@@ -2,9 +2,8 @@ import SwiftUI
 
 enum AppTab: Hashable {
     case home
-    case freeTalk
+    case practice
     case review
-    case roleplays
     case profile
 
     static var launchDefault: AppTab {
@@ -17,12 +16,10 @@ enum AppTab: Hashable {
         }
 
         switch arguments[flagIndex + 1] {
-        case "freeTalk":
-            return .freeTalk
+        case "practice", "freeTalk", "roleplays":
+            return .practice
         case "review":
             return .review
-        case "roleplays":
-            return .roleplays
         case "profile":
             return .profile
         default:
@@ -96,8 +93,9 @@ enum HomeRoute: Hashable {
     }
 }
 
-enum FreeTalkRoute: Hashable {
+enum PracticeRoute: Hashable {
     case session
+    case tutor
     case createRoleplay
     case topics
     case topic(RoleplayTopic)
@@ -107,10 +105,10 @@ enum FreeTalkRoute: Hashable {
     case community
     case communityRoleplay(RoleplayScenario)
 
-    static var launchDefaultPath: [FreeTalkRoute] {
+    static var launchDefaultPath: [PracticeRoute] {
         let arguments = ProcessInfo.processInfo.arguments
         guard
-            let flagIndex = arguments.firstIndex(of: "-ConverlaxInitialFreeTalkRoute"),
+            let flagIndex = arguments.firstIndex(where: { $0 == "-ConverlaxInitialPracticeRoute" || $0 == "-ConverlaxInitialFreeTalkRoute" }),
             arguments.indices.contains(flagIndex + 1)
         else {
             return []
@@ -119,6 +117,8 @@ enum FreeTalkRoute: Hashable {
         switch arguments[flagIndex + 1] {
         case "session":
             return [.session]
+        case "tutor":
+            return [.tutor]
         case "createRoleplay":
             return [.createRoleplay]
         case "topics":
@@ -600,7 +600,7 @@ struct ChatMessage: Identifiable, Equatable {
     var canSave = false
 }
 
-enum PracticeRoute: Hashable {
+enum QuickPracticeRoute: Hashable {
     case vocab
     case verbs
 }

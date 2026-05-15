@@ -35,9 +35,8 @@ private struct MainTabView: View {
     @Binding var selectedTab: AppTab
     @Binding var activeSheet: ActiveSheet?
     @State private var homePath = HomeRoute.launchDefaultPath
-    @State private var freeTalkPath = FreeTalkRoute.launchDefaultPath
+    @State private var practicePath = PracticeRoute.launchDefaultPath
     @State private var reviewPath = ReviewRoute.launchDefaultPath
-    @State private var roleplaysPath = FreeTalkRoute.launchDefaultPath
     @State private var profilePath = ProfileRoute.launchDefaultPath
 
     var body: some View {
@@ -78,15 +77,15 @@ private struct MainTabView: View {
             }
             .tag(AppTab.home)
 
-            NavigationStack(path: $freeTalkPath) {
-                FreeTalkHomeView(state: state)
-                    .accessibilityIdentifier("screen-free-talk")
+            NavigationStack(path: $practicePath) {
+                PracticeHomeView(state: state)
+                    .accessibilityIdentifier("screen-practice")
             }
             .tabItem {
-                Label("Free Talk", systemImage: "mic.circle.fill")
-                    .accessibilityIdentifier("tab-free-talk")
+                Label("Practice", systemImage: "mic.circle.fill")
+                    .accessibilityIdentifier("tab-practice")
             }
-            .tag(AppTab.freeTalk)
+            .tag(AppTab.practice)
 
             NavigationStack(path: $reviewPath) {
                 ReviewHomeView(state: state)
@@ -97,16 +96,6 @@ private struct MainTabView: View {
                     .accessibilityIdentifier("tab-review")
             }
             .tag(AppTab.review)
-
-            NavigationStack(path: $roleplaysPath) {
-                RoleplaysHomeView(state: state)
-                    .accessibilityIdentifier("screen-roleplays")
-            }
-            .tabItem {
-                Label("Roleplays", systemImage: "person.2.wave.2.fill")
-                    .accessibilityIdentifier("tab-roleplays")
-            }
-            .tag(AppTab.roleplays)
 
             NavigationStack(path: $profilePath) {
                 SpeakProfileHomeView(state: state)

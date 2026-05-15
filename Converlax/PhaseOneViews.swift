@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct FreeTalkHomeView: View {
+struct PracticeHomeView: View {
     @ObservedObject var state: LearningState
 
     var body: some View {
@@ -9,27 +9,24 @@ struct FreeTalkHomeView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    SectionHeader(title: "Free Talk", subtitle: "Practice open conversation or start a roleplay.")
+                    SectionHeader(title: "Speak today", subtitle: "Open conversation, rehearse a situation, or build a custom session.")
 
-                    NavigationLink(value: FreeTalkRoute.session) {
-                        HeroActionCard(title: "Start Free Talk", subtitle: "A flexible speaking session with live prompts", symbol: "mic.circle.fill", color: .primaryBlue, asset: .freeTalk)
+                    NavigationLink(value: PracticeRoute.session) {
+                        HeroActionCard(title: "Start speaking", subtitle: "Open conversation with live prompts", symbol: "mic.circle.fill", color: .primaryBlue, asset: .freeTalk)
                     }
                     .buttonStyle(.plain)
 
-                    quickActions
+                    primaryPracticeActions
 
-                    SectionHeader(title: "Topics", subtitle: "Choose a scenario and rehearse useful lines.")
-                    ForEach(state.roleplayTopics) { topic in
-                        NavigationLink(value: FreeTalkRoute.topic(topic)) {
-                            TopicRow(topic: topic)
+                    SectionHeader(title: "Choose a situation", subtitle: "Roleplays for common real-world moments.")
+                    ForEach(state.roleplays.prefix(3)) { roleplay in
+                        NavigationLink(value: PracticeRoute.roleplay(roleplay)) {
+                            RoleplayRow(roleplay: roleplay, favorite: state.isFavorite(roleplay))
                         }
                         .buttonStyle(.plain)
                     }
 
-                    SectionHeader(title: "Recent usage", subtitle: "Your last practice sessions.")
-                    ForEach(state.usageSessions.prefix(3)) { session in
-                        UsageRow(session: session)
-                    }
+                    practiceLibrary
                 }
                 .padding(20)
             }
@@ -37,11 +34,13 @@ struct FreeTalkHomeView: View {
                 Color.clear.frame(height: 96)
             }
         }
-        .navigationTitle("Free Talk")
-        .navigationDestination(for: FreeTalkRoute.self) { route in
+        .navigationTitle("Practice")
+        .navigationDestination(for: PracticeRoute.self) { route in
             switch route {
             case .session:
                 FreeTalkSessionView(state: state)
+            case .tutor:
+                TutorView(state: state)
             case .createRoleplay:
                 CreateRoleplayView(state: state)
             case .topics:
@@ -60,22 +59,56 @@ struct FreeTalkHomeView: View {
         }
     }
 
-    private var quickActions: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            NavigationLink(value: FreeTalkRoute.createRoleplay) {
-                MiniFlowCard(title: "Create roleplay", symbol: "plus.bubble.fill", color: .mintSuccess, asset: .customLesson)
+    private var primaryPracticeActions: some View {
+        VStack(spacing: 0) {
+            NavigationLink(value: PracticeRoute.topics) {
+                SettingsLikeRow(symbol: "person.2.wave.2.fill", title: "Choose a roleplay", subtitle: "\(state.roleplays.count) guided speaking situations", asset: .roleplay)
             }
-            NavigationLink(value: FreeTalkRoute.topics) {
-                MiniFlowCard(title: "Topics", symbol: "square.grid.2x2.fill", color: .warmAmber, asset: .askInfo)
+            .buttonStyle(.plain)
+
+            Divider().padding(.leading, 72)
+
+            NavigationLink(value: PracticeRoute.createRoleplay) {
+                SettingsLikeRow(symbol: "plus.bubble.fill", title: "Create custom practice", subtitle: "Turn your own situation into a speaking lesson", asset: .customLesson)
             }
-            NavigationLink(value: FreeTalkRoute.history) {
-                MiniFlowCard(title: "History", symbol: "clock.fill", color: .violetAccent, asset: .historyUsage)
+            .buttonStyle(.plain)
+
+            Divider().padding(.leading, 72)
+
+            NavigationLink(value: PracticeRoute.tutor) {
+                SettingsLikeRow(symbol: "bubble.left.and.bubble.right.fill", title: "Chat with tutor", subtitle: "Ask for help before or after practice", asset: .askInfo)
             }
-            NavigationLink(value: FreeTalkRoute.community) {
-                MiniFlowCard(title: "Community", symbol: "person.3.fill", color: .primaryBlue, asset: .community)
-            }
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
+        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    private var practiceLibrary: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionHeader(title: "Practice library", subtitle: "Revisit saved, recent, and community sessions.")
+
+            VStack(spacing: 0) {
+                NavigationLink(value: PracticeRoute.favorites) {
+                    SettingsLikeRow(symbol: "star.fill", title: "Favorites", subtitle: "\(state.favoriteRoleplays.count) saved roleplays", asset: .favorites)
+                }
+                .buttonStyle(.plain)
+
+                Divider().padding(.leading, 72)
+
+                NavigationLink(value: PracticeRoute.history) {
+                    SettingsLikeRow(symbol: "clock.fill", title: "History", subtitle: "Recent conversations and usage", asset: .historyUsage)
+                }
+                .buttonStyle(.plain)
+
+                Divider().padding(.leading, 72)
+
+                NavigationLink(value: PracticeRoute.community) {
+                    SettingsLikeRow(symbol: "person.3.fill", title: "Community", subtitle: "More situations from other learners", asset: .community)
+                }
+                .buttonStyle(.plain)
+            }
+            .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
     }
 }
 
@@ -88,7 +121,7 @@ struct ReviewHomeView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    SectionHeader(title: "Review", subtitle: "Keep saved words and lines active.")
+                    SectionHeader(title: "Due today", subtitle: "Keep saved words and lines active.")
                     NavigationLink(value: ReviewRoute.smartReview) {
                         HeroActionCard(title: "Smart review", subtitle: "\(state.reviewItems.count) items ready", symbol: "bolt.circle.fill", color: .primaryBlue, asset: .review)
                     }
@@ -121,63 +154,6 @@ struct ReviewHomeView: View {
                 SavedLinesView(state: state, searchable: true)
             case .reviewInfo:
                 InfoDetailView(title: "Review information", subtitle: "Review mixes saved words, saved lines, and recent lesson mistakes. Listening mode hides the text first so you can train recognition before speaking.")
-            }
-        }
-    }
-}
-
-struct RoleplaysHomeView: View {
-    @ObservedObject var state: LearningState
-    @State private var communityFirst = false
-
-    var sortedRoleplays: [RoleplayScenario] {
-        communityFirst ? state.roleplays.sorted { $0.isCommunity && !$1.isCommunity } : state.roleplays
-    }
-
-    var body: some View {
-        ZStack {
-            Color.appBackground.ignoresSafeArea()
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    SectionHeader(title: "Roleplays", subtitle: "Generated lessons and community practice.")
-
-                    Toggle("Community first", isOn: $communityFirst)
-                        .padding(16)
-                        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-
-                    ForEach(sortedRoleplays) { roleplay in
-                        NavigationLink(value: FreeTalkRoute.roleplay(roleplay)) {
-                            RoleplayRow(roleplay: roleplay, favorite: state.isFavorite(roleplay))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(20)
-            }
-            .safeAreaInset(edge: .bottom) {
-                Color.clear.frame(height: 96)
-            }
-        }
-        .navigationTitle("Roleplays")
-        .navigationDestination(for: FreeTalkRoute.self) { route in
-            switch route {
-            case .roleplay(let roleplay), .communityRoleplay(let roleplay):
-                RoleplayDetailView(roleplay: roleplay, state: state)
-            case .community:
-                CommunityView(state: state)
-            case .favorites:
-                FavoritesView(state: state)
-            case .history:
-                HistoryUsageView(state: state)
-            case .topic(let topic):
-                TopicDetailView(topic: topic, state: state)
-            case .session:
-                FreeTalkSessionView(state: state)
-            case .createRoleplay:
-                CreateRoleplayView(state: state)
-            case .topics:
-                TopicsBrowserView(state: state)
             }
         }
     }
@@ -428,7 +404,7 @@ private struct TopicsBrowserView: View {
 
     var body: some View {
         List(state.roleplayTopics) { topic in
-            NavigationLink(value: FreeTalkRoute.topic(topic)) {
+            NavigationLink(value: PracticeRoute.topic(topic)) {
                 TopicRow(topic: topic)
             }
         }
@@ -444,7 +420,7 @@ private struct TopicDetailView: View {
         List {
             Section(topic.subtitle) {
                 ForEach(state.roleplays.filter { topic.scenarioIDs.contains($0.id) }) { roleplay in
-                    NavigationLink(value: FreeTalkRoute.roleplay(roleplay)) {
+                    NavigationLink(value: PracticeRoute.roleplay(roleplay)) {
                         RoleplayRow(roleplay: roleplay, favorite: state.isFavorite(roleplay))
                     }
                 }
@@ -522,7 +498,7 @@ private struct FavoritesView: View {
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(state.favoriteRoleplays) { roleplay in
-                    NavigationLink(value: FreeTalkRoute.roleplay(roleplay)) {
+                    NavigationLink(value: PracticeRoute.roleplay(roleplay)) {
                         RoleplayRow(roleplay: roleplay, favorite: true)
                     }
                 }
@@ -540,7 +516,7 @@ private struct CommunityView: View {
         List {
             Toggle("Popular first", isOn: $sortPopularFirst)
             ForEach(state.communityRoleplays) { roleplay in
-                NavigationLink(value: FreeTalkRoute.communityRoleplay(roleplay)) {
+                NavigationLink(value: PracticeRoute.communityRoleplay(roleplay)) {
                     RoleplayRow(roleplay: roleplay, favorite: state.isFavorite(roleplay))
                 }
             }

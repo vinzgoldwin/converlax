@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct PracticeHomeView: View {
+struct QuickLessonPracticeView: View {
     @ObservedObject var state: LearningState
 
     var body: some View {
@@ -11,11 +11,11 @@ struct PracticeHomeView: View {
                 Text("Quick lessons")
                     .font(.title2.weight(.bold))
 
-                NavigationLink(value: PracticeRoute.vocab) {
+                NavigationLink(value: QuickPracticeRoute.vocab) {
                     PracticeCard(title: "Vocab", subtitle: "Translate and save useful words", symbol: "character.book.closed.fill", color: Color.warmAmber, asset: .vocab)
                 }
 
-                NavigationLink(value: PracticeRoute.verbs) {
+                NavigationLink(value: QuickPracticeRoute.verbs) {
                     PracticeCard(title: "Verbs", subtitle: "Fill blanks from the current unit", symbol: "textformat.abc.dottedunderline", color: Color.violetAccent, asset: .verbs)
                 }
 
@@ -25,7 +25,7 @@ struct PracticeHomeView: View {
             .padding(20)
         }
         .navigationTitle("Practice")
-        .navigationDestination(for: PracticeRoute.self) { route in
+        .navigationDestination(for: QuickPracticeRoute.self) { route in
             switch route {
             case .vocab:
                 VocabLessonView(lesson: BeginnerContent.vocabPracticeLesson(for: state.profile.targetLanguage), state: state)
