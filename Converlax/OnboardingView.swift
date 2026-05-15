@@ -2,9 +2,18 @@ import SwiftUI
 
 struct OnboardingView: View {
     @ObservedObject var state: LearningState
-    @State private var targetLanguage: TargetLanguage = .french
-    @State private var selectedLevel: Level = .beginner
+    let onComplete: () -> Void
+    @State private var targetLanguage: TargetLanguage
+    @State private var selectedLevel: Level
     @State private var step = 0
+    @State private var isAdvancing = false
+
+    init(state: LearningState, onComplete: @escaping () -> Void = {}) {
+        self.state = state
+        self.onComplete = onComplete
+        _targetLanguage = State(initialValue: state.profile.targetLanguage.isAvailable ? state.profile.targetLanguage : .english)
+        _selectedLevel = State(initialValue: state.profile.currentLevel)
+    }
 
     var body: some View {
         ZStack {
@@ -29,9 +38,11 @@ struct OnboardingView: View {
                 Spacer()
 
                 Button(action: continueFlow) {
-                    Text(step == 2 ? "Start speaking" : "Continue")
+                    Text(primaryButtonTitle)
                 }
-                .buttonStyle(PrimaryButtonStyle())
+                .buttonStyle(PrimaryButtonStyle(isEnabled: !isAdvancing))
+                .disabled(isAdvancing)
+                .accessibilityIdentifier("onboarding-primary-button-\(step)")
             }
             .padding(22)
         }
@@ -61,17 +72,25 @@ struct OnboardingView: View {
 
     private var title: String {
         switch step {
-        case 0: "Speak sooner"
-        case 1: "Choose your language"
-        default: "Start at your level"
+        case 0: "Start with speaking"
+        case 1: "Pick a course language"
+        default: "Choose a starting point"
         }
     }
 
     private var subtitle: String {
         switch step {
-        case 0: "Begin with one useful line, say it out loud, and keep it for review."
-        case 1: "Your first lesson will use this course."
-        default: "Converlax will open the first lesson that fits."
+        case 0: "Converlax gives you one useful line, then helps you say it out loud."
+        case 1: "Your first lesson will open in this language."
+        default: "Beginner is best for a quick first speaking lesson."
+        }
+    }
+
+    private var primaryButtonTitle: String {
+        switch step {
+        case 0: "Set up first lesson"
+        case 1: "Choose level"
+        default: "Show my first lesson"
         }
     }
 
@@ -85,22 +104,19 @@ struct OnboardingView: View {
     }
 
     private var introCards: some View {
-        VStack(spacing: 12) {
-            OnboardingFeatureRow(asset: .freeTalk, symbol: "waveform", title: "Say one useful line", subtitle: "Start with short prompts built for real conversation.")
-            OnboardingFeatureRow(asset: .savedLines, symbol: "bookmark.fill", title: "Keep what helps", subtitle: "Saved lines come back when they are ready to practice.")
-        }
+        OnboardingFirstLessonCard()
     }
 
     private var languageChoices: some View {
         VStack(spacing: 12) {
-            ForEach(TargetLanguage.allCases) { language in
+            ForEach(TargetLanguage.allCases.filter(\.isAvailable)) { language in
                 ChoiceRow(
                     title: language.rawValue,
                     subtitle: subtitle(for: language),
-                    selected: targetLanguage == language,
-                    enabled: language.isAvailable
+                    selected: targetLanguage == language
                 ) {
                     targetLanguage = language
+                    state.selectTargetLanguage(language)
                 }
             }
         }
@@ -108,100 +124,116 @@ struct OnboardingView: View {
 
     private var levelChoices: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Part 1")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    ForEach([Level.beginner, .elementary]) { level in
-                        levelButton(level)
-                    }
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(Level.allCases) { level in
+                    levelButton(level)
                 }
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Part 2")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    ForEach([Level.upperElementary, .intermediate]) { level in
-                        levelButton(level)
-                    }
-                }
+
+                Text("You can switch levels later from Home.")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 2)
             }
         }
+        .scrollIndicators(.hidden)
     }
 
     private func levelButton(_ level: Level) -> some View {
         ChoiceRow(
-            title: "\(level.rawValue) \(level.code)",
+            title: level == .beginner ? "\(level.rawValue) \(level.code) - Recommended" : "\(level.rawValue) \(level.code)",
             subtitle: onboardingSubtitle(for: level),
             selected: selectedLevel == level
         ) {
             selectedLevel = level
+            state.selectLevel(level)
         }
     }
 
     private func onboardingSubtitle(for level: Level) -> String {
         switch level {
         case .beginner:
-            "First conversations"
+            "Short introductions and everyday lines"
         case .elementary:
-            "Daily routines and places"
+            "Daily routines and simple places"
         case .upperElementary:
-            "Appointments and small talk"
+            "Appointments and longer small talk"
         case .intermediate:
-            "Opinions and stories"
+            "Opinions, stories, and follow-up questions"
         }
     }
 
     private func continueFlow() {
+        guard !isAdvancing else { return }
+        isAdvancing = true
+
         if step < 2 {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
                 step += 1
             }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                isAdvancing = false
+            }
         } else {
-            state.completeOnboarding(language: targetLanguage, level: selectedLevel)
+            state.completeOnboarding(language: state.profile.targetLanguage, level: state.profile.currentLevel)
+            onComplete()
         }
     }
 
     private func subtitle(for language: TargetLanguage) -> String {
         guard language.isAvailable else { return "Coming soon" }
-        return "\(language.unitTitle) available now"
+        return language == .english ? "Start with practical English conversation" : "Start with practical French conversation"
     }
 }
 
-private struct OnboardingFeatureRow: View {
-    let asset: ConverlaxAssetKind?
-    let symbol: String
-    let title: String
-    let subtitle: String
-
-    init(asset: ConverlaxAssetKind? = nil, symbol: String, title: String, subtitle: String) {
-        self.asset = asset
-        self.symbol = symbol
-        self.title = title
-        self.subtitle = subtitle
-    }
-
+private struct OnboardingFirstLessonCard: View {
     var body: some View {
-        HStack(spacing: 14) {
-            if let asset {
-                ConverlaxAssetBadge(kind: asset, size: 52)
-            } else {
-                AvatarBadge(symbol: symbol, color: .primaryBlue)
-                    .frame(width: 46, height: 46)
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .center, spacing: 14) {
+                ConverlaxAssetBadge(kind: .freeTalk, size: 62)
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Your first lesson takes about 4 minutes.")
+                        .font(.headline.weight(.semibold))
+                    Text("Learn one line, speak it, and check that it makes sense.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.headline.weight(.semibold))
-                Text(subtitle)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 10) {
+                OnboardingMiniStep(symbol: "text.bubble.fill", title: "Learn")
+                OnboardingMiniStep(symbol: "mic.fill", title: "Speak")
+                OnboardingMiniStep(symbol: "checkmark.seal.fill", title: "Check")
             }
-            Spacer()
         }
         .padding(16)
         .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.clayStroke.opacity(0.72), lineWidth: 1)
+        )
+    }
+}
+
+private struct OnboardingMiniStep: View {
+    let symbol: String
+    let title: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: symbol)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Color.primaryBlue)
+            Text(title)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.84)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 9)
+        .background(Color.appBackground.opacity(0.72), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -240,7 +272,9 @@ struct ChoiceRow: View {
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
-        .accessibilityHint(enabled ? "" : "This course is not available yet.")
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(title)
+        .accessibilityHint(enabled ? subtitle : "This course is not available yet.")
     }
 }
 

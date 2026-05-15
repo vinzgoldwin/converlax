@@ -6,6 +6,8 @@ struct TutorView: View {
     @State private var voiceState: TutorVoiceState = .keyboard
     @State private var showHistory = false
     @State private var lastFeedback: LearningFeedback?
+    @State private var noInputNotice: String?
+    @State private var savedMessageIDs: Set<UUID> = []
     @State private var messages = [
         ChatMessage(text: "Hi there. I can help you rehearse the phrases from your current unit.", isUser: false),
         ChatMessage(text: "Ask me a question, tap a suggestion, or practice one of your saved words.", isUser: false)
@@ -27,6 +29,7 @@ struct TutorView: View {
             }
         }
         .navigationTitle("Tutor")
+        .toolbar(.hidden, for: .tabBar)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Menu {
@@ -62,9 +65,19 @@ struct TutorView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 ForEach(messages) { message in
-                    ChatBubble(message: message) {
+                    ChatBubble(message: message, isSaved: savedMessageIDs.contains(message.id)) {
                         saveMessage(message)
                     }
+                }
+
+                if let noInputNotice {
+                    Label(noInputNotice, systemImage: "exclamationmark.triangle.fill")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Color.warmAmber)
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.warmAmber.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .accessibilityIdentifier("tutor-no-input-notice")
                 }
 
                 if let lastWord = state.courseSavedWords.last {
@@ -112,6 +125,7 @@ struct TutorView: View {
     }
 
     private func startVoice() {
+        noInputNotice = nil
         withAnimation(.spring(response: 0.3, dampingFraction: 0.86)) {
             voiceState = .recording
         }
@@ -119,12 +133,16 @@ struct TutorView: View {
 
     private func sendMessage() {
         let clean = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !clean.isEmpty else { return }
+        guard !clean.isEmpty else {
+            noInputNotice = "Type a phrase or use the mic so the Tutor can give feedback."
+            return
+        }
         let word = state.courseSavedWords.last ?? state.courseLessons.first?.savedWords.first ?? BeginnerContent.lessons[0].savedWords[0]
         withAnimation {
+            noInputNotice = nil
             messages.append(ChatMessage(text: clean, isUser: true))
             messages.append(ChatMessage(text: "\(word.term) means \(word.translation). Try it in this sentence: \(word.example)", isUser: false, canSave: true))
-            messages.append(ChatMessage(text: "Next best action: \(state.nextRecommendation).", isUser: false, canSave: true))
+            messages.append(ChatMessage(text: "Next best action: \(state.nextRecommendation.title).", isUser: false, canSave: true))
         }
         lastFeedback = state.recordTutorCorrection(for: clean)
         input = ""
@@ -132,6 +150,7 @@ struct TutorView: View {
 
     private func submitVoice() {
         voiceState = .loading
+        noInputNotice = nil
         addTutorResponse()
         voiceState = .response
     }
@@ -147,18 +166,29 @@ struct TutorView: View {
 
     private func saveMessage(_ message: ChatMessage) {
         let line = SavedLine(
-            id: "tutor-\(message.text.hashValue)",
+            id: "tutor-\(stableMessageID(message.text))",
             text: message.text,
             translation: "Saved Tutor response",
             source: "Tutor",
             note: "Saved from Tutor chat."
         )
         state.saveLine(line)
+        savedMessageIDs.insert(message.id)
     }
 
     private func resetConversation() {
         messages = Array(messages.prefix(2))
         lastFeedback = nil
+        noInputNotice = nil
+        savedMessageIDs = []
+    }
+
+    private func stableMessageID(_ text: String) -> String {
+        let characters = text.lowercased().map { character -> Character in
+            character.isLetter || character.isNumber ? character : "-"
+        }
+        let collapsed = String(characters).split(separator: "-").joined(separator: "-")
+        return String(collapsed.prefix(48)).isEmpty ? "message" : String(collapsed.prefix(48))
     }
 }
 
@@ -239,6 +269,7 @@ private struct TextComposer: View {
 
 private struct ChatBubble: View {
     let message: ChatMessage
+    let isSaved: Bool
     let onSave: () -> Void
 
     var body: some View {
@@ -259,11 +290,12 @@ private struct ChatBubble: View {
 
                 if message.canSave && !message.isUser {
                     Button(action: onSave) {
-                        Label("Save line", systemImage: "bookmark.fill")
+                        Label(isSaved ? "Saved" : "Save line", systemImage: isSaved ? "bookmark.fill" : "bookmark")
                             .font(.caption.weight(.semibold))
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(Color.primaryBlue)
+                    .disabled(isSaved)
                 }
             }
 

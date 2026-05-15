@@ -394,7 +394,7 @@ struct StatCard: View {
     var body: some View {
         VStack(spacing: 6) {
             Text(value)
-                .font(.title.weight(.bold))
+                .font(.title2.weight(.bold))
                 .foregroundStyle(color)
             Text(label)
                 .font(.caption.weight(.semibold))
@@ -403,8 +403,13 @@ struct StatCard: View {
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
-        .padding(18)
-        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(.vertical, 14)
+        .padding(.horizontal, 10)
+        .background(Color.claySurface.opacity(0.62), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.clayStroke.opacity(0.6), lineWidth: 1)
+        )
         .accessibilityElement(children: .combine)
     }
 }
@@ -437,38 +442,79 @@ struct LearningFeedbackCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Label("Feedback", systemImage: "sparkles")
+            HStack(alignment: .top, spacing: 10) {
+                Label("Speaking feedback", systemImage: "sparkles")
                     .font(.headline.weight(.semibold))
                     .foregroundStyle(Color.primaryBlue)
-                Spacer()
-                Text("\(feedback.averageScore)%")
-                    .font(.headline.weight(.bold))
-                    .foregroundStyle(scoreColor(feedback.averageScore))
+                Spacer(minLength: 10)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("\(feedback.confidence)%")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(scoreColor(feedback.confidence))
+                    Text(feedback.claritySignal.isEmpty ? "Confidence" : feedback.claritySignal)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.trailing)
+                }
             }
 
-            Text(feedback.correction)
-                .font(.subheadline.weight(.medium))
-
-            Text(feedback.betterPhrase)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                FeedbackMetric(title: "Pronunciation", value: feedback.pronunciation)
-                FeedbackMetric(title: "Grammar", value: feedback.grammar)
-                FeedbackMetric(title: "Vocabulary", value: feedback.vocabulary)
-                FeedbackMetric(title: "Fluency", value: feedback.fluency)
+            if !feedback.promptText.isEmpty {
+                FeedbackTextBlock(title: "Prompt", text: feedback.promptText, symbol: "quote.bubble.fill", color: .secondary)
             }
+
+            if !feedback.attemptedText.isEmpty {
+                FeedbackTextBlock(title: "You said", text: feedback.attemptedText, symbol: "mic.fill", color: .primaryBlue)
+            }
+
+            FeedbackTextBlock(title: "Correction", text: feedback.correction, symbol: "checkmark.seal.fill", color: .mintSuccess)
+            FeedbackTextBlock(title: "More natural", text: feedback.betterPhrase, symbol: "bubble.left.and.text.bubble.right.fill", color: .violetAccent)
+            FeedbackTextBlock(title: "Pronunciation tip", text: feedback.pronunciationTip, symbol: "waveform", color: .warmAmber)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Saved takeaway", systemImage: "bookmark.fill")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.primaryBlue)
+                Text(feedback.savedTakeaway)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Divider()
+                Label(feedback.nextAction, systemImage: "arrow.turn.down.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.primaryBlue.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .padding(16)
         .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color.clayStroke))
+        .accessibilityIdentifier("learning-feedback-card")
         .accessibilityElement(children: .combine)
     }
 
     private func scoreColor(_ score: Int) -> Color {
         score >= 76 ? .mintSuccess : score >= 60 ? .warmAmber : .converlaxCoral
+    }
+}
+
+private struct FeedbackTextBlock: View {
+    let title: String
+    let text: String
+    let symbol: String
+    let color: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Label(title, systemImage: symbol)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(color)
+            Text(text)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -508,9 +554,23 @@ struct SpeechPracticePanel: View {
                 .font(.headline.weight(.semibold))
             ConverlaxWaveform(color: accent, isActive: phase == .recording || phase == .processing)
 
-            if !transcript.isEmpty {
+            if phase == .error {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(Color.warmAmber)
+                    Text("No clear speech was captured. Try again a little slower and closer to the mic.")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.warmAmber.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+
+            if !transcript.isEmpty && feedback == nil {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("Recognized transcript")
+                    Text("You said")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                     Text(transcript)

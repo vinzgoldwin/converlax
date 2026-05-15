@@ -4,21 +4,37 @@ struct ContentView: View {
     @StateObject private var learningState = LearningState()
     @State private var selectedTab: AppTab
     @State private var activeSheet: ActiveSheet?
+    @State private var isShowingForcedOnboarding: Bool
+    @State private var homePath: [HomeRoute]
+    @State private var practicePath: [PracticeRoute]
+    @State private var reviewPath: [ReviewRoute]
+    @State private var profilePath: [ProfileRoute]
 
     init() {
         _selectedTab = State(initialValue: AppTab.launchDefault)
+        _isShowingForcedOnboarding = State(initialValue: Self.forceOnboarding)
+        _homePath = State(initialValue: HomeRoute.launchDefaultPath)
+        _practicePath = State(initialValue: PracticeRoute.launchDefaultPath)
+        _reviewPath = State(initialValue: ReviewRoute.launchDefaultPath)
+        _profilePath = State(initialValue: ProfileRoute.launchDefaultPath)
     }
 
     var body: some View {
         Group {
-            if learningState.profile.hasCompletedOnboarding && !Self.forceOnboarding {
+            if learningState.profile.hasCompletedOnboarding && !isShowingForcedOnboarding {
                 MainTabView(
                     state: learningState,
                     selectedTab: $selectedTab,
-                    activeSheet: $activeSheet
+                    activeSheet: $activeSheet,
+                    homePath: $homePath,
+                    practicePath: $practicePath,
+                    reviewPath: $reviewPath,
+                    profilePath: $profilePath
                 )
             } else {
-                OnboardingView(state: learningState)
+                OnboardingView(state: learningState) {
+                    isShowingForcedOnboarding = false
+                }
             }
         }
         .fontDesign(.rounded)
@@ -34,10 +50,10 @@ private struct MainTabView: View {
     @ObservedObject var state: LearningState
     @Binding var selectedTab: AppTab
     @Binding var activeSheet: ActiveSheet?
-    @State private var homePath = HomeRoute.launchDefaultPath
-    @State private var practicePath = PracticeRoute.launchDefaultPath
-    @State private var reviewPath = ReviewRoute.launchDefaultPath
-    @State private var profilePath = ProfileRoute.launchDefaultPath
+    @Binding var homePath: [HomeRoute]
+    @Binding var practicePath: [PracticeRoute]
+    @Binding var reviewPath: [ReviewRoute]
+    @Binding var profilePath: [ProfileRoute]
 
     var body: some View {
         TabView(selection: $selectedTab) {

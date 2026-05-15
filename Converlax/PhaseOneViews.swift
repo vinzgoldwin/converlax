@@ -81,27 +81,49 @@ struct PracticeHomeView: View {
 struct ReviewHomeView: View {
     @ObservedObject var state: LearningState
 
+    private var reviewCount: Int {
+        state.reviewItems.count
+    }
+
     var body: some View {
         ZStack {
             Color.appBackground.ignoresSafeArea()
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    SectionHeader(title: "Due today", subtitle: "Keep saved words and lines active.")
+                    SectionHeader(
+                        title: reviewCount == 0 ? "Nothing due" : "Due today",
+                        subtitle: reviewCount == 0 ? state.nextRecommendation.reason : "Keep saved words and lines active."
+                    )
                     NavigationLink(value: ReviewRoute.smartReview) {
-                        HeroActionCard(title: "Review due items", subtitle: "\(state.reviewItems.count) ready", symbol: "bolt.circle.fill", color: .primaryBlue, asset: .review)
+                        HeroActionCard(
+                            title: reviewCount == 0 ? "Review is clear" : "Review due items",
+                            subtitle: reviewCount == 0 ? state.nextRecommendation.title : "\(reviewCount) ready from saved content and practice",
+                            symbol: "bolt.circle.fill",
+                            color: .primaryBlue,
+                            asset: .review
+                        )
                     }
                     .buttonStyle(.plain)
 
-                    NavigationLink(value: ReviewRoute.savedLinesReview) {
-                        HeroActionCard(title: "Practice saved lines", subtitle: "\(state.savedLines.count) lines ready", symbol: "bookmark.circle.fill", color: .mintSuccess, asset: .savedLines)
-                    }
-                    .buttonStyle(.plain)
+                    VStack(spacing: 0) {
+                        NavigationLink(value: ReviewRoute.savedLinesReview) {
+                            SettingsLikeRow(symbol: "bookmark.fill", title: "Practice saved lines", subtitle: "\(state.savedLines.count) lines ready")
+                        }
+                        .buttonStyle(.plain)
 
-                    NavigationLink(value: ReviewRoute.reviewInfo) {
-                        SettingsLikeRow(symbol: "info.circle.fill", title: "Review timing", subtitle: "Why items come back", asset: .askInfo)
+                        Divider().padding(.leading, 62)
+
+                        NavigationLink(value: ReviewRoute.reviewInfo) {
+                            SettingsLikeRow(symbol: "info.circle.fill", title: "Review timing", subtitle: "Why items come back")
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
+                    .background(Color.claySurface.opacity(0.68), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(Color.clayStroke.opacity(0.66), lineWidth: 1)
+                    )
                 }
                 .padding(20)
             }
@@ -234,26 +256,26 @@ struct SpeakProfileHomeView: View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(spacing: 0) {
                 NavigationLink(value: ProfileRoute.savedLines) {
-                    SettingsLikeRow(symbol: "bookmark.fill", title: "Practice saved lines", subtitle: "\(state.savedLines.count) ready", asset: .savedLines)
+                    SettingsLikeRow(symbol: "bookmark.fill", title: "Practice saved lines", subtitle: "\(state.savedLines.count) ready")
                 }
 
                 Divider().padding(.leading, 72)
 
                 NavigationLink(value: ProfileRoute.practiceHistory) {
-                    SettingsLikeRow(symbol: "clock.fill", title: "Practice history", subtitle: "\(state.usageSessions.count) sessions", asset: .historyUsage)
+                    SettingsLikeRow(symbol: "clock.fill", title: "Practice history", subtitle: "\(state.usageSessions.count) sessions")
                 }
 
                 Divider().padding(.leading, 72)
 
                 NavigationLink(value: ProfileRoute.activities) {
-                    SettingsLikeRow(symbol: "list.bullet.rectangle.fill", title: "Recent activity", subtitle: "\(state.activities.count) updates", asset: .activities)
+                    SettingsLikeRow(symbol: "list.bullet.rectangle.fill", title: "Recent activity", subtitle: "\(state.activities.count) updates")
                 }
             }
             .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
 
             VStack(spacing: 0) {
                 NavigationLink(value: ProfileRoute.settings) {
-                    SettingsLikeRow(symbol: "gearshape.fill", title: "Adjust settings", subtitle: "Language, voice, reminders", asset: .settings)
+                    SettingsLikeRow(symbol: "gearshape.fill", title: "Adjust settings", subtitle: "Language, voice, reminders")
                 }
             }
             .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -527,47 +549,72 @@ private struct FreeTalkSessionView: View {
     @ObservedObject var state: LearningState
     @State private var finished = false
     @State private var summary: LearningSessionSummary?
+    @State private var feedback: LearningFeedback?
+
+    private let prompt = "Tell me about your day using one sentence. Then ask me a question back."
+    private let mockTranscript = "I usually study English at night. How about you?"
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            LessonProgressBar(progress: finished ? 1 : 0.45)
-            SectionHeader(title: finished ? "Session saved" : "Answer one prompt", subtitle: finished ? "Saved in Profile > Practice history." : "Speak naturally, then save the session.")
-            ConverlaxMascotView(state: finished ? .success : .listening, size: 116)
-                .frame(maxWidth: .infinity)
-            Text(finished ? "You practiced open conversation. Your history and saved material are under Profile." : "Tell me about your day using one sentence. Then ask me a question back.")
-                .font(.title3.weight(.semibold))
-                .padding(18)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            if let summary {
-                SessionSummaryPanel(summary: summary)
-            }
-            if finished {
-                PracticeSavedHint()
-            }
-            Spacer()
-            Button(finished ? "Practice again" : "Save session") {
-                if finished {
-                    finished = false
-                    summary = nil
-                } else {
-                    state.recordConversationSession(
-                        title: "Free Talk",
-                        detail: "Open speaking session",
-                        minutes: 5,
-                        transcript: "I usually study English at night. How about you?",
-                        strongPhrases: ["How about you?", "I usually study English at night."],
-                        weakPhrases: ["I study English in night."]
-                    )
-                    summary = state.sessionSummaries.first
-                    finished = true
+        VStack(alignment: .leading, spacing: 16) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    LessonProgressBar(progress: finished ? 1 : 0.45)
+                    SectionHeader(title: finished ? "Session saved" : "Answer one prompt", subtitle: finished ? "Saved in Profile > Practice history." : "Speak naturally, then save the session.")
+                    ConverlaxMascotView(state: finished ? .success : .listening, size: 116)
+                        .frame(maxWidth: .infinity)
+                    Text(finished ? "You practiced open conversation. Your history and saved material are under Profile." : prompt)
+                        .font(.title3.weight(.semibold))
+                        .padding(18)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+
+                    if let feedback {
+                        LearningFeedbackCard(feedback: feedback)
+                    }
+
+                    if let summary {
+                        SessionSummaryPanel(summary: summary)
+                    }
+
+                    if finished {
+                        PracticeSavedHint()
+                    }
                 }
+                .padding(.bottom, 4)
+            }
+
+            Button(finished ? "Practice again" : "Save session") {
+                handlePrimaryAction()
             }
             .buttonStyle(PrimaryButtonStyle())
+            .accessibilityIdentifier("free-talk-primary-action")
         }
         .padding(20)
         .background(Color.appBackground.ignoresSafeArea())
         .navigationTitle("Free Talk")
+        .toolbar(.hidden, for: .tabBar)
+        .accessibilityIdentifier("free-talk-session")
+    }
+
+    private func handlePrimaryAction() {
+        if finished {
+            finished = false
+            summary = nil
+            feedback = nil
+        } else {
+            let result = state.recordConversationSession(
+                title: "Free Talk",
+                detail: "Open speaking session",
+                minutes: 5,
+                transcript: mockTranscript,
+                strongPhrases: ["How about you?", "I usually study English at night."],
+                weakPhrases: ["I study English in night."],
+                prompt: prompt
+            )
+            summary = result.summary
+            feedback = result.feedback
+            finished = true
+        }
     }
 }
 
@@ -764,6 +811,7 @@ private struct RoleplayDetailView: View {
     @ObservedObject var state: LearningState
     @State private var completed = false
     @State private var summary: LearningSessionSummary?
+    @State private var feedback: LearningFeedback?
 
     var body: some View {
         ScrollView {
@@ -782,19 +830,14 @@ private struct RoleplayDetailView: View {
                     state.toggleFavorite(roleplay)
                 }
                 .buttonStyle(SecondaryButtonStyle())
-                Button(completed ? "Session saved" : "Start situation") {
-                    state.recordConversationSession(
-                        title: roleplay.title,
-                        detail: roleplay.setting,
-                        minutes: roleplay.minutes,
-                        transcript: roleplay.lines.map(\.text).joined(separator: " "),
-                        strongPhrases: roleplay.lines.prefix(1).map(\.text),
-                        weakPhrases: roleplay.lines.dropFirst().prefix(1).map(\.text)
-                    )
-                    summary = state.sessionSummaries.first
-                    completed = true
+                Button(completed ? "Practice again" : "Start situation") {
+                    handlePrimaryAction()
                 }
                 .buttonStyle(PrimaryButtonStyle())
+                .accessibilityIdentifier("roleplay-primary-action")
+                if let feedback {
+                    LearningFeedbackCard(feedback: feedback)
+                }
                 if let summary {
                     SessionSummaryPanel(summary: summary)
                 }
@@ -806,6 +849,29 @@ private struct RoleplayDetailView: View {
         }
         .background(Color.appBackground.ignoresSafeArea())
         .navigationTitle("Situation")
+        .toolbar(.hidden, for: .tabBar)
+        .accessibilityIdentifier("roleplay-detail")
+    }
+
+    private func handlePrimaryAction() {
+        if completed {
+            completed = false
+            summary = nil
+            feedback = nil
+        } else {
+            let result = state.recordConversationSession(
+                title: roleplay.title,
+                detail: roleplay.setting,
+                minutes: roleplay.minutes,
+                transcript: roleplay.lines.map(\.text).joined(separator: " "),
+                strongPhrases: roleplay.lines.prefix(1).map(\.text),
+                weakPhrases: roleplay.lines.dropFirst().prefix(1).map(\.text),
+                prompt: "Roleplay at \(roleplay.setting): \(roleplay.subtitle)"
+            )
+            summary = result.summary
+            feedback = result.feedback
+            completed = true
+        }
     }
 }
 
@@ -961,7 +1027,7 @@ private struct SmartReviewView: View {
     }
 
     private func advanceReview() {
-        index = min(index + 1, max(items.count - 1, 0))
+        index = min(index, max(items.count - 1, 0))
         showAnswer = false
     }
 }
@@ -1395,9 +1461,10 @@ struct SectionHeader: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(title)
-                .font(.title2.weight(.bold))
+                .font(.headline.weight(.bold))
+                .foregroundStyle(Color.converlaxInk)
             Text(subtitle)
-                .font(.subheadline)
+                .font(.footnote)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1412,28 +1479,36 @@ struct HeroActionCard: View {
     var asset: ConverlaxAssetKind? = nil
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(alignment: .center, spacing: 16) {
             if let asset {
-                ConverlaxAssetBadge(kind: asset, size: 62)
+                ConverlaxAssetBadge(kind: asset, size: 70)
             } else {
                 AvatarBadge(symbol: symbol, color: color)
-                    .frame(width: 54, height: 54)
+                    .frame(width: 58, height: 58)
             }
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.headline.weight(.bold))
+                    .font(.title3.weight(.bold))
                     .foregroundStyle(.primary)
+                    .lineLimit(2)
                 Text(subtitle)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
             Image(systemName: "chevron.right")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.secondary)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(color)
         }
+        .frame(maxWidth: .infinity, minHeight: 104, alignment: .leading)
         .padding(18)
-        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(color.opacity(0.09), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(color.opacity(0.2), lineWidth: 1)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
 
@@ -1444,21 +1519,23 @@ private struct MiniFlowCard: View {
     var asset: ConverlaxAssetKind? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if let asset {
-                ConverlaxAssetBadge(kind: asset, size: 52)
-            } else {
-                AvatarBadge(symbol: symbol, color: color)
-                    .frame(width: 42, height: 42)
-            }
+        HStack(spacing: 12) {
+            AvatarBadge(symbol: symbol, color: color)
+                .frame(width: 36, height: 36)
             Text(title)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            if asset != nil {
+                Image(systemName: "sparkle")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(color.opacity(0.8))
+                    .accessibilityHidden(true)
+            }
         }
-        .padding(16)
-        .frame(minHeight: 116)
-        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(.horizontal, 14)
+        .frame(minHeight: 54)
+        .background(Color.claySurface.opacity(0.62), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
@@ -1475,30 +1552,40 @@ private struct RoleplayRow: View {
     let favorite: Bool
 
     var body: some View {
-        HStack(spacing: 14) {
-            ConverlaxAssetBadge(kind: roleplay.isCommunity ? .community : .roleplay, size: 52)
-                .frame(width: 46, height: 46)
+        HStack(spacing: 12) {
+            AvatarBadge(symbol: roleplay.isCommunity ? "person.3.fill" : "person.2.wave.2.fill", color: roleplay.isCommunity ? .violetAccent : .primaryBlue)
+                .frame(width: 38, height: 38)
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text(roleplay.title)
-                        .font(.headline.weight(.semibold))
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
+                        .lineLimit(1)
                     if favorite {
                         Image(systemName: "star.fill")
+                            .font(.caption.weight(.semibold))
                             .foregroundStyle(Color.warmAmber)
                     }
                 }
                 Text(roleplay.subtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .lineLimit(2)
             }
             Spacer()
             Text(roleplay.difficulty.code)
                 .font(.caption.weight(.bold))
                 .foregroundStyle(.secondary)
         }
-        .padding(16)
-        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .frame(minHeight: 58)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Color.claySurface.opacity(0.62), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.clayStroke.opacity(0.65), lineWidth: 1)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
@@ -1563,26 +1650,27 @@ private struct SettingsLikeRow: View {
     var asset: ConverlaxAssetKind? = nil
 
     var body: some View {
-        HStack(spacing: 14) {
-            if let asset {
-                ConverlaxAssetBadge(kind: asset, size: 48)
-            } else {
-                AvatarBadge(symbol: symbol, color: .primaryBlue)
-                    .frame(width: 40, height: 40)
-            }
+        HStack(spacing: 12) {
+            AvatarBadge(symbol: symbol, color: .primaryBlue)
+                .frame(width: 36, height: 36)
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
+                    .lineLimit(1)
                 Text(subtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .lineLimit(2)
             }
             Spacer()
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(.secondary)
         }
-        .padding(14)
+        .frame(minHeight: 56)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .contentShape(Rectangle())
     }
 }

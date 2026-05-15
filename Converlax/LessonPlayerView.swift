@@ -35,22 +35,24 @@ struct LessonPlayerView: View {
                     }
                     .buttonStyle(PrimaryButtonStyle())
                 } else {
-                    LessonStepCard(
-                        step: step,
-                        selectedAnswer: $selectedAnswer,
-                        checked: checked,
-                        accent: lesson.accent.color,
-                        savedCurrentLine: savedCurrentLine,
-                        feedback: feedback,
-                        speechPhase: speechPhase,
-                        transcript: transcript,
-                        speechFeedback: speechFeedback,
-                        onSaveLine: saveCurrentLine,
-                        onSpeechPrimary: advanceSpeechState,
-                        onSpeechCancel: cancelSpeech
-                    )
-
-                    Spacer()
+                    ScrollView {
+                        LessonStepCard(
+                            step: step,
+                            selectedAnswer: $selectedAnswer,
+                            checked: checked,
+                            accent: lesson.accent.color,
+                            savedCurrentLine: savedCurrentLine,
+                            feedback: feedback,
+                            speechPhase: speechPhase,
+                            transcript: transcript,
+                            speechFeedback: speechFeedback,
+                            onSaveLine: saveCurrentLine,
+                            onSpeechPrimary: advanceSpeechState,
+                            onSpeechCancel: cancelSpeech
+                        )
+                        .padding(.bottom, 18)
+                    }
+                    .scrollIndicators(.hidden)
 
                     Button(action: advance) {
                         Text(buttonTitle)
@@ -59,10 +61,13 @@ struct LessonPlayerView: View {
                     .disabled(!canAdvance)
                 }
             }
-            .padding(20)
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 104)
         }
         .navigationTitle(lesson.title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -148,7 +153,17 @@ struct LessonPlayerView: View {
             speechPhase = .recording
         case .recording:
             transcript = step.prompt.replacingOccurrences(of: "...", with: "coffee")
-            speechPhase = .transcript
+            if transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                speechPhase = .error
+            } else {
+                speechFeedback = state.acceptSpeechPractice(
+                    lesson: lesson,
+                    step: step,
+                    transcript: transcript,
+                    mode: "Speaking practice"
+                )
+                speechPhase = .feedback
+            }
         case .processing:
             break
         case .transcript:
@@ -310,7 +325,7 @@ struct LessonModePlayerView: View {
                             LessonModeHeader(mode: mode, lesson: lesson, stepIndex: stepIndex, stepCount: modeSteps.count)
                             modeStepContent
                         }
-                        .padding(.bottom, 6)
+                        .padding(.bottom, currentInteraction == .speech ? 108 : 20)
                     }
                     .scrollIndicators(.hidden)
 
@@ -327,6 +342,7 @@ struct LessonModePlayerView: View {
         }
         .navigationTitle(mode.title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -471,7 +487,17 @@ struct LessonModePlayerView: View {
             speechPhase = .recording
         case .recording:
             transcript = mockTranscript(for: step)
-            speechPhase = .transcript
+            if transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                speechPhase = .error
+            } else {
+                speechFeedback = state.acceptSpeechPractice(
+                    lesson: lesson,
+                    step: step,
+                    transcript: transcript,
+                    mode: mode.modeName
+                )
+                speechPhase = .feedback
+            }
         case .processing:
             break
         case .transcript:

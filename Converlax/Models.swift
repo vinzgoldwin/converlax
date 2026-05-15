@@ -56,7 +56,10 @@ enum HomeRoute: Hashable {
     static var launchDefaultPath: [HomeRoute] {
         let arguments = ProcessInfo.processInfo.arguments
         let launchLanguage: TargetLanguage = arguments.contains("-ConverlaxUseEnglishContent") ? .english : .french
-        let launchLesson = BeginnerContent.lessons(for: launchLanguage).first ?? BeginnerContent.lessons[0]
+        let launchLessonID = arguments.firstIndex(of: "-ConverlaxInitialLessonID").flatMap { idIndex in
+            arguments.indices.contains(idIndex + 1) ? arguments[idIndex + 1] : nil
+        }
+        let launchLesson = launchLessonID.flatMap(BeginnerContent.lesson(id:)) ?? BeginnerContent.lessons(for: launchLanguage).first ?? BeginnerContent.lessons[0]
         guard
             let flagIndex = arguments.firstIndex(of: "-ConverlaxInitialHomeRoute"),
             arguments.indices.contains(flagIndex + 1)
@@ -279,7 +282,7 @@ enum TargetLanguage: String, CaseIterable, Codable, Identifiable {
 
     var unitDescription: String {
         switch self {
-        case .english: "A complete starter unit for introductions, small talk, cafes, directions, and daily conversation."
+        case .english: "A complete starter unit for introductions, small talk, cafes, directions, help, plans, routines, shopping, and work."
         case .french: "A complete starter unit for greetings, cafe orders, directions, and hotel check-in."
         case .spanish, .italian: "This course path is not available yet."
         }
@@ -412,12 +415,97 @@ struct LearningFeedback: Codable, Hashable, Identifiable {
     let fluency: Int
     let meaning: Int
     let confidence: Int
+    let promptText: String
+    let attemptedText: String
     let correction: String
     let betterPhrase: String
+    let pronunciationTip: String
+    let claritySignal: String
+    let savedTakeaway: String
+    let nextAction: String
     let createdDay: String
 
     var averageScore: Int {
         (pronunciation + grammar + vocabulary + fluency + meaning) / 5
+    }
+
+    init(
+        id: String,
+        source: String,
+        pronunciation: Int,
+        grammar: Int,
+        vocabulary: Int,
+        fluency: Int,
+        meaning: Int,
+        confidence: Int,
+        promptText: String = "",
+        attemptedText: String = "",
+        correction: String,
+        betterPhrase: String,
+        pronunciationTip: String = "Say the sentence in one smooth breath and keep the final word clear.",
+        claritySignal: String = "",
+        savedTakeaway: String = "",
+        nextAction: String = "Try one more spoken attempt.",
+        createdDay: String
+    ) {
+        self.id = id
+        self.source = source
+        self.pronunciation = pronunciation
+        self.grammar = grammar
+        self.vocabulary = vocabulary
+        self.fluency = fluency
+        self.meaning = meaning
+        self.confidence = confidence
+        self.promptText = promptText
+        self.attemptedText = attemptedText
+        self.correction = correction
+        self.betterPhrase = betterPhrase
+        self.pronunciationTip = pronunciationTip
+        self.claritySignal = claritySignal
+        self.savedTakeaway = savedTakeaway
+        self.nextAction = nextAction
+        self.createdDay = createdDay
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case source
+        case pronunciation
+        case grammar
+        case vocabulary
+        case fluency
+        case meaning
+        case confidence
+        case promptText
+        case attemptedText
+        case correction
+        case betterPhrase
+        case pronunciationTip
+        case claritySignal
+        case savedTakeaway
+        case nextAction
+        case createdDay
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        source = try container.decode(String.self, forKey: .source)
+        pronunciation = try container.decode(Int.self, forKey: .pronunciation)
+        grammar = try container.decode(Int.self, forKey: .grammar)
+        vocabulary = try container.decode(Int.self, forKey: .vocabulary)
+        fluency = try container.decode(Int.self, forKey: .fluency)
+        meaning = try container.decode(Int.self, forKey: .meaning)
+        confidence = try container.decode(Int.self, forKey: .confidence)
+        promptText = try container.decodeIfPresent(String.self, forKey: .promptText) ?? ""
+        attemptedText = try container.decodeIfPresent(String.self, forKey: .attemptedText) ?? ""
+        correction = try container.decode(String.self, forKey: .correction)
+        betterPhrase = try container.decode(String.self, forKey: .betterPhrase)
+        pronunciationTip = try container.decodeIfPresent(String.self, forKey: .pronunciationTip) ?? "Say the sentence in one smooth breath and keep the final word clear."
+        claritySignal = try container.decodeIfPresent(String.self, forKey: .claritySignal) ?? ""
+        savedTakeaway = try container.decodeIfPresent(String.self, forKey: .savedTakeaway) ?? betterPhrase
+        nextAction = try container.decodeIfPresent(String.self, forKey: .nextAction) ?? "Try one more spoken attempt."
+        createdDay = try container.decode(String.self, forKey: .createdDay)
     }
 }
 
@@ -515,6 +603,13 @@ struct ReviewItem: Codable, Hashable, Identifiable {
     let source: String
     var dueLabel: String = "Today"
     var confidence: Int = 70
+}
+
+struct NextLearningRecommendation: Equatable {
+    let title: String
+    let detail: String
+    let reason: String
+    let symbol: String
 }
 
 struct LessonStep: Codable, Hashable, Identifiable {

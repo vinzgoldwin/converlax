@@ -42,202 +42,210 @@ enum BeginnerContent {
             id: "english-introductions",
             unit: 1,
             title: "Introduce yourself",
-            subtitle: "Name, country, and reason for learning",
+            subtitle: "Say your name, where you are from, and why you are learning",
             icon: "person.wave.2.fill",
             accent: .blue,
             minutes: 4,
             steps: [
-                LessonStep(id: "english-intro-1", kind: .teach, title: "Start naturally", prompt: "Hi, I'm Kevin. Nice to meet you.", helper: "Use this in casual introductions and first meetings.", choices: [], correctAnswer: nil),
-                LessonStep(id: "english-intro-2", kind: .speak, title: "Say it out loud", prompt: "Hi, I'm ... Nice to meet you.", helper: "Replace the blank with your name.", choices: [], correctAnswer: nil),
-                LessonStep(id: "english-intro-3", kind: .choice, title: "Choose the best reply", prompt: "Nice to meet you.", helper: "Pick the most natural response.", choices: ["Nice to meet you too.", "I am going to meet you.", "Meet me nice."], correctAnswer: "Nice to meet you too.")
+                LessonStep(id: "english-intro-1", kind: .teach, title: "Start with your name", prompt: "Hi, I'm Maya. Nice to meet you.", helper: "Use this for first meetings, class, travel, or work.", choices: [], correctAnswer: nil),
+                LessonStep(id: "english-intro-2", kind: .choice, title: "Reply naturally", prompt: "Nice to meet you.", helper: "Choose the response a real person would say.", choices: ["Nice to meet you too.", "I meet you nice.", "You are meet."], correctAnswer: "Nice to meet you too."),
+                LessonStep(id: "english-intro-3", kind: .speak, title: "Add where you are from", prompt: "I'm from Indonesia.", helper: "Change Indonesia to your country or city.", choices: [], correctAnswer: nil),
+                LessonStep(id: "english-intro-4", kind: .speak, title: "Say your reason", prompt: "I'm learning English for travel and work.", helper: "Keep the reason short: for travel, for work, or for my studies.", choices: [], correctAnswer: nil)
             ],
             savedWords: [
-                SavedWord(term: "nice to meet you", translation: "a polite first-meeting phrase", example: "Hi, I'm Maya. Nice to meet you."),
-                SavedWord(term: "I'm from", translation: "use this to say your country or city", example: "I'm from Indonesia.")
+                SavedWord(term: "nice to meet you", translation: "polite phrase for a first meeting", example: "Hi, I'm Maya. Nice to meet you."),
+                SavedWord(term: "I'm from", translation: "use this to say your country or city", example: "I'm from Indonesia."),
+                SavedWord(term: "I'm learning English for", translation: "use this to explain your reason", example: "I'm learning English for travel and work.")
             ]
         ),
         BeginnerLesson(
             id: "english-small-talk",
             unit: 1,
-            title: "Start small talk",
-            subtitle: "Ask how someone is doing",
+            title: "Greet and make small talk",
+            subtitle: "Start a friendly check-in and ask back",
             icon: "bubble.left.fill",
             accent: .mint,
-            minutes: 3,
+            minutes: 4,
             steps: [
-                LessonStep(id: "english-talk-1", kind: .teach, title: "Simple check-in", prompt: "How's your day going?", helper: "A friendly question for casual conversation.", choices: [], correctAnswer: nil),
-                LessonStep(id: "english-talk-2", kind: .choice, title: "Pick the natural answer", prompt: "How's your day going?", helper: "Choose the response that sounds natural.", choices: ["Pretty good, thanks.", "It is going day.", "I am day fine."], correctAnswer: "Pretty good, thanks."),
-                LessonStep(id: "english-talk-3", kind: .speak, title: "Short exchange", prompt: "Pretty good, thanks. How about you?", helper: "This keeps the conversation moving.", choices: [], correctAnswer: nil)
+                LessonStep(id: "english-talk-1", kind: .teach, title: "Open the conversation", prompt: "Hi, how's your day going?", helper: "A relaxed greeting for classmates, neighbors, or coworkers.", choices: [], correctAnswer: nil),
+                LessonStep(id: "english-talk-2", kind: .choice, title: "Answer casually", prompt: "How's your day going?", helper: "Choose the answer that sounds natural.", choices: ["Pretty good, thanks.", "It is going day.", "I am day fine."], correctAnswer: "Pretty good, thanks."),
+                LessonStep(id: "english-talk-3", kind: .speak, title: "Ask back", prompt: "Pretty good, thanks. How about you?", helper: "Ask back so the conversation does not stop.", choices: [], correctAnswer: nil),
+                LessonStep(id: "english-talk-4", kind: .choice, title: "Close politely", prompt: "I have to go now.", helper: "Pick a friendly closing line.", choices: ["It was nice talking to you.", "I go nice.", "Talk is finished good."], correctAnswer: "It was nice talking to you.")
             ],
             savedWords: [
-                SavedWord(term: "how's your day going", translation: "a friendly check-in", example: "How's your day going?"),
-                SavedWord(term: "how about you", translation: "ask the same question back", example: "I'm doing well. How about you?")
+                SavedWord(term: "how's your day going", translation: "friendly question about someone's day", example: "Hi, how's your day going?"),
+                SavedWord(term: "pretty good, thanks", translation: "natural short answer when you feel okay", example: "Pretty good, thanks. How about you?"),
+                SavedWord(term: "how about you", translation: "ask the same question back", example: "I'm doing well. How about you?"),
+                SavedWord(term: "it was nice talking to you", translation: "polite way to end a short chat", example: "I have to go. It was nice talking to you.")
             ]
         ),
         BeginnerLesson(
             id: "english-ordering",
             unit: 1,
             title: "Order at a cafe",
-            subtitle: "Ask politely for food or drinks",
+            subtitle: "Order a drink, add a size, and answer the barista",
             icon: "cup.and.saucer.fill",
             accent: .amber,
             minutes: 5,
             steps: [
-                LessonStep(id: "english-cafe-1", kind: .teach, title: "Polite request", prompt: "Could I have a coffee, please?", helper: "Could I have is polite and useful in cafes.", choices: [], correctAnswer: nil),
-                LessonStep(id: "english-cafe-2", kind: .choice, title: "Choose the polite request", prompt: "You want tea.", helper: "Pick the best sentence.", choices: ["Could I have a tea, please?", "I tea now.", "Give tea to me."], correctAnswer: "Could I have a tea, please?"),
-                LessonStep(id: "english-cafe-3", kind: .speak, title: "Make it yours", prompt: "Could I have ..., please?", helper: "Try coffee, tea, water, or a sandwich.", choices: [], correctAnswer: nil)
+                LessonStep(id: "english-cafe-1", kind: .teach, title: "Make a polite order", prompt: "Could I have a small coffee, please?", helper: "Could I have is polite and useful in cafes and shops.", choices: [], correctAnswer: nil),
+                LessonStep(id: "english-cafe-2", kind: .choice, title: "Choose the polite request", prompt: "You want tea.", helper: "Pick the sentence that sounds ready to use.", choices: ["Could I have a tea, please?", "I tea now.", "Give tea to me."], correctAnswer: "Could I have a tea, please?"),
+                LessonStep(id: "english-cafe-3", kind: .speak, title: "Make it yours", prompt: "Could I have a medium latte, please?", helper: "Swap medium latte for water, tea, coffee, or a sandwich.", choices: [], correctAnswer: nil),
+                LessonStep(id: "english-cafe-4", kind: .choice, title: "Answer the barista", prompt: "Anything else?", helper: "Choose the short answer you can say at the counter.", choices: ["No, that's all. Thank you.", "Else no all.", "Coffee is finished."], correctAnswer: "No, that's all. Thank you.")
             ],
             savedWords: [
-                SavedWord(term: "could I have", translation: "polite way to ask for something", example: "Could I have a coffee, please?"),
-                SavedWord(term: "please", translation: "adds politeness to a request", example: "Could I have some water, please?")
+                SavedWord(term: "could I have", translation: "polite way to ask for something", example: "Could I have a small coffee, please?"),
+                SavedWord(term: "for here or to go", translation: "barista question about where you will drink or eat", example: "For here or to go?"),
+                SavedWord(term: "no, that's all", translation: "say this when you do not want anything else", example: "No, that's all. Thank you.")
             ]
         ),
         BeginnerLesson(
             id: "english-directions",
             unit: 1,
             title: "Ask for directions",
-            subtitle: "Find a place in the city",
+            subtitle: "Find a place and understand simple directions",
             icon: "map.fill",
             accent: .violet,
             minutes: 4,
             steps: [
-                LessonStep(id: "english-directions-1", kind: .teach, title: "Find a place", prompt: "Excuse me, where is the station?", helper: "Start with excuse me to sound polite.", choices: [], correctAnswer: nil),
-                LessonStep(id: "english-directions-2", kind: .choice, title: "Choose the meaning", prompt: "Where is the station?", helper: "What is the speaker asking for?", choices: ["They want to find the station.", "They want to buy a ticket.", "They work at the station."], correctAnswer: "They want to find the station."),
-                LessonStep(id: "english-directions-3", kind: .speak, title: "Ask clearly", prompt: "Excuse me, where is the nearest station?", helper: "Nearest means closest to you.", choices: [], correctAnswer: nil)
+                LessonStep(id: "english-directions-1", kind: .teach, title: "Ask politely", prompt: "Excuse me, where is the nearest station?", helper: "Start with excuse me when you need a stranger's attention.", choices: [], correctAnswer: nil),
+                LessonStep(id: "english-directions-2", kind: .choice, title: "Check the meaning", prompt: "nearest", helper: "What does nearest mean?", choices: ["closest", "most expensive", "closed"], correctAnswer: "closest"),
+                LessonStep(id: "english-directions-3", kind: .speak, title: "Change the place", prompt: "Excuse me, where is the nearest bus stop?", helper: "Swap bus stop for station, cafe, pharmacy, or restroom.", choices: [], correctAnswer: nil),
+                LessonStep(id: "english-directions-4", kind: .choice, title: "Understand the answer", prompt: "Go straight and turn left.", helper: "Choose the meaning of the direction.", choices: ["Walk ahead, then go left.", "Stop here and wait.", "Buy a ticket first."], correctAnswer: "Walk ahead, then go left.")
             ],
             savedWords: [
                 SavedWord(term: "excuse me", translation: "polite way to get attention", example: "Excuse me, where is the station?"),
-                SavedWord(term: "nearest", translation: "closest", example: "Where is the nearest cafe?")
+                SavedWord(term: "where is the nearest", translation: "ask for the closest place", example: "Where is the nearest cafe?"),
+                SavedWord(term: "turn left", translation: "go to the left side", example: "Go straight and turn left.")
             ]
         ),
         BeginnerLesson(
-            id: "english-work-chat",
+            id: "english-ask-for-help",
             unit: 1,
-            title: "Talk about work",
-            subtitle: "Say what you do and ask back",
-            icon: "briefcase.fill",
+            title: "Ask for help or clarification",
+            subtitle: "Ask someone to repeat, slow down, or help with a problem",
+            icon: "questionmark.circle.fill",
             accent: .blue,
             minutes: 5,
             steps: [
-                LessonStep(id: "english-work-1", kind: .teach, title: "Your role", prompt: "I work in design.", helper: "Use I work in plus your field.", choices: [], correctAnswer: nil),
-                LessonStep(id: "english-work-2", kind: .choice, title: "Fill the blank", prompt: "I ___ in marketing.", helper: "Choose the missing word.", choices: ["work", "am", "do"], correctAnswer: "work"),
-                LessonStep(id: "english-work-3", kind: .speak, title: "Ask back", prompt: "What do you do?", helper: "This asks about someone's job or work.", choices: [], correctAnswer: nil)
+                LessonStep(id: "english-help-1", kind: .teach, title: "Ask for help", prompt: "Could you help me, please?", helper: "Use could you for polite requests to another person.", choices: [], correctAnswer: nil),
+                LessonStep(id: "english-help-2", kind: .choice, title: "Ask them to repeat", prompt: "You did not understand.", helper: "Choose the useful clarification question.", choices: ["Could you say that again, please?", "You say again me?", "Again word please me."], correctAnswer: "Could you say that again, please?"),
+                LessonStep(id: "english-help-3", kind: .speak, title: "Ask for slower speech", prompt: "Sorry, could you speak more slowly?", helper: "This helps when someone speaks too fast.", choices: [], correctAnswer: nil),
+                LessonStep(id: "english-help-4", kind: .choice, title: "Explain the problem", prompt: "Your phone has no battery.", helper: "Pick the clear sentence.", choices: ["My phone is out of battery.", "My phone no energy.", "Phone finish battery."], correctAnswer: "My phone is out of battery.")
             ],
             savedWords: [
-                SavedWord(term: "I work in", translation: "say your field or industry", example: "I work in marketing."),
-                SavedWord(term: "what do you do", translation: "ask about someone's job", example: "What do you do?")
-            ]
-        ),
-        BeginnerLesson(
-            id: "english-daily-routine",
-            unit: 1,
-            title: "Describe your routine",
-            subtitle: "Talk about everyday habits",
-            icon: "clock.fill",
-            accent: .mint,
-            minutes: 5,
-            steps: [
-                LessonStep(id: "english-routine-1", kind: .teach, title: "Daily habits", prompt: "I usually wake up at seven.", helper: "Use usually for something you do most days.", choices: [], correctAnswer: nil),
-                LessonStep(id: "english-routine-2", kind: .choice, title: "Choose the natural sentence", prompt: "You want to describe your morning.", helper: "Pick the sentence that sounds natural.", choices: ["I usually wake up at seven.", "I wake usually at seven.", "I am wake at seven."], correctAnswer: "I usually wake up at seven."),
-                LessonStep(id: "english-routine-3", kind: .speak, title: "Make it personal", prompt: "I usually ... before work.", helper: "Try: drink coffee, check messages, or study English.", choices: [], correctAnswer: nil)
-            ],
-            savedWords: [
-                SavedWord(term: "usually", translation: "most days; normally", example: "I usually study English at night."),
-                SavedWord(term: "before work", translation: "earlier than work starts", example: "I usually drink coffee before work.")
-            ]
-        ),
-        BeginnerLesson(
-            id: "english-shopping-prices",
-            unit: 1,
-            title: "Shop and ask prices",
-            subtitle: "Ask how much something costs",
-            icon: "bag.fill",
-            accent: .amber,
-            minutes: 5,
-            steps: [
-                LessonStep(id: "english-shopping-1", kind: .teach, title: "Ask the price", prompt: "How much is this?", helper: "Use this when you are holding or pointing at one item.", choices: [], correctAnswer: nil),
-                LessonStep(id: "english-shopping-2", kind: .choice, title: "Pick the right question", prompt: "You want to know the price of a shirt.", helper: "Choose the most useful question.", choices: ["How much is this?", "How many this?", "How price this?"], correctAnswer: "How much is this?"),
-                LessonStep(id: "english-shopping-3", kind: .speak, title: "Add a request", prompt: "How much is this? Do you have a smaller size?", helper: "Smaller size can become larger size or another color.", choices: [], correctAnswer: nil)
-            ],
-            savedWords: [
-                SavedWord(term: "how much is this", translation: "ask for the price of one thing", example: "How much is this jacket?"),
-                SavedWord(term: "smaller size", translation: "a size that is less large", example: "Do you have a smaller size?")
+                SavedWord(term: "could you help me", translation: "polite way to ask for help", example: "Could you help me, please?"),
+                SavedWord(term: "could you say that again", translation: "ask someone to repeat", example: "Could you say that again, please?"),
+                SavedWord(term: "could you speak more slowly", translation: "ask someone to slow down", example: "Sorry, could you speak more slowly?"),
+                SavedWord(term: "out of battery", translation: "has no battery power left", example: "My phone is out of battery.")
             ]
         ),
         BeginnerLesson(
             id: "english-making-plans",
             unit: 1,
             title: "Make plans",
-            subtitle: "Suggest a time and confirm",
+            subtitle: "Suggest a time, place, and confirm the plan",
             icon: "calendar.badge.plus",
             accent: .violet,
             minutes: 5,
             steps: [
-                LessonStep(id: "english-plans-1", kind: .teach, title: "Suggest a plan", prompt: "Would you like to meet at six?", helper: "Would you like to is a polite way to invite someone.", choices: [], correctAnswer: nil),
-                LessonStep(id: "english-plans-2", kind: .choice, title: "Choose the polite invitation", prompt: "Invite someone to dinner.", helper: "Pick the sentence that sounds friendly and natural.", choices: ["Would you like to have dinner?", "You dinner with me now?", "Dinner you like?"], correctAnswer: "Would you like to have dinner?"),
-                LessonStep(id: "english-plans-3", kind: .speak, title: "Confirm details", prompt: "Great. Let's meet at six near the station.", helper: "Use let's to suggest doing something together.", choices: [], correctAnswer: nil)
+                LessonStep(id: "english-plans-1", kind: .teach, title: "Suggest a plan", prompt: "Would you like to meet tomorrow?", helper: "Would you like to is a polite way to invite someone.", choices: [], correctAnswer: nil),
+                LessonStep(id: "english-plans-2", kind: .choice, title: "Invite someone", prompt: "Invite someone for coffee.", helper: "Pick the friendly invitation.", choices: ["Would you like to get coffee?", "You coffee with me now?", "Coffee you like meet?"], correctAnswer: "Would you like to get coffee?"),
+                LessonStep(id: "english-plans-3", kind: .speak, title: "Add time and place", prompt: "Let's meet at six near the station.", helper: "This reuses the directions lesson and makes the plan specific.", choices: [], correctAnswer: nil),
+                LessonStep(id: "english-plans-4", kind: .choice, title: "Confirm the time", prompt: "Does six work for you?", helper: "Choose the natural yes response.", choices: ["Yes, that works for me.", "Six works me yes.", "I am six good."], correctAnswer: "Yes, that works for me.")
             ],
             savedWords: [
-                SavedWord(term: "would you like to", translation: "polite invitation phrase", example: "Would you like to meet tomorrow?"),
-                SavedWord(term: "let's meet", translation: "suggest a meeting", example: "Let's meet near the station.")
+                SavedWord(term: "would you like to", translation: "polite way to invite someone", example: "Would you like to meet tomorrow?"),
+                SavedWord(term: "let's meet at", translation: "suggest a meeting time or place", example: "Let's meet at six near the station."),
+                SavedWord(term: "does six work for you", translation: "ask if the time is okay", example: "Does six work for you?"),
+                SavedWord(term: "that works for me", translation: "say a plan is okay", example: "Yes, that works for me.")
             ]
         ),
         BeginnerLesson(
-            id: "english-ask-for-help",
+            id: "english-daily-routine",
             unit: 1,
-            title: "Ask for help",
-            subtitle: "Explain a problem simply",
-            icon: "questionmark.circle.fill",
-            accent: .blue,
-            minutes: 4,
-            steps: [
-                LessonStep(id: "english-help-1", kind: .teach, title: "Polite help request", prompt: "Could you help me, please?", helper: "Use could you for polite requests to another person.", choices: [], correctAnswer: nil),
-                LessonStep(id: "english-help-2", kind: .choice, title: "Choose the clear problem", prompt: "Your phone has no battery.", helper: "Pick the sentence that explains the problem.", choices: ["My phone is out of battery.", "My phone no energy.", "Phone finish battery."], correctAnswer: "My phone is out of battery."),
-                LessonStep(id: "english-help-3", kind: .speak, title: "Ask and explain", prompt: "Could you help me, please? My phone is out of battery.", helper: "Say the request first, then explain the problem.", choices: [], correctAnswer: nil)
-            ],
-            savedWords: [
-                SavedWord(term: "could you help me", translation: "polite way to ask for help", example: "Could you help me, please?"),
-                SavedWord(term: "out of battery", translation: "has no battery power left", example: "My phone is out of battery.")
-            ]
-        ),
-        BeginnerLesson(
-            id: "english-health-help",
-            unit: 1,
-            title: "Say what hurts",
-            subtitle: "Ask for basic health help",
-            icon: "cross.case.fill",
+            title: "Talk about daily routine",
+            subtitle: "Say what you usually do before and after work",
+            icon: "clock.fill",
             accent: .mint,
-            minutes: 4,
+            minutes: 5,
             steps: [
-                LessonStep(id: "english-health-1", kind: .teach, title: "Simple symptom", prompt: "I have a headache.", helper: "Use I have a plus symptom for common health problems.", choices: [], correctAnswer: nil),
-                LessonStep(id: "english-health-2", kind: .choice, title: "Pick the natural symptom", prompt: "You feel pain in your head.", helper: "Choose the common English phrase.", choices: ["I have a headache.", "I am head pain.", "My head is have hurt."], correctAnswer: "I have a headache."),
-                LessonStep(id: "english-health-3", kind: .speak, title: "Ask for a pharmacy", prompt: "I have a headache. Is there a pharmacy nearby?", helper: "Nearby means close to your current location.", choices: [], correctAnswer: nil)
+                LessonStep(id: "english-routine-1", kind: .teach, title: "Daily habits", prompt: "I usually wake up at seven.", helper: "Use usually for something you do most days.", choices: [], correctAnswer: nil),
+                LessonStep(id: "english-routine-2", kind: .choice, title: "Choose the natural sentence", prompt: "You want to describe your morning.", helper: "Pick the sentence that sounds natural.", choices: ["I usually wake up at seven.", "I wake usually at seven.", "I am wake at seven."], correctAnswer: "I usually wake up at seven."),
+                LessonStep(id: "english-routine-3", kind: .speak, title: "Make it personal", prompt: "I usually drink coffee before work.", helper: "Change drink coffee to check messages, exercise, or study English.", choices: [], correctAnswer: nil),
+                LessonStep(id: "english-routine-4", kind: .choice, title: "Answer a routine question", prompt: "What do you usually do after work?", helper: "Choose the beginner answer that sounds natural.", choices: ["I usually study English after work.", "I am after work study usually.", "After work is study me."], correctAnswer: "I usually study English after work.")
             ],
             savedWords: [
-                SavedWord(term: "headache", translation: "pain in your head", example: "I have a headache."),
-                SavedWord(term: "nearby", translation: "close to here", example: "Is there a pharmacy nearby?")
+                SavedWord(term: "I usually", translation: "start a sentence about a normal habit", example: "I usually study English at night."),
+                SavedWord(term: "before work", translation: "earlier than work starts", example: "I usually drink coffee before work."),
+                SavedWord(term: "after work", translation: "later than work ends", example: "I usually study English after work."),
+                SavedWord(term: "what do you usually do", translation: "ask about someone's regular habit", example: "What do you usually do after work?")
+            ]
+        ),
+        BeginnerLesson(
+            id: "english-shopping-prices",
+            unit: 1,
+            title: "Handle shopping and prices",
+            subtitle: "Ask the price, size, and payment question",
+            icon: "bag.fill",
+            accent: .amber,
+            minutes: 5,
+            steps: [
+                LessonStep(id: "english-shopping-1", kind: .teach, title: "Ask the price", prompt: "How much is this?", helper: "Use this when you are holding or pointing at one item.", choices: [], correctAnswer: nil),
+                LessonStep(id: "english-shopping-2", kind: .choice, title: "Pick the right question", prompt: "You want to know the price of a shirt.", helper: "Choose the most useful question.", choices: ["How much is this?", "How many this?", "How price this?"], correctAnswer: "How much is this?"),
+                LessonStep(id: "english-shopping-3", kind: .speak, title: "Ask for a size", prompt: "Do you have this in a smaller size?", helper: "Smaller can become larger, blue, black, or another color.", choices: [], correctAnswer: nil),
+                LessonStep(id: "english-shopping-4", kind: .choice, title: "Respond to the price", prompt: "The price is too high.", helper: "Pick the natural sentence.", choices: ["That's a little too expensive for me.", "Price very big for me.", "I am expensive no."], correctAnswer: "That's a little too expensive for me.")
+            ],
+            savedWords: [
+                SavedWord(term: "how much is this", translation: "ask for the price of one thing", example: "How much is this jacket?"),
+                SavedWord(term: "do you have this in", translation: "ask for a size or color", example: "Do you have this in a smaller size?"),
+                SavedWord(term: "too expensive for me", translation: "say the price is higher than you want", example: "That's a little too expensive for me."),
+                SavedWord(term: "can I pay by card", translation: "ask if card payment is okay", example: "Can I pay by card?")
+            ]
+        ),
+        BeginnerLesson(
+            id: "english-work-chat",
+            unit: 1,
+            title: "Introduce yourself at work",
+            subtitle: "Say your role and ask about another person's team",
+            icon: "briefcase.fill",
+            accent: .blue,
+            minutes: 5,
+            steps: [
+                LessonStep(id: "english-work-1", kind: .teach, title: "Say your role", prompt: "Hi, I'm Maya. I work in product.", helper: "Use I work in plus your field or team.", choices: [], correctAnswer: nil),
+                LessonStep(id: "english-work-2", kind: .speak, title: "Ask about their team", prompt: "What team are you on?", helper: "Use this to ask a coworker where they work in the company.", choices: [], correctAnswer: nil),
+                LessonStep(id: "english-work-3", kind: .speak, title: "Connect your work", prompt: "I work with the design team. What do you do?", helper: "This reuses What do you do? for a simple workplace chat.", choices: [], correctAnswer: nil),
+                LessonStep(id: "english-work-4", kind: .speak, title: "Close the introduction", prompt: "Nice to meet you. I look forward to working with you.", helper: "Use this when you meet a new teammate or join a new group.", choices: [], correctAnswer: nil)
+            ],
+            savedWords: [
+                SavedWord(term: "I work in", translation: "say your field, role, or team", example: "I work in product."),
+                SavedWord(term: "what team are you on", translation: "ask about someone's team at work", example: "What team are you on?"),
+                SavedWord(term: "I work with", translation: "say who you work with", example: "I work with the design team."),
+                SavedWord(term: "I look forward to working with you", translation: "polite workplace closing", example: "Nice to meet you. I look forward to working with you.")
             ]
         ),
         BeginnerLesson(
             id: "english-review",
             unit: 1,
-            title: "Conversation review",
-            subtitle: "One complete starter conversation",
+            title: "Review starter conversation",
+            subtitle: "Combine introductions, cafes, directions, help, plans, routine, shopping, and work",
             icon: "checkmark.seal.fill",
             accent: .mint,
             minutes: 8,
             steps: [
-                LessonStep(id: "english-review-1", kind: .teach, title: "Put it together", prompt: "Hi, I'm Kevin. Nice to meet you. How's your day going?", helper: "You can now start a simple English conversation.", choices: [], correctAnswer: nil),
-                LessonStep(id: "english-review-2", kind: .choice, title: "Cafe response", prompt: "Could I have a coffee, please?", helper: "What might the barista say?", choices: ["Sure. Anything else?", "I am coffee.", "Where is Kevin?"], correctAnswer: "Sure. Anything else?"),
-                LessonStep(id: "english-review-3", kind: .choice, title: "Plan details", prompt: "Would you like to meet at six?", helper: "Choose a natural reply.", choices: ["Yes, that works for me.", "Six is like meet.", "I am meeting six yes."], correctAnswer: "Yes, that works for me."),
-                LessonStep(id: "english-review-4", kind: .choice, title: "Ask for help", prompt: "My phone is out of battery.", helper: "Choose the useful follow-up request.", choices: ["Could you help me, please?", "Could you battery me?", "Help is phone."], correctAnswer: "Could you help me, please?"),
-                LessonStep(id: "english-review-5", kind: .speak, title: "Final speaking prompt", prompt: "Hi, I'm ... Nice to meet you. Would you like to meet at six?", helper: "Say the full exchange with your own name and a clear invitation.", choices: [], correctAnswer: nil)
+                LessonStep(id: "english-review-1", kind: .teach, title: "Put it together", prompt: "Hi, I'm Maya. Nice to meet you. How's your day going?", helper: "You can now open a simple conversation and keep it moving.", choices: [], correctAnswer: nil),
+                LessonStep(id: "english-review-2", kind: .choice, title: "Cafe exchange", prompt: "Could I have a small coffee, please?", helper: "What might the barista ask next?", choices: ["Sure. For here or to go?", "I am coffee.", "Where is Maya?"], correctAnswer: "Sure. For here or to go?"),
+                LessonStep(id: "english-review-3", kind: .choice, title: "Directions check", prompt: "Where is the nearest station?", helper: "Choose the answer that gives directions.", choices: ["Go straight and turn left.", "Nice to meet you too.", "No, that's all."], correctAnswer: "Go straight and turn left."),
+                LessonStep(id: "english-review-4", kind: .choice, title: "Clarify politely", prompt: "You did not understand the answer.", helper: "Choose the useful follow-up.", choices: ["Could you say that again, please?", "You answer again me.", "I no answer."], correctAnswer: "Could you say that again, please?"),
+                LessonStep(id: "english-review-5", kind: .choice, title: "Confirm plans", prompt: "Does six work for you?", helper: "Choose a natural reply.", choices: ["Yes, that works for me.", "Six is like meet.", "I am meeting six yes."], correctAnswer: "Yes, that works for me."),
+                LessonStep(id: "english-review-6", kind: .speak, title: "Final speaking prompt", prompt: "Hi, I'm ... Nice to meet you. I'm learning English for work. Could I have a coffee, please? Later, let's meet at six near the station.", helper: "Say the mini conversation with your own name and a clear plan.", choices: [], correctAnswer: nil)
             ],
             savedWords: [
-                SavedWord(term: "anything else", translation: "ask if someone wants more", example: "Sure. Anything else?"),
-                SavedWord(term: "that works for me", translation: "that plan is okay for me", example: "Yes, that works for me."),
-                SavedWord(term: "could you help me", translation: "polite way to ask for help", example: "Could you help me, please?"),
-                SavedWord(term: "pretty good", translation: "natural answer for how you are", example: "Pretty good, thanks.")
+                SavedWord(term: "for here or to go", translation: "cafe question about where you will drink or eat", example: "Sure. For here or to go?"),
+                SavedWord(term: "go straight and turn left", translation: "simple direction answer", example: "The station? Go straight and turn left."),
+                SavedWord(term: "could you say that again", translation: "ask someone to repeat", example: "Could you say that again, please?"),
+                SavedWord(term: "that works for me", translation: "say a plan is okay", example: "Yes, that works for me."),
+                SavedWord(term: "I look forward to working with you", translation: "polite workplace closing", example: "Nice to meet you. I look forward to working with you.")
             ]
         )
     ]
