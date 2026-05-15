@@ -326,7 +326,7 @@ enum BeginnerContent {
             steps: [
                 LessonStep(id: "hotel-1", kind: .teach, title: "At reception", prompt: "J'ai une reservation.", helper: "I have a reservation.", choices: [], correctAnswer: nil),
                 LessonStep(id: "hotel-2", kind: .choice, title: "Fill the blank", prompt: "J'ai ___ reservation.", helper: "Choose the missing word.", choices: ["une", "bonjour", "gare"], correctAnswer: "une"),
-                LessonStep(id: "hotel-3", kind: .speak, title: "Roleplay", prompt: "Bonjour, j'ai une reservation.", helper: "Then add your name: Je m'appelle ...", choices: [], correctAnswer: nil)
+                LessonStep(id: "hotel-3", kind: .speak, title: "Speak", prompt: "Bonjour, j'ai une reservation.", helper: "Then add your name: Je m'appelle ...", choices: [], correctAnswer: nil)
             ],
             savedWords: [
                 SavedWord(term: "j'ai", translation: "I have", example: "J'ai une reservation."),

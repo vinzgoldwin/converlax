@@ -303,7 +303,7 @@ final class LearningState: ObservableObject {
         var next = profile
         let correction = correct
             ? "Good answer. Keep the phrase active by reviewing it later."
-            : "Correct answer: \(step.correctAnswer ?? step.prompt). Save this as a mistake and retry it in Smart Review."
+            : "Correct answer: \(step.correctAnswer ?? step.prompt). Save this and review it again later."
         let feedback = mockFeedback(source: mode, correction: correction)
         addFeedback(feedback, in: &next)
         updateSkill(mode, title: mode, delta: 1, confidenceDelta: correct ? 4 : -3, in: &next)
@@ -483,7 +483,7 @@ final class LearningState: ObservableObject {
         } else {
             next.favoriteRoleplayIDs.insert(roleplay.id)
             prependActivity(
-                LearningActivity(id: "favorite-\(roleplay.id)", title: "Added to favorites", detail: roleplay.title, symbol: "star.fill", dateLabel: "Today"),
+                LearningActivity(id: "favorite-\(roleplay.id)", title: "Saved a situation", detail: roleplay.title, symbol: "star.fill", dateLabel: "Today"),
                 in: &next
             )
         }

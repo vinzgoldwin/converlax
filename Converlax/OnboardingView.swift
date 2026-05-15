@@ -4,9 +4,6 @@ struct OnboardingView: View {
     @ObservedObject var state: LearningState
     @State private var targetLanguage: TargetLanguage = .french
     @State private var selectedLevel: Level = .beginner
-    @State private var dailyGoal = 2
-    @State private var textMode = false
-    @State private var reminderEnabled = true
     @State private var step = 0
 
     var body: some View {
@@ -15,7 +12,7 @@ struct OnboardingView: View {
 
             VStack(alignment: .leading, spacing: 18) {
                 header
-                LessonProgressBar(progress: Double(step + 1) / 4)
+                LessonProgressBar(progress: Double(step + 1) / 3)
                 titleBlock
                 ConverlaxMascotView(state: mascotState, size: step == 0 ? 116 : 88)
                     .frame(maxWidth: .infinity)
@@ -25,16 +22,14 @@ struct OnboardingView: View {
                     introCards
                 } else if step == 1 {
                     languageChoices
-                } else if step == 2 {
-                    levelChoices
                 } else {
-                    preferenceChoices
+                    levelChoices
                 }
 
                 Spacer()
 
                 Button(action: continueFlow) {
-                    Text(step == 3 ? "Start learning" : "Continue")
+                    Text(step == 2 ? "Start speaking" : "Continue")
                 }
                 .buttonStyle(PrimaryButtonStyle())
             }
@@ -66,19 +61,17 @@ struct OnboardingView: View {
 
     private var title: String {
         switch step {
-        case 0: "Speak with confidence"
-        case 1: "What do you want to learn?"
-        case 2: "Where should we start?"
-        default: "Tune your practice"
+        case 0: "Speak sooner"
+        case 1: "Choose your language"
+        default: "Start at your level"
         }
     }
 
     private var subtitle: String {
         switch step {
-        case 0: "Build lessons, tutor chats, roleplays, and saved-line review around real conversation."
-        case 1: "Pick your target language. The first complete beginner unit is ready to practice."
-        case 2: "Choose the level that best matches your current speaking comfort."
-        default: "Choose how Converlax should guide your daily speaking sessions."
+        case 0: "Begin with one useful line, say it out loud, and keep it for review."
+        case 1: "Your first lesson will use this course."
+        default: "Converlax will open the first lesson that fits."
         }
     }
 
@@ -93,9 +86,8 @@ struct OnboardingView: View {
 
     private var introCards: some View {
         VStack(spacing: 12) {
-            OnboardingFeatureRow(asset: .freeTalk, symbol: "waveform", title: "Practice out loud", subtitle: "Lessons focus on useful lines, short answers, and speaking rhythm.")
-            OnboardingFeatureRow(asset: .customLesson, symbol: "sparkles", title: "Chat with a tutor", subtitle: "Ask for phrases, save replies, and review them later.")
-            OnboardingFeatureRow(asset: .roleplay, symbol: "person.2.wave.2.fill", title: "Roleplay real moments", subtitle: "Create or choose scenarios like cafes, travel, and work.")
+            OnboardingFeatureRow(asset: .freeTalk, symbol: "waveform", title: "Say one useful line", subtitle: "Start with short prompts built for real conversation.")
+            OnboardingFeatureRow(asset: .savedLines, symbol: "bookmark.fill", title: "Keep what helps", subtitle: "Saved lines come back when they are ready to practice.")
         }
     }
 
@@ -137,51 +129,36 @@ struct OnboardingView: View {
         }
     }
 
-    private var preferenceChoices: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Stepper("Daily goal: \(dailyGoal) lessons", value: $dailyGoal, in: 1...6)
-                .padding(16)
-                .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-
-            Toggle("Use text mode when voice is unavailable", isOn: $textMode)
-                .padding(16)
-                .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-
-            Toggle("Practice reminders", isOn: $reminderEnabled)
-                .padding(16)
-                .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("No subscription required for Phase 1")
-                    .font(.headline.weight(.semibold))
-                Text("Membership, login, and billing screens are mocked later in Profile.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(16)
-            .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    private func levelButton(_ level: Level) -> some View {
+        ChoiceRow(
+            title: "\(level.rawValue) \(level.code)",
+            subtitle: onboardingSubtitle(for: level),
+            selected: selectedLevel == level
+        ) {
+            selectedLevel = level
         }
     }
 
-    private func levelButton(_ level: Level) -> some View {
-        Button {
-            selectedLevel = level
-        } label: {
-            LevelCard(level: level, selected: selectedLevel == level)
+    private func onboardingSubtitle(for level: Level) -> String {
+        switch level {
+        case .beginner:
+            "First conversations"
+        case .elementary:
+            "Daily routines and places"
+        case .upperElementary:
+            "Appointments and small talk"
+        case .intermediate:
+            "Opinions and stories"
         }
-        .buttonStyle(.plain)
     }
 
     private func continueFlow() {
-        if step < 3 {
+        if step < 2 {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
                 step += 1
             }
         } else {
             state.completeOnboarding(language: targetLanguage, level: selectedLevel)
-            state.setDailyGoal(dailyGoal)
-            state.setVoiceRecognitionEnabled(!textMode)
-            state.setNotificationsEnabled(reminderEnabled)
         }
     }
 
@@ -279,7 +256,7 @@ struct LevelSelectionView: View {
                     levelSection(title: "Part 1", subtitle: "Beginner foundations", levels: [.beginner, .elementary])
                     levelSection(title: "Part 2", subtitle: "Confident everyday conversation", levels: [.upperElementary, .intermediate])
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Changing level updates the course destination.")
+                        Text("Your next lesson updates right away.")
                             .font(.headline.weight(.semibold))
                         Text("Completed progress stays saved, but the Home path will move to lessons that match the selected level.")
                             .font(.subheadline)

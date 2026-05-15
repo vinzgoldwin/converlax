@@ -3,23 +3,18 @@ import SwiftUI
 struct CourseHomeView: View {
     @ObservedObject var state: LearningState
     @Binding var activeSheet: ActiveSheet?
-    @State private var selectedTrack: LessonTrack = .course
 
     var body: some View {
         ZStack {
             Color.appBackground.ignoresSafeArea()
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    CourseHeader(state: state, activeSheet: $activeSheet, selectedTrack: $selectedTrack)
-                    if selectedTrack == .course {
-                        CourseTrackContent(state: state, activeSheet: $activeSheet)
-                    } else {
-                        PracticeTrackContent(state: state)
-                    }
+                VStack(alignment: .leading, spacing: 16) {
+                    CourseHeader(state: state, activeSheet: $activeSheet)
+                    CourseTrackContent(state: state, activeSheet: $activeSheet)
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 16)
+                .padding(.top, 14)
             }
             .safeAreaInset(edge: .bottom) {
                 Color.clear.frame(height: 96)
@@ -35,110 +30,91 @@ private struct CourseTrackContent: View {
     @Binding var activeSheet: ActiveSheet?
 
     var body: some View {
-        CourseUnitIntro(language: state.profile.targetLanguage)
-        SkillProgressStrip(progress: state.skillProgress)
         CurrentLessonLink(state: state)
-        HomeQuickActions(state: state, activeSheet: $activeSheet)
-        LessonPath(state: state, lessons: state.courseLessons)
-        LockedUnitPreview()
-        NavigationLink(value: HomeRoute.tutor) {
-            TutorPromptBar()
-                .padding(.top, 2)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-private struct PracticeTrackContent: View {
-    @ObservedObject var state: LearningState
-
-    var body: some View {
-        SectionHeader(title: "Practice", subtitle: "Short drills for recall, speaking, and saved lines.")
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            NavigationLink(value: HomeRoute.vocab) {
-                QuickActionCard(title: "Vocab", subtitle: "Translate words", symbol: "character.book.closed.fill", color: .warmAmber, asset: .vocab)
-            }
-            NavigationLink(value: HomeRoute.verbs) {
-                QuickActionCard(title: "Verbs", subtitle: "Fill blanks", symbol: "textformat.abc.dottedunderline", color: .violetAccent, asset: .verbs)
-            }
-            NavigationLink(value: HomeRoute.speakingDrill(state.currentLesson)) {
-                QuickActionCard(title: "Speaking", subtitle: "Say core phrases", symbol: "mic.fill", color: .mintSuccess, asset: .freeTalk)
-            }
-            NavigationLink(value: HomeRoute.qaLesson(state.currentLesson)) {
-                QuickActionCard(title: "Q&A", subtitle: "Answer prompts", symbol: "questionmark.bubble.fill", color: .primaryBlue, asset: .askInfo)
-            }
-        }
-        .buttonStyle(.plain)
-
-        NavigationLink(value: HomeRoute.customLesson) {
-            HeroActionCard(title: "Create a practice roleplay", subtitle: "Turn any situation into a speaking drill", symbol: "plus.bubble.fill", color: .mintSuccess, asset: .customLesson)
-        }
-        .buttonStyle(.plain)
-
-        VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: "Recommended", subtitle: "Practice from your current unit.")
-            NavigationLink(value: HomeRoute.lessonDetail(state.currentLesson)) {
-                LessonRow(lesson: state.currentLesson, isCurrent: true, isCompleted: state.isCompleted(state.currentLesson))
-            }
-            .buttonStyle(.plain)
-        }
+        HomeProgressRow(state: state, activeSheet: $activeSheet)
+        HomeQuickActions(state: state)
     }
 }
 
 private struct CourseHeader: View {
     @ObservedObject var state: LearningState
     @Binding var activeSheet: ActiveSheet?
-    @Binding var selectedTrack: LessonTrack
 
     var body: some View {
-        VStack(spacing: 12) {
-            HStack {
+        HStack(alignment: .center, spacing: 14) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Start today's lesson")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+
                 Button {
                     activeSheet = .level
                 } label: {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 7) {
+                        Text(state.profile.targetLanguage.sampleNote)
+                            .lineLimit(1)
                         Text(state.profile.currentLevel.code)
-                            .font(.footnote.weight(.semibold))
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Color.primaryBlue)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 4)
+                            .background(Color.primaryBlue.opacity(0.1), in: Capsule())
                         Image(systemName: "chevron.down")
                             .font(.caption2.weight(.bold))
+                            .foregroundStyle(.secondary)
                     }
+                    .font(.footnote.weight(.semibold))
                     .foregroundStyle(.primary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    .padding(.horizontal, 11)
+                    .padding(.vertical, 7)
                     .background(Color.claySurface, in: Capsule())
                 }
                 .accessibilityLabel("Current level \(state.profile.currentLevel.rawValue)")
-
-                Spacer()
-
-                Picker("Track", selection: $selectedTrack) {
-                    ForEach(LessonTrack.allCases) { track in
-                        Text(track.rawValue).tag(track)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 184)
-
-                Spacer()
-
-                HStack(spacing: 5) {
-                    ConverlaxAssetBadge(kind: .streak, size: 28)
-                    Text("\(state.profile.streak)")
-                        .font(.footnote.weight(.bold))
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color.claySurface, in: Capsule())
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("\(state.profile.streak) day streak")
-                .onTapGesture {
-                    activeSheet = .streak
-                }
             }
 
-            VStack(alignment: .leading, spacing: 6) {
+            Spacer(minLength: 8)
+
+            ConverlaxMascotView(state: .waving, size: 58)
+                .accessibilityHidden(true)
+        }
+    }
+}
+
+private struct HomeProgressRow: View {
+    @ObservedObject var state: LearningState
+    @Binding var activeSheet: ActiveSheet?
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Button {
+                activeSheet = .streak
+            } label: {
+                HStack(spacing: 9) {
+                    ConverlaxAssetBadge(kind: .streak, size: 34)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Streak")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Text("\(state.profile.streak) days")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                    }
+                }
+                .frame(minWidth: 92, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(state.profile.streak) day streak")
+
+            Rectangle()
+                .fill(Color.clayStroke)
+                .frame(width: 1)
+                .padding(.vertical, 4)
+
+            VStack(alignment: .leading, spacing: 7) {
                 HStack {
-                    Text(state.profile.targetLanguage.sampleNote)
+                    Text("Unit progress")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                     Spacer()
@@ -148,11 +124,20 @@ private struct CourseHeader: View {
                 }
 
                 LessonProgressBar(progress: state.courseProgress)
+
                 Text(state.nextRecommendation)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Color.primaryBlue)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
             }
         }
+        .padding(14)
+        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.clayStroke.opacity(0.72), lineWidth: 1)
+        )
     }
 }
 
@@ -185,29 +170,61 @@ private struct CurrentLessonLink: View {
             FeaturedLessonCard(lesson: state.currentLesson, completed: state.isCompleted(state.currentLesson))
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("home-primary-lesson-action")
     }
 }
 
 private struct HomeQuickActions: View {
     @ObservedObject var state: LearningState
-    @Binding var activeSheet: ActiveSheet?
 
     var body: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+        HStack(spacing: 10) {
             NavigationLink(value: HomeRoute.courseDetail) {
-                QuickActionCard(title: "Course", subtitle: "Unit path", symbol: "map.fill", color: .primaryBlue, asset: .askDirections)
+                SecondaryLearningAction(title: "See all lessons", subtitle: "Course path", symbol: "map.fill", color: .primaryBlue)
             }
-            NavigationLink(value: HomeRoute.tutor) {
-                QuickActionCard(title: "Tutor", subtitle: "Chat practice", symbol: "sparkles", color: .mintSuccess, asset: .customLesson)
+            .accessibilityIdentifier("home-course-path-action")
+
+            NavigationLink(value: HomeRoute.speakingDrill(state.currentLesson)) {
+                SecondaryLearningAction(title: "Practice speaking", subtitle: "Speak now", symbol: "mic.fill", color: .mintSuccess)
             }
-            NavigationLink(value: HomeRoute.vocab) {
-                QuickActionCard(title: "Vocab", subtitle: "Quick lesson", symbol: "character.book.closed.fill", color: .warmAmber, asset: .vocab)
-            }
-            NavigationLink(value: HomeRoute.verbs) {
-                QuickActionCard(title: "Verbs", subtitle: "Fill blanks", symbol: "textformat.abc", color: .violetAccent, asset: .verbs)
-            }
+            .accessibilityIdentifier("home-extra-practice-action")
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct SecondaryLearningAction: View {
+    let title: String
+    let subtitle: String
+    let symbol: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 10) {
+            AvatarBadge(symbol: symbol, color: color)
+                .frame(width: 34, height: 34)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, minHeight: 62, alignment: .leading)
+        .padding(.horizontal, 12)
+        .background(Color.claySurface.opacity(0.78), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.clayStroke.opacity(0.68), lineWidth: 1)
+        )
     }
 }
 
@@ -244,55 +261,68 @@ private struct FeaturedLessonCard: View {
     let completed: Bool
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                ConverlaxAssetBadge(kind: lesson.visualAsset, size: 58)
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 12) {
+                ConverlaxAssetBadge(kind: lesson.visualAsset, size: 62)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(completed ? "Review \(lesson.title.lowercased())" : lesson.title)
-                        .font(.headline.weight(.semibold))
-                    Text(lesson.subtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.78))
+                    Text(completed ? "Review lesson" : "Continue lesson")
+                        .font(.caption.weight(.bold))
+                        .textCase(.uppercase)
+                        .foregroundStyle(.white.opacity(0.72))
+                    Text(lesson.title)
+                        .font(.title2.weight(.bold))
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.9)
                 }
 
                 Spacer()
+
+                Text("\(lesson.minutes) min")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white.opacity(0.88))
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 6)
+                    .background(.white.opacity(0.14), in: Capsule())
             }
-            .padding(.horizontal, 18)
-            .padding(.top, 18)
 
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(lesson.steps.first?.prompt ?? "Start your next lesson")
-                        .font(.callout.weight(.semibold))
-                    Text("\(lesson.minutes) min lesson")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.white.opacity(0.74))
-                }
+            VStack(alignment: .leading, spacing: 7) {
+                Text(lesson.subtitle)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.82))
+                    .lineLimit(2)
 
-                Spacer()
+                Text(lesson.steps.first?.prompt ?? "Start your next lesson")
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
 
+            HStack(spacing: 8) {
                 Image(systemName: completed ? "arrow.clockwise" : "play.fill")
-                    .font(.title2.weight(.bold))
-                    .foregroundStyle(Color.primaryBlue)
-                    .frame(width: 58, height: 58)
-                    .background(.white.opacity(0.95), in: Circle())
+                    .font(.headline.weight(.bold))
+                    .accessibilityHidden(true)
+                Text(completed ? "Practice again" : "Start lesson")
+                    .font(.headline.weight(.bold))
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
                     .accessibilityHidden(true)
             }
-            .padding(18)
-
-            Text(completed ? "Practice again" : "Start")
-                .font(.headline.weight(.semibold))
-                .foregroundStyle(Color.primaryBlue)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .padding([.horizontal, .bottom], 10)
+            .foregroundStyle(Color.primaryBlue)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 15)
+            .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
+        .padding(16)
         .foregroundStyle(.white)
         .background(
             LinearGradient(colors: [Color.primaryBlue, Color.converlaxTeal, Color.mintSuccess.opacity(0.88)], startPoint: .topLeading, endPoint: .bottomTrailing),
-            in: RoundedRectangle(cornerRadius: 26, style: .continuous)
+            in: RoundedRectangle(cornerRadius: 24, style: .continuous)
         )
         .shadow(color: lesson.accent.color.opacity(0.24), radius: 20, y: 10)
     }
@@ -335,34 +365,60 @@ struct CourseDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     CourseUnitIntro(language: state.profile.targetLanguage)
-                    ForEach(state.courseLessons) { lesson in
-                        NavigationLink(value: HomeRoute.lessonDetail(lesson)) {
-                            LessonRow(lesson: lesson, isCurrent: state.isCurrent(lesson), isCompleted: state.isCompleted(lesson))
-                        }
-                        .buttonStyle(.plain)
-                    }
+                    CurrentCourseLessonStart(state: state)
 
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Lesson types")
-                            .font(.headline.weight(.semibold))
-                        NavigationLink(value: HomeRoute.videoLesson(state.currentLesson)) {
-                            QuickActionCard(title: "Video lesson", subtitle: "Watch and repeat", symbol: "play.rectangle.fill", color: .primaryBlue, asset: .askInfo)
-                        }
-                        NavigationLink(value: HomeRoute.speakingDrill(state.currentLesson)) {
-                            QuickActionCard(title: "Speaking drill", subtitle: "Practice out loud", symbol: "mic.fill", color: .mintSuccess, asset: .freeTalk)
-                        }
-                        NavigationLink(value: HomeRoute.qaLesson(state.currentLesson)) {
-                            QuickActionCard(title: "Q&A lesson", subtitle: "Answer prompts", symbol: "questionmark.bubble.fill", color: .violetAccent, asset: .askInfo)
-                        }
-                        NavigationLink(value: HomeRoute.customLesson) {
-                            QuickActionCard(title: "Custom lesson", subtitle: "Create from a situation", symbol: "plus.bubble.fill", color: .warmAmber, asset: .customLesson)
+                        SectionHeader(title: "Choose a lesson", subtitle: "Each one builds a useful conversation.")
+                        ForEach(state.courseLessons) { lesson in
+                            NavigationLink(value: HomeRoute.lessonDetail(lesson)) {
+                                LessonRow(lesson: lesson, isCurrent: state.isCurrent(lesson), isCompleted: state.isCompleted(lesson))
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
+
+                    LessonToolsMenu(lesson: state.currentLesson, title: "Practice another way", includesCourseModes: true)
                 }
                 .padding(20)
             }
         }
         .navigationTitle("Course")
+    }
+}
+
+private struct CurrentCourseLessonStart: View {
+    @ObservedObject var state: LearningState
+
+    private var lesson: BeginnerLesson {
+        state.currentLesson
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 14) {
+                ConverlaxAssetBadge(kind: lesson.visualAsset, size: 58)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(state.isCompleted(lesson) ? "Review current lesson" : "Up next")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.primaryBlue)
+                    Text(lesson.title)
+                        .font(.headline.weight(.bold))
+                    Text(lesson.subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            NavigationLink(value: HomeRoute.lesson(lesson)) {
+                Label(state.isCompleted(lesson) ? "Start again" : "Start lesson", systemImage: "play.fill")
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            .accessibilityIdentifier("course-detail-start-button")
+        }
+        .padding(18)
+        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 }
 

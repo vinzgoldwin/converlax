@@ -2,7 +2,7 @@ import Foundation
 
 enum PhaseOneContent {
     static let savedLines: [SavedLine] = [
-        SavedLine(id: "line-cafe-order", text: "Could I have a coffee, please?", translation: "A polite cafe order", source: "Cafe roleplay", note: "Use could I have for polite requests."),
+        SavedLine(id: "line-cafe-order", text: "Could I have a coffee, please?", translation: "A polite cafe order", source: "Cafe situation", note: "Use could I have for polite requests."),
         SavedLine(id: "line-greeting", text: "Nice to meet you too.", translation: "Natural reply to an introduction", source: "Tutor", note: "Works in casual and professional meetings."),
         SavedLine(id: "line-directions", text: "Excuse me, where is the nearest station?", translation: "Ask for directions politely", source: "Directions lesson", note: "Nearest means closest."),
         SavedLine(id: "line-routine", text: "I usually study English at night.", translation: "Describe a regular habit", source: "Daily routine lesson", note: "Usually means most days."),
@@ -26,8 +26,8 @@ enum PhaseOneContent {
             difficulty: .beginner,
             minutes: 6,
             lines: [
-                SavedLine(id: "hotel-line-1", text: "I have a reservation under Kevin.", translation: "Give your booking name", source: "Roleplay", note: "Use under before a reservation name."),
-                SavedLine(id: "hotel-line-2", text: "What time is breakfast?", translation: "Ask for hotel information", source: "Roleplay", note: "Swap breakfast for checkout or dinner.")
+                SavedLine(id: "hotel-line-1", text: "I have a reservation under Kevin.", translation: "Give your booking name", source: "Situation", note: "Use under before a reservation name."),
+                SavedLine(id: "hotel-line-2", text: "What time is breakfast?", translation: "Ask for hotel information", source: "Situation", note: "Swap breakfast for checkout or dinner.")
             ],
             isCommunity: false
         ),
@@ -40,7 +40,7 @@ enum PhaseOneContent {
             difficulty: .beginner,
             minutes: 4,
             lines: [
-                SavedLine(id: "station-line-1", text: "Which platform goes to the city center?", translation: "Ask for the right platform", source: "Roleplay", note: "Which asks someone to choose from options.")
+                SavedLine(id: "station-line-1", text: "Which platform goes to the city center?", translation: "Ask for the right platform", source: "Situation", note: "Which asks someone to choose from options.")
             ],
             isCommunity: true
         ),
@@ -53,7 +53,7 @@ enum PhaseOneContent {
             difficulty: .beginner,
             minutes: 5,
             lines: [
-                SavedLine(id: "coffee-line-1", text: "Could I have a small latte?", translation: "Order a drink with a size", source: "Roleplay", note: "Small can become medium or large.")
+                SavedLine(id: "coffee-line-1", text: "Could I have a small latte?", translation: "Order a drink with a size", source: "Situation", note: "Small can become medium or large.")
             ],
             isCommunity: false
         ),
@@ -86,15 +86,15 @@ enum PhaseOneContent {
     ]
 
     static let usageSessions: [UsageSession] = [
-        UsageSession(id: "usage-1", title: "Cafe roleplay", detail: "Completed 5 speaking turns", minutes: 6, dateLabel: "Today"),
-        UsageSession(id: "usage-2", title: "Smart review", detail: "Reviewed 8 saved lines", minutes: 4, dateLabel: "Yesterday"),
+        UsageSession(id: "usage-1", title: "Cafe situation", detail: "Completed 5 speaking turns", minutes: 6, dateLabel: "Today"),
+        UsageSession(id: "usage-2", title: "Review due items", detail: "Reviewed 8 saved lines", minutes: 4, dateLabel: "Yesterday"),
         UsageSession(id: "usage-3", title: "Tutor chat", detail: "Asked for travel phrases", minutes: 7, dateLabel: "This week")
     ]
 
     static let activities: [LearningActivity] = [
         LearningActivity(id: "activity-streak", title: "Streak started", detail: "Completed a lesson today", symbol: "flame.fill", dateLabel: "Today"),
         LearningActivity(id: "activity-line", title: "Saved a line", detail: "Could I have a coffee, please?", symbol: "bookmark.fill", dateLabel: "Today"),
-        LearningActivity(id: "activity-roleplay", title: "Finished a roleplay", detail: "Cafe roleplay, 6 minutes", symbol: "person.2.wave.2.fill", dateLabel: "Yesterday")
+        LearningActivity(id: "activity-roleplay", title: "Finished a situation", detail: "Cafe situation, 6 minutes", symbol: "person.2.wave.2.fill", dateLabel: "Yesterday")
     ]
 
     static let reviewItems: [ReviewItem] = [

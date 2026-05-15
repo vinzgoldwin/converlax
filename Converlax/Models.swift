@@ -174,6 +174,7 @@ enum ReviewRoute: Hashable {
 enum ProfileRoute: Hashable {
     case savedLines
     case activities
+    case practiceHistory
     case settings
     case membership
     case editProfile
@@ -200,6 +201,8 @@ enum ProfileRoute: Hashable {
             return [.savedLines]
         case "activities":
             return [.activities]
+        case "practiceHistory", "history":
+            return [.practiceHistory]
         case "settings":
             return [.settings]
         case "membership":
@@ -347,7 +350,7 @@ enum SavedLearningKind: String, Codable, Hashable {
     case phrase = "Phrase"
     case tutorMessage = "Tutor"
     case mistake = "Mistake"
-    case roleplayPhrase = "Roleplay"
+    case roleplayPhrase = "Situation"
 }
 
 enum SpeechPracticePhase: String, Codable, Hashable {

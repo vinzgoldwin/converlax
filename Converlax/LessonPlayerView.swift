@@ -182,9 +182,9 @@ enum LessonModeKind {
 
     var title: String {
         switch self {
-        case .video: "Video lesson"
-        case .speakingDrill: "Speaking drill"
-        case .qa: "Q&A lesson"
+        case .video: "Watch and repeat"
+        case .speakingDrill: "Practice speaking"
+        case .qa: "Answer prompts"
         }
     }
 
@@ -196,11 +196,19 @@ enum LessonModeKind {
         }
     }
 
+    var completionTitle: String {
+        switch self {
+        case .video: "Lesson watched"
+        case .speakingDrill: "Speaking practice complete"
+        case .qa: "Prompt practice complete"
+        }
+    }
+
     var modeName: String {
         switch self {
-        case .video: "Video lesson"
-        case .speakingDrill: "Speaking drill"
-        case .qa: "Q&A lesson"
+        case .video: "Watch and repeat"
+        case .speakingDrill: "Practice speaking"
+        case .qa: "Answer prompts"
         }
     }
 
@@ -749,9 +757,9 @@ private struct LessonModeCompletionPanel: View {
             ConverlaxMascotView(state: .celebrating, size: 104)
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("\(mode.title) complete")
+                Text(mode.completionTitle)
                     .font(.largeTitle.weight(.bold))
-                Text("You finished \(lesson.title.lowercased()). Scores, speech feedback, saved lines, and lesson words were added to review.")
+                Text("You finished \(lesson.title.lowercased()). Answers, speech feedback, and saved lines were added to review.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
