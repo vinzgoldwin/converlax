@@ -10,7 +10,7 @@ struct PracticeHomeView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     SectionHeader(
-                        title: "How do I speak now?",
+                        title: "Start speaking",
                         subtitle: "Pick the shortest route into a spoken turn."
                     )
 
@@ -91,15 +91,27 @@ struct ReviewHomeView: View {
     }
 
     private var primaryReviewRoute: ReviewRoute {
-        reviewCount == 0 ? .savedLinesReview : .smartReview
+        if reviewCount > 0 {
+            return .smartReview
+        }
+
+        return personalSavedLineCount > 0 ? .savedLinesReview : .startLesson
     }
 
     private var primaryReviewTitle: String {
-        reviewCount == 0 ? "Practice saved lines" : "Review due items"
+        if reviewCount > 0 {
+            return "Review due items"
+        }
+
+        return personalSavedLineCount > 0 ? "Practice saved lines" : "Start a lesson"
     }
 
     private var primaryReviewSubtitle: String {
-        reviewCount == 0 ? "No review due right now" : "\(reviewCount) ready from saved content and practice"
+        if reviewCount > 0 {
+            return "\(reviewCount) ready from saved content and practice"
+        }
+
+        return personalSavedLineCount > 0 ? "No review due right now" : "Create something to review later"
     }
 
     private var savedLinesSubtitle: String {
@@ -113,8 +125,8 @@ struct ReviewHomeView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     SectionHeader(
-                        title: "What should I review now?",
-                        subtitle: reviewCount == 0 ? "No due items. Use saved lines instead." : "\(reviewCount) due from saved content and practice."
+                        title: reviewCount == 0 ? "Review is clear" : "Due today",
+                        subtitle: nil
                     )
                     NavigationLink(value: primaryReviewRoute) {
                         HeroActionCard(
@@ -156,6 +168,8 @@ struct ReviewHomeView: View {
                 SavedLinesView(state: state, searchable: true)
             case .reviewInfo:
                 InfoDetailView(title: "How review works", subtitle: "Saved words, saved lines, and recent mistakes come back when they are ready to practice.")
+            case .startLesson:
+                LessonPlayerView(lesson: state.currentLesson, state: state)
             }
         }
     }
@@ -216,8 +230,7 @@ struct SpeakProfileHomeView: View {
     private var journeyDashboard: some View {
         VStack(alignment: .leading, spacing: 18) {
             SectionHeader(
-                title: "What have I accomplished?",
-                subtitle: "\(state.journeyProgress.totalXP) XP earned across lessons, speaking, review, and saved content."
+                title: "Your journey"
             )
             journeyProgressPanel
             recentJourneyPanel
@@ -229,7 +242,7 @@ struct SpeakProfileHomeView: View {
     private var journeyProgressPanel: some View {
         let progress = state.journeyProgress
 
-        return VStack(alignment: .leading, spacing: 18) {
+        return VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center, spacing: 14) {
                 ConverlaxMascotView(state: .avatar, size: 66, isAnimated: false)
 
@@ -254,7 +267,7 @@ struct SpeakProfileHomeView: View {
                     .foregroundStyle(Color.primaryBlue)
             }
         }
-        .padding(18)
+        .padding(16)
         .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -285,7 +298,7 @@ struct SpeakProfileHomeView: View {
                     }
                 }
                 .padding(.horizontal, 14)
-                .padding(.vertical, 6)
+                .padding(.vertical, 4)
                 .background(Color.claySurface.opacity(0.74), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -293,7 +306,7 @@ struct SpeakProfileHomeView: View {
                 )
             }
         }
-        .padding(.top, 2)
+        .padding(.top, 0)
     }
 
     private var journeyNavigation: some View {
@@ -306,6 +319,12 @@ struct SpeakProfileHomeView: View {
 
             NavigationLink(value: ProfileRoute.practiceHistory) {
                 JourneyNavigationRow(asset: .historyUsage, title: "Practice history", detail: "\(state.profile.usageSessions.count) sessions")
+            }
+
+            Divider().padding(.leading, 58)
+
+            NavigationLink(value: ProfileRoute.settings) {
+                JourneyNavigationRow(asset: .settings, title: "Settings", detail: "Goal, voice, course")
             }
         }
         .buttonStyle(.plain)
@@ -456,7 +475,7 @@ private struct JourneyRecentRow: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 5)
         .accessibilityElement(children: .combine)
     }
 
@@ -489,7 +508,7 @@ private struct JourneyNavigationRow: View {
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
         }
-        .padding(.vertical, 13)
+        .padding(.vertical, 10)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
@@ -2027,16 +2046,18 @@ private struct InfoDetailView: View {
 
 struct SectionHeader: View {
     let title: String
-    let subtitle: String
+    var subtitle: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(title)
                 .font(.headline.weight(.bold))
                 .foregroundStyle(Color.converlaxInk)
-            Text(subtitle)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            if let subtitle {
+                Text(subtitle)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

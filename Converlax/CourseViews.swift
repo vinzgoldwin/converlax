@@ -38,13 +38,13 @@ private struct CourseHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text("What should I do next?")
+            Text("Continue from here")
                 .font(.title2.weight(.bold))
                 .foregroundStyle(.primary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("Continue the lesson that is ready for your \(state.profile.currentLevel.rawValue.lowercased()) \(state.profile.targetLanguage.rawValue) practice.")
+            Text("\(state.profile.currentLevel.rawValue) \(state.profile.targetLanguage.rawValue)")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }

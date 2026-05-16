@@ -151,6 +151,7 @@ enum ReviewRoute: Hashable {
     case savedLinesReview
     case savedLineSearch
     case reviewInfo
+    case startLesson
 
     static var launchDefaultPath: [ReviewRoute] {
         let arguments = ProcessInfo.processInfo.arguments
@@ -170,6 +171,8 @@ enum ReviewRoute: Hashable {
             return [.savedLineSearch]
         case "reviewInfo":
             return [.reviewInfo]
+        case "startLesson":
+            return [.startLesson]
         default:
             return []
         }
