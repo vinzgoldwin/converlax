@@ -2475,6 +2475,7 @@ private struct EditLearnerProfileView: View {
     @ObservedObject var state: LearningState
     @Environment(\.dismiss) private var dismiss
     @State private var draft: LearnerProfile
+    @State private var showsDiscardConfirmation = false
 
     init(state: LearningState) {
         self.state = state
@@ -2489,18 +2490,6 @@ private struct EditLearnerProfileView: View {
             }
 
             Section("Avatar") {
-                HStack(spacing: 14) {
-                    ConverlaxMascotView(state: draft.avatarChoice.mascotState, size: 58, isAnimated: false)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(draft.avatarChoice.title)
-                            .font(.subheadline.weight(.semibold))
-                        Text("Shown on your profile.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
                 Picker("Mascot", selection: $draft.avatarChoice) {
                     ForEach(LearnerAvatarChoice.allCases) { choice in
                         Text(choice.title).tag(choice)
@@ -2525,39 +2514,36 @@ private struct EditLearnerProfileView: View {
                     }
                 }
 
-                Picker("Daily speaking goal", selection: $draft.dailySpeakingGoal) {
-                    ForEach(DailySpeakingGoal.allCases) { goal in
-                        Text(goal.title).tag(goal)
-                    }
-                }
-
                 Picker("Practice focus", selection: $draft.practiceFocus) {
                     ForEach(PracticeFocus.allCases) { focus in
                         Text(focus.title).tag(focus)
                     }
                 }
             }
-
-            Section("Reminders") {
-                Picker("Preference", selection: reminderPreferenceBinding) {
-                    Text("No preference").tag(nil as ReminderPreference?)
-                    ForEach(ReminderPreference.allCases) { preference in
-                        Text(preference.title).tag(preference as ReminderPreference?)
-                    }
-                }
-            }
         }
         .scrollContentBackground(.hidden)
         .background(Color.appBackground.ignoresSafeArea())
-        .navigationTitle("Learner profile")
+        .navigationTitle("Edit profile")
+        .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
-                    state.updateLearnerProfile(draft)
-                    dismiss()
-                }
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel", action: cancel)
             }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Done", action: save)
+                    .disabled(!hasChanges)
+            }
+        }
+        .confirmationDialog(
+            "Discard changes?",
+            isPresented: $showsDiscardConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Discard changes", role: .destructive) {
+                dismiss()
+            }
+            Button("Keep editing", role: .cancel) {}
         }
     }
 
@@ -2568,11 +2554,21 @@ private struct EditLearnerProfileView: View {
         )
     }
 
-    private var reminderPreferenceBinding: Binding<ReminderPreference?> {
-        Binding(
-            get: { draft.reminderPreference },
-            set: { draft.reminderPreference = $0 }
-        )
+    private var hasChanges: Bool {
+        draft.sanitized != state.profile.learnerProfile.sanitized
+    }
+
+    private func cancel() {
+        if hasChanges {
+            showsDiscardConfirmation = true
+        } else {
+            dismiss()
+        }
+    }
+
+    private func save() {
+        state.updateLearnerProfile(draft)
+        dismiss()
     }
 }
 
