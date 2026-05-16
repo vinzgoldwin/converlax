@@ -11,7 +11,7 @@ export function loadConfig(env = process.env) {
     port: integerFromEnv(env.PORT, DEFAULT_PORT),
     openRouterApiKey: env.OPENROUTER_API_KEY ?? "",
     openRouterBaseUrl: env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1",
-    openRouterModel: env.OPENROUTER_MODEL ?? "openai/gpt-5.2",
+    openRouterModel: env.OPENROUTER_MODEL ?? "google/gemini-3.1-flash-lite",
     openRouterTimeoutMs: integerFromEnv(env.OPENROUTER_TIMEOUT_MS, DEFAULT_TIMEOUT_MS),
     openRouterAppReferer: env.OPENROUTER_APP_REFERER ?? "https://converlax.local",
     openRouterAppTitle: env.OPENROUTER_APP_TITLE ?? "Converlax",

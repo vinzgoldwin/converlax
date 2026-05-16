@@ -440,6 +440,7 @@ struct TutorPromptBar: View {
 
 struct LearningFeedbackCard: View {
     let feedback: LearningFeedback
+    @State private var showsMoreFeedback = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -452,68 +453,117 @@ struct LearningFeedbackCard: View {
             }
 
             if isSpeechFeedback {
-                FeedbackConfidenceLine(confidence: feedback.confidence)
-            }
-
-            if let attemptText {
-                FeedbackCoachLine(title: attemptTitle, text: attemptText, symbol: attemptSymbol, color: .primaryBlue)
-            }
-
-            if let naturalVersion {
-                FeedbackCoachLine(title: "Natural version", text: naturalVersion, symbol: "quote.bubble.fill", color: .mintSuccess)
-            }
-
-            if let grammarCorrection {
-                FeedbackCoachLine(title: "Grammar", text: grammarCorrection, symbol: "textformat", color: .primaryBlue)
-            }
-
-            if let vocabularyImprovement {
-                FeedbackCoachLine(title: "Vocabulary", text: vocabularyImprovement, symbol: "character.book.closed.fill", color: .violetAccent)
-            }
-
-            if let coachTip {
-                FeedbackCoachLine(title: "Coach tip", text: coachTip, symbol: "waveform", color: .warmAmber)
-            }
-
-            if let didWell {
-                FeedbackCoachLine(title: "Did well", text: didWell, symbol: "checkmark.seal.fill", color: .mintSuccess)
-            }
-
-            if let tryNext {
-                FeedbackCoachLine(title: "Try next", text: tryNext, symbol: "arrow.forward.circle.fill", color: .primaryBlue)
-            }
-
-            if let reviewItem {
-                FeedbackCoachLine(title: "Review later", text: reviewItem, symbol: "arrow.clockwise", color: .warmAmber)
-            }
-
-            if let savedTakeaway {
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "bookmark.fill")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Color.primaryBlue)
-                        .padding(.top, 2)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Saved takeaway")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(Color.primaryBlue)
-                        Text(savedTakeaway)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.primary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.primaryBlue.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                speechFeedbackContent
+            } else {
+                standardFeedbackContent
             }
         }
         .padding(16)
         .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.clayStroke))
         .accessibilityIdentifier("learning-feedback-card")
-        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private var speechFeedbackContent: some View {
+        FeedbackConfidenceSummary(confidence: feedback.confidence)
+
+        if let naturalVersion {
+            FeedbackPrimaryLine(title: "Say it like this", text: naturalVersion, symbol: "quote.bubble.fill")
+        }
+
+        if let tryNext {
+            FeedbackActionLine(text: tryNext)
+        }
+
+        if hasMoreFeedback {
+            DisclosureGroup(isExpanded: $showsMoreFeedback) {
+                VStack(alignment: .leading, spacing: 12) {
+                    if let attemptText {
+                        FeedbackCoachLine(title: "You said", text: attemptText, symbol: attemptSymbol, color: .primaryBlue)
+                    }
+
+                    if let fixDetails {
+                        FeedbackCoachLine(title: "Fix", text: fixDetails, symbol: "textformat", color: .primaryBlue)
+                    }
+
+                    if let coachTip {
+                        FeedbackCoachLine(title: "Pronunciation", text: coachTip, symbol: "waveform", color: .warmAmber)
+                    }
+
+                    if let didWell {
+                        FeedbackCoachLine(title: "Did well", text: didWell, symbol: "checkmark.seal.fill", color: .mintSuccess)
+                    }
+
+                    if let reviewItem {
+                        FeedbackCoachLine(title: "Review later", text: reviewItem, symbol: "arrow.clockwise", color: .warmAmber)
+                    }
+                }
+                .padding(.top, 8)
+            } label: {
+                Text("More feedback")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.primaryBlue)
+            }
+            .tint(Color.primaryBlue)
+        }
+    }
+
+    @ViewBuilder
+    private var standardFeedbackContent: some View {
+        if let attemptText {
+            FeedbackCoachLine(title: attemptTitle, text: attemptText, symbol: attemptSymbol, color: .primaryBlue)
+        }
+
+        if let naturalVersion {
+            FeedbackCoachLine(title: "Natural version", text: naturalVersion, symbol: "quote.bubble.fill", color: .mintSuccess)
+        }
+
+        if let grammarCorrection {
+            FeedbackCoachLine(title: "Grammar", text: grammarCorrection, symbol: "textformat", color: .primaryBlue)
+        }
+
+        if let vocabularyImprovement {
+            FeedbackCoachLine(title: "Vocabulary", text: vocabularyImprovement, symbol: "character.book.closed.fill", color: .violetAccent)
+        }
+
+        if let coachTip {
+            FeedbackCoachLine(title: "Coach tip", text: coachTip, symbol: "waveform", color: .warmAmber)
+        }
+
+        if let didWell {
+            FeedbackCoachLine(title: "Did well", text: didWell, symbol: "checkmark.seal.fill", color: .mintSuccess)
+        }
+
+        if let tryNext {
+            FeedbackCoachLine(title: "Try next", text: tryNext, symbol: "arrow.forward.circle.fill", color: .primaryBlue)
+        }
+
+        if let reviewItem {
+            FeedbackCoachLine(title: "Review later", text: reviewItem, symbol: "arrow.clockwise", color: .warmAmber)
+        }
+
+        if let savedTakeaway {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "bookmark.fill")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.primaryBlue)
+                    .padding(.top, 2)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Saved takeaway")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Color.primaryBlue)
+                    Text(savedTakeaway)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.primaryBlue.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
     }
 
     private var isSpeechFeedback: Bool {
@@ -529,7 +579,7 @@ struct LearningFeedbackCard: View {
     }
 
     private var feedbackTitle: String {
-        isSpeechFeedback ? "Coach note" : "Quick feedback"
+        isSpeechFeedback ? "Speaking feedback" : "Quick feedback"
     }
 
     private var attemptTitle: String {
@@ -556,6 +606,16 @@ struct LearningFeedbackCard: View {
 
     private var vocabularyImprovement: String? {
         clean(feedback.vocabularyImprovement)
+    }
+
+    private var fixDetails: String? {
+        let details = [
+            grammarCorrection,
+            vocabularyImprovement
+        ].compactMap { $0 }
+
+        guard !details.isEmpty else { return nil }
+        return details.joined(separator: "\n")
     }
 
     private var coachTip: String? {
@@ -586,11 +646,19 @@ struct LearningFeedbackCard: View {
             let answer = clean(feedback.reviewItemAnswer)
         else { return nil }
 
-        return "\(prompt) \(answer)"
+        return "\(prompt)\n\(answer)"
     }
 
     private var savedTakeaway: String? {
         cleanCoachText(feedback.savedTakeaway)
+    }
+
+    private var hasMoreFeedback: Bool {
+        attemptText != nil ||
+            fixDetails != nil ||
+            coachTip != nil ||
+            didWell != nil ||
+            reviewItem != nil
     }
 
     private func clean(_ text: String) -> String? {
@@ -675,6 +743,78 @@ private struct FeedbackConfidenceLine: View {
     }
 }
 
+private struct FeedbackConfidenceSummary: View {
+    let confidence: Int
+
+    private var boundedConfidence: Int {
+        min(100, max(0, confidence))
+    }
+
+    private var summary: String {
+        switch boundedConfidence {
+        case 85...100:
+            return "Strong attempt"
+        case 70..<85:
+            return "Clear attempt"
+        case 55..<70:
+            return "Good start"
+        default:
+            return "Keep practicing"
+        }
+    }
+
+    var body: some View {
+        Text("\(summary) · \(boundedConfidence)%")
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .accessibilityLabel("\(summary), \(boundedConfidence) percent")
+    }
+}
+
+private struct FeedbackPrimaryLine: View {
+    let title: String
+    let text: String
+    let symbol: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label(title, systemImage: symbol)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Color.primaryBlue)
+
+            Text(text)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct FeedbackActionLine: View {
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "arrow.forward.circle.fill")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Color.primaryBlue)
+                .padding(.top, 2)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Try next")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.primaryBlue)
+                Text(text)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 private struct FeedbackCoachLine: View {
     let title: String
     let text: String
@@ -706,21 +846,10 @@ struct SpeechPracticePanel: View {
     let onCancel: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: panelSpacing) {
             header
 
-            VStack(spacing: 16) {
-                VoiceInputOrb(
-                    phase: phase,
-                    accent: actionColor,
-                    isActive: isListeningOrWorking
-                )
-                .frame(maxWidth: .infinity)
-
-                transcriptSection
-            }
-            .frame(maxWidth: .infinity)
-            .frame(minHeight: contentMinHeight, alignment: .center)
+            inputContent
 
             if showsMessage {
                 SpeechStateMessage(
@@ -740,6 +869,26 @@ struct SpeechPracticePanel: View {
         .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color.clayStroke.opacity(0.9)))
         .accessibilityIdentifier("speech-practice-panel")
+    }
+
+    @ViewBuilder
+    private var inputContent: some View {
+        if showsFeedbackCard {
+            EmptyView()
+        } else {
+            VStack(spacing: 16) {
+                VoiceInputOrb(
+                    phase: phase,
+                    accent: actionColor,
+                    isActive: isListeningOrWorking
+                )
+                .frame(maxWidth: .infinity)
+
+                transcriptSection
+            }
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: contentMinHeight, alignment: .center)
+        }
     }
 
     private var header: some View {
@@ -835,8 +984,16 @@ struct SpeechPracticePanel: View {
         phase == .recording || phase == .requestingPermission || phase == .processing || phase == .transcribing
     }
 
+    private var showsFeedbackCard: Bool {
+        phase == .feedback && feedback != nil
+    }
+
     private var showsTranscript: Bool {
         !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var panelSpacing: CGFloat {
+        showsFeedbackCard ? 14 : 18
     }
 
     private var contentMinHeight: CGFloat {
@@ -994,7 +1151,7 @@ struct SpeechPracticePanel: View {
         case .transcript:
             "Review before feedback."
         case .feedback:
-            "Use the feedback, then continue."
+            "Copy the sentence, then continue."
         case .accepted:
             "Saved for practice."
         case .noSpeech:
@@ -1162,7 +1319,8 @@ private struct SpeechTranscriptBlock: View {
             Text(text)
                 .font(.body.weight(.semibold))
                 .foregroundStyle(Color.converlaxInk)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(isLive ? 3 : nil)
+                .fixedSize(horizontal: false, vertical: !isLive)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)

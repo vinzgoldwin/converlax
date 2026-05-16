@@ -8,8 +8,12 @@
   },
   "scripts": {
     "dev": "node --env-file=.env --watch src/server.js",
+    "dev:worker": "wrangler dev",
+    "deploy": "wrangler deploy",
     "start": "node src/server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "worker:check": "wrangler deploy --dry-run",
+    "worker:dry-run": "wrangler deploy --dry-run"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.2",

@@ -70,7 +70,7 @@ Successful responses always use:
   },
   "meta": {
     "provider": "openrouter",
-    "model": "openai/gpt-5.2",
+    "model": "google/gemini-3.1-flash-lite",
     "requestId": "gen-..."
   }
 }
@@ -94,7 +94,7 @@ Errors always use:
 Environment variables:
 
 - `OPENROUTER_API_KEY`: required for `/v1/feedback`.
-- `OPENROUTER_MODEL`: defaults to `openai/gpt-5.2`.
+- `OPENROUTER_MODEL`: defaults to `google/gemini-3.1-flash-lite`.
 - `OPENROUTER_BASE_URL`: defaults to `https://openrouter.ai/api/v1`.
 - `OPENROUTER_TIMEOUT_MS`: defaults to `15000`.
 - `PORT`: defaults to `8787`.
@@ -111,5 +111,23 @@ No secrets should be committed. `.env` is ignored.
 - Put the service behind HTTPS before using it from a physical device or production build.
 - Keep logs at request metadata level. The service logs transcript length and context labels, not transcript content.
 - Tune `RATE_LIMIT_MAX` and `RATE_LIMIT_WINDOW` for your expected traffic.
+
+## Cloudflare Workers
+
+The Worker entrypoint is `src/worker.js` and deploys with Wrangler:
+
+```bash
+cd backend
+wrangler secret put OPENROUTER_API_KEY
+npm run deploy
+```
+
+Wrangler will return an HTTPS `workers.dev` URL. Use that URL as the app's `CONVERLAX_AI_FEEDBACK_BASE_URL`.
+
+Current Worker URL:
+
+```text
+https://converlax-ai-feedback.vinzgoldwin.workers.dev
+```
 
 OpenRouter API reference: https://openrouter.ai/docs/api/api-reference/chat/send-chat-completion-request

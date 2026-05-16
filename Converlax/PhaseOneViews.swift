@@ -892,7 +892,7 @@ private struct FreeTalkSessionView: View {
         speechErrorMessage = nil
 
         Task {
-            let started = await speechRecognizer.startRecording()
+            let started = await speechRecognizer.startRecording(localeIdentifier: state.profile.targetLanguage.speechRecognitionLocaleIdentifier)
             if started {
                 speechPhase = .recording
             } else {
@@ -1417,7 +1417,7 @@ private struct RoleplayDetailView: View {
         speechErrorMessage = nil
 
         Task {
-            let started = await speechRecognizer.startRecording()
+            let started = await speechRecognizer.startRecording(localeIdentifier: state.profile.targetLanguage.speechRecognitionLocaleIdentifier)
             if started {
                 speechPhase = .recording
             } else {
@@ -1843,7 +1843,7 @@ private struct SmartReviewView: View {
         showAnswer = false
 
         Task {
-            let started = await speechRecognizer.startRecording()
+            let started = await speechRecognizer.startRecording(localeIdentifier: state.profile.targetLanguage.speechRecognitionLocaleIdentifier)
             if started {
                 speechPhase = .recording
             } else {
@@ -2093,7 +2093,7 @@ private struct SavedLinesReviewView: View {
         feedback = nil
 
         Task {
-            let started = await speechRecognizer.startRecording()
+            let started = await speechRecognizer.startRecording(localeIdentifier: state.profile.targetLanguage.speechRecognitionLocaleIdentifier)
             if started {
                 speechPhase = .recording
             } else {

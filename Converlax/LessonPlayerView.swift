@@ -19,6 +19,7 @@ struct LessonPlayerView: View {
 
     init(lesson: BeginnerLesson, state: LearningState) {
         _lesson = State(initialValue: lesson)
+        _stepIndex = State(initialValue: state.resumeStepIndex(for: lesson))
         self.state = state
     }
 
@@ -143,7 +144,7 @@ struct LessonPlayerView: View {
         speechErrorMessage = nil
 
         Task {
-            let started = await speechRecognizer.startRecording()
+            let started = await speechRecognizer.startRecording(localeIdentifier: state.profile.targetLanguage.speechRecognitionLocaleIdentifier)
             if started {
                 speechPhase = .recording
             } else {
@@ -214,8 +215,10 @@ struct LessonPlayerView: View {
         speechPhase = .accepted
 
         if stepIndex < lesson.steps.count - 1 {
+            let nextStepIndex = stepIndex + 1
+            state.saveLessonResume(lesson: lesson, stepIndex: nextStepIndex)
             withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
-                stepIndex += 1
+                stepIndex = nextStepIndex
                 savedCurrentLine = false
                 speechPhase = .ready
                 transcript = ""
@@ -241,6 +244,7 @@ struct LessonPlayerView: View {
     private func applyLaunchSpeechStateIfNeeded() {
         guard
             !didApplyLaunchSpeechState,
+            state.resumeStepIndex(for: lesson) == 0,
             ProcessInfo.processInfo.converlaxInitialHomeRoute == "lesson",
             let launchState = ProcessInfo.processInfo.converlaxArgumentValue(after: "-ConverlaxLessonSpeechState"),
             let targetIndex = lesson.steps.firstIndex(where: { $0.kind == .speak || $0.kind == .choice })
@@ -697,7 +701,7 @@ struct LessonModePlayerView: View {
         speechErrorMessage = nil
 
         Task {
-            let started = await speechRecognizer.startRecording()
+            let started = await speechRecognizer.startRecording(localeIdentifier: state.profile.targetLanguage.speechRecognitionLocaleIdentifier)
             if started {
                 speechPhase = .recording
             } else {

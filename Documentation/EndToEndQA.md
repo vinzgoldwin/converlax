@@ -13,6 +13,8 @@ Simulator: iPhone 17, iOS 26.2
 - Empty Review state routes the learner to speaking instead of showing demo review items.
 - Profile shows level, title, one progress bar, recent journey, and compact navigation rows.
 - Custom practice now creates a playable roleplay instead of stopping at a generated-looking row.
+- Voice-first lesson flow requests Speech Recognition and Microphone permissions, enters recording, and shows a live transcript on iPhone 17 simulator with permissions allowed.
+- English speaking practice now forces English speech recognition locale instead of inheriting the device locale.
 
 ## Screenshots
 
@@ -24,7 +26,7 @@ Simulator: iPhone 17, iOS 26.2
 
 ## Remaining Risks
 
-- Full real microphone recognition still needs physical-device or simulator audio validation with permissions allowed.
-- AI feedback quality depends on a configured backend key and should be checked with live OpenRouter responses before release.
+- Full real microphone recognition should still get one physical-device QA pass before App Store release.
+- AI feedback quality should be checked with several live OpenRouter responses before release.
 - Long feedback cards can push the next action below the fold on small screens; it remains scrollable but should be watched in future UI passes.
 - Lesson completion was spot-checked through the voice/text feedback path, but a full manual pass through every lesson turn should be repeated with live microphone input.

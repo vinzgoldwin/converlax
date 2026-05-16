@@ -292,6 +292,15 @@ enum TargetLanguage: String, CaseIterable, Codable, Identifiable {
         case .spanish, .italian: "Switch to English or French for the guided starter course."
         }
     }
+
+    var speechRecognitionLocaleIdentifier: String {
+        switch self {
+        case .english: "en-US"
+        case .french: "fr-FR"
+        case .spanish: "es-ES"
+        case .italian: "it-IT"
+        }
+    }
 }
 
 enum Level: String, CaseIterable, Codable, Identifiable {
@@ -1037,6 +1046,7 @@ struct LearningProfile: Codable, Equatable {
     var currentLevel: Level = .beginner
     var completedLessonIDs: Set<String> = []
     var currentLessonID: String = BeginnerContent.firstLessonID(for: .english)
+    var lessonResumeStepIndices: [String: Int] = [:]
     var streak: Int = 0
     var savedWords: [SavedWord] = []
     var savedLines: [SavedLine] = []
@@ -1067,6 +1077,7 @@ struct LearningProfile: Codable, Equatable {
         currentLevel = try container.decodeIfPresent(Level.self, forKey: .currentLevel) ?? .beginner
         completedLessonIDs = try container.decodeIfPresent(Set<String>.self, forKey: .completedLessonIDs) ?? []
         currentLessonID = try container.decodeIfPresent(String.self, forKey: .currentLessonID) ?? BeginnerContent.firstLessonID(for: targetLanguage)
+        lessonResumeStepIndices = try container.decodeIfPresent([String: Int].self, forKey: .lessonResumeStepIndices) ?? [:]
         streak = try container.decodeIfPresent(Int.self, forKey: .streak) ?? 0
         savedWords = try container.decodeIfPresent([SavedWord].self, forKey: .savedWords) ?? []
         savedLines = try container.decodeIfPresent([SavedLine].self, forKey: .savedLines) ?? []

@@ -201,7 +201,7 @@ struct TutorView: View {
         feedbackNotice = nil
 
         Task {
-            let started = await speechRecognizer.startRecording()
+            let started = await speechRecognizer.startRecording(localeIdentifier: state.profile.targetLanguage.speechRecognitionLocaleIdentifier)
             if started {
                 voicePhase = .recording
             } else {

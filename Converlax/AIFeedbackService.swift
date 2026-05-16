@@ -69,12 +69,13 @@ enum AIFeedbackServiceError: LocalizedError {
 
 struct AIFeedbackService {
     static let shared = AIFeedbackService()
+    private static let productionBaseURL = URL(string: "https://converlax-ai-feedback.vinzgoldwin.workers.dev")!
 
     private let baseURL: URL
     private let session: URLSession
 
     init(baseURL: URL? = Self.defaultBaseURL, session: URLSession = .shared) {
-        self.baseURL = baseURL ?? URL(string: "http://127.0.0.1:8787")!
+        self.baseURL = baseURL ?? Self.productionBaseURL
         self.session = session
     }
 
@@ -147,6 +148,6 @@ struct AIFeedbackService {
             return url
         }
 
-        return URL(string: "http://127.0.0.1:8787")
+        return productionBaseURL
     }
 }

@@ -208,6 +208,15 @@ final class LearningState: ObservableObject {
         BeginnerContent.lesson(id: profile.currentLessonID) ?? courseLessons.first ?? BeginnerContent.lessons[0]
     }
 
+    func resumeStepIndex(for lesson: BeginnerLesson) -> Int {
+        guard !lesson.steps.isEmpty, !isCompleted(lesson) else { return 0 }
+        if let savedIndex = profile.lessonResumeStepIndices[lesson.id] {
+            return min(max(savedIndex, 0), lesson.steps.count - 1)
+        }
+
+        return inferredResumeStepIndex(for: lesson)
+    }
+
     func isCompleted(_ lesson: BeginnerLesson) -> Bool {
         profile.completedLessonIDs.contains(lesson.id)
     }
@@ -323,6 +332,7 @@ final class LearningState: ObservableObject {
         var next = profile
         let today = dayString(for: now)
         let inserted = next.completedLessonIDs.insert(lesson.id).inserted
+        next.lessonResumeStepIndices[lesson.id] = nil
         var reviewIDs: [String] = []
 
         for word in lesson.savedWords {
@@ -406,6 +416,14 @@ final class LearningState: ObservableObject {
             next.currentLessonID = lesson.id
         }
 
+        profile = next
+    }
+
+    func saveLessonResume(lesson: BeginnerLesson, stepIndex: Int) {
+        guard !lesson.steps.isEmpty else { return }
+        var next = profile
+        next.currentLessonID = lesson.id
+        next.lessonResumeStepIndices[lesson.id] = min(max(stepIndex, 0), lesson.steps.count - 1)
         profile = next
     }
 
@@ -1257,6 +1275,26 @@ final class LearningState: ObservableObject {
         BeginnerContent.lessons(for: language).first { !completedLessonIDs.contains($0.id) }?.id ?? BeginnerContent.firstLessonID(for: language)
     }
 
+    private func inferredResumeStepIndex(for lesson: BeginnerLesson) -> Int {
+        let completedPromptKeys = Set(
+            profile.feedbackEvents
+                .filter { $0.source.localizedCaseInsensitiveContains("speaking") }
+                .map { normalizedPromptKey($0.promptText) }
+        )
+        let latestCompletedIndex = lesson.steps.lastIndex {
+            completedPromptKeys.contains(normalizedPromptKey($0.prompt))
+        }
+
+        guard let latestCompletedIndex else { return 0 }
+        return min(latestCompletedIndex + 1, lesson.steps.count - 1)
+    }
+
+    private func normalizedPromptKey(_ text: String) -> String {
+        text
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+    }
+
     private static func restore(from storage: UserDefaults, key: String) -> LearningProfile? {
         guard let data = storage.data(forKey: key) else { return nil }
         return try? JSONDecoder().decode(LearningProfile.self, from: data)
@@ -1279,6 +1317,16 @@ final class LearningState: ObservableObject {
         next.learnerProfile = next.learnerProfile.sanitized
         let validIDs = Set(TargetLanguage.allCases.flatMap { BeginnerContent.lessons(for: $0).map(\.id) })
         next.completedLessonIDs = next.completedLessonIDs.intersection(validIDs)
+        next.lessonResumeStepIndices = next.lessonResumeStepIndices.reduce(into: [:]) { result, item in
+            guard
+                validIDs.contains(item.key),
+                !next.completedLessonIDs.contains(item.key),
+                let lesson = BeginnerContent.lesson(id: item.key),
+                !lesson.steps.isEmpty
+            else { return }
+
+            result[item.key] = min(max(item.value, 0), lesson.steps.count - 1)
+        }
         next.dailyGoal = min(max(next.dailyGoal, 1), 6)
         if next.savedLines.isEmpty {
             next.savedLines = []
