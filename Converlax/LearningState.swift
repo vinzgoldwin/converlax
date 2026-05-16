@@ -56,7 +56,7 @@ final class LearningState: ObservableObject {
     }
 
     var savedLines: [SavedLine] {
-        seededSavedLines(profile.savedLines)
+        profile.savedLines
     }
 
     var savedLearningObjects: [SavedLearningObject] {
@@ -64,7 +64,7 @@ final class LearningState: ObservableObject {
     }
 
     var scheduledReviewItems: [ScheduledReviewItem] {
-        seededScheduledReviews(profile.scheduledReviews)
+        scheduledReviews(profile.scheduledReviews)
     }
 
     var dueReviewItems: [ScheduledReviewItem] {
@@ -96,7 +96,7 @@ final class LearningState: ObservableObject {
     }
 
     var skillProgress: [SkillProgress] {
-        seededSkillProgress(profile.skillProgress)
+        skillProgress(profile.skillProgress)
     }
 
     var nextRecommendation: NextLearningRecommendation {
@@ -184,11 +184,11 @@ final class LearningState: ObservableObject {
     }
 
     var usageSessions: [UsageSession] {
-        seededUsageSessions(profile.usageSessions)
+        profile.usageSessions
     }
 
     var activities: [LearningActivity] {
-        seededActivities(profile.activities)
+        profile.activities
     }
 
     var reviewItems: [ReviewItem] {
@@ -280,6 +280,12 @@ final class LearningState: ObservableObject {
     func setDailyGoal(_ goal: Int) {
         var next = profile
         next.dailyGoal = min(max(goal, 1), 6)
+        profile = next
+    }
+
+    func updateLearnerProfile(_ learnerProfile: LearnerProfile) {
+        var next = profile
+        next.learnerProfile = learnerProfile.sanitized
         profile = next
     }
 
@@ -444,7 +450,7 @@ final class LearningState: ObservableObject {
         var next = profile
         let now = Date()
         let today = dayString(for: now)
-        if !seededSavedLines(next.savedLines).contains(where: { $0.id == line.id }) {
+        if !next.savedLines.contains(where: { $0.id == line.id }) {
             next.savedLines.append(line)
         }
         addLearningObject(
@@ -523,7 +529,7 @@ final class LearningState: ObservableObject {
     }
 
     @discardableResult
-    func acceptSpeechPractice(lesson: BeginnerLesson, step: LessonStep, transcript: String, mode: String, now: Date = Date()) -> LearningFeedback {
+    func acceptSpeechPractice(lesson: BeginnerLesson, step: LessonStep, transcript: String, mode: String, aiFeedback: AIFeedback? = nil, now: Date = Date()) -> LearningFeedback {
         var next = profile
         let cleanTranscript = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
         let correctedLine = correctedSpeechLine(for: step, transcript: cleanTranscript)
@@ -536,7 +542,8 @@ final class LearningState: ObservableObject {
             naturalPhrase: naturalLine,
             pronunciationTip: rhythmTip(for: correctedLine),
             savedTakeaway: naturalLine,
-            nextAction: "Say the natural phrase once more, then continue."
+            nextAction: "Say the natural phrase once more, then continue.",
+            aiFeedback: aiFeedback
         )
         addFeedback(feedback, in: &next)
         addLearningObject(
@@ -552,6 +559,7 @@ final class LearningState: ObservableObject {
             in: &next,
             now: now
         )
+        addFeedbackReviewItemIfNeeded(feedback, source: mode, in: &next, now: now)
         updateSkill("Speaking", title: "Speaking confidence", delta: 1, confidenceDelta: 5, in: &next)
         profile = next
         return feedback
@@ -597,7 +605,7 @@ final class LearningState: ObservableObject {
     }
 
     @discardableResult
-    func recordConversationSession(title: String, detail: String, minutes: Int, transcript: String, strongPhrases: [String], weakPhrases: [String], prompt: String = "", now: Date = Date()) -> (summary: LearningSessionSummary, feedback: LearningFeedback) {
+    func recordConversationSession(title: String, detail: String, minutes: Int, transcript: String, strongPhrases: [String], weakPhrases: [String], prompt: String = "", aiFeedback: AIFeedback? = nil, now: Date = Date()) -> (summary: LearningSessionSummary, feedback: LearningFeedback) {
         var next = profile
         let today = dayString(for: now)
         let usage = UsageSession(
@@ -647,7 +655,8 @@ final class LearningState: ObservableObject {
             naturalPhrase: conversationNaturalPhrase(transcript: transcript, strongPhrases: strongPhrases),
             pronunciationTip: conversationTip(for: transcript),
             savedTakeaway: conversationTakeaway(weakPhrases: weakPhrases, strongPhrases: strongPhrases, transcript: transcript),
-            nextAction: nextRecommendationForSession(title: title, weakPhrases: weakPhrases)
+            nextAction: nextRecommendationForSession(title: title, weakPhrases: weakPhrases),
+            aiFeedback: aiFeedback
         )
 
         if reviewIDs.isEmpty {
@@ -662,6 +671,9 @@ final class LearningState: ObservableObject {
             )
             addLearningObject(object, in: &next, now: now)
             reviewIDs.append("review-\(object.id)")
+        }
+        if let reviewID = addFeedbackReviewItemIfNeeded(feedback, source: title, in: &next, now: now) {
+            reviewIDs.append(reviewID)
         }
 
         let summary = LearningSessionSummary(
@@ -691,7 +703,7 @@ final class LearningState: ObservableObject {
     }
 
     @discardableResult
-    func recordTutorCorrection(for message: String, now: Date = Date()) -> LearningFeedback {
+    func recordTutorCorrection(for message: String, aiFeedback: AIFeedback? = nil, now: Date = Date()) -> LearningFeedback {
         var next = profile
         let natural = tutorNaturalPhrase(for: message)
         let feedback = makeFeedback(
@@ -702,7 +714,8 @@ final class LearningState: ObservableObject {
             naturalPhrase: natural,
             pronunciationTip: tutorTip(for: natural),
             savedTakeaway: natural,
-            nextAction: "Save the phrase, then say it once in voice mode."
+            nextAction: "Save the phrase, then say it once in voice mode.",
+            aiFeedback: aiFeedback
         )
         addFeedback(feedback, in: &next)
         addLearningObject(
@@ -718,6 +731,7 @@ final class LearningState: ObservableObject {
             in: &next,
             now: now
         )
+        addFeedbackReviewItemIfNeeded(feedback, source: "Tutor", in: &next, now: now)
         updateSkill("Tutor", title: "Tutor practice", delta: 1, confidenceDelta: 2, in: &next)
         profile = next
         return feedback
@@ -783,40 +797,17 @@ final class LearningState: ObservableObject {
 
     func restartOnboarding() {
         var next = LearningProfile()
+        next.learnerProfile = profile.learnerProfile
         next.dailyGoal = profile.dailyGoal
         next.hapticsEnabled = profile.hapticsEnabled
         next.soundEnabled = profile.soundEnabled
         profile = next
     }
 
-    private func seededSavedLines(_ customLines: [SavedLine]) -> [SavedLine] {
-        var lines = PhaseOneContent.savedLines
-        for line in customLines where !lines.contains(where: { $0.id == line.id }) {
-            lines.append(line)
-        }
-        return lines
-    }
-
-    private func seededUsageSessions(_ customSessions: [UsageSession]) -> [UsageSession] {
-        var sessions = customSessions
-        for session in PhaseOneContent.usageSessions where !sessions.contains(where: { $0.id == session.id }) {
-            sessions.append(session)
-        }
-        return sessions
-    }
-
-    private func seededActivities(_ customActivities: [LearningActivity]) -> [LearningActivity] {
-        var items = customActivities
-        for activity in PhaseOneContent.activities where !items.contains(where: { $0.id == activity.id }) {
-            items.append(activity)
-        }
-        return items
-    }
-
     private func seededLearningObjects(_ customObjects: [SavedLearningObject]) -> [SavedLearningObject] {
         var objects = customObjects
 
-        for line in seededSavedLines(profile.savedLines) {
+        for line in profile.savedLines {
             let object = SavedLearningObject(
                 id: "line-\(line.id)",
                 kind: .line,
@@ -849,34 +840,10 @@ final class LearningState: ObservableObject {
         return objects
     }
 
-    private func seededScheduledReviews(_ customReviews: [ScheduledReviewItem]) -> [ScheduledReviewItem] {
+    private func scheduledReviews(_ customReviews: [ScheduledReviewItem]) -> [ScheduledReviewItem] {
         var reviews = customReviews
-        let today = dayString(for: Date())
 
-        if !hasStartedLearning {
-            for item in PhaseOneContent.reviewItems {
-                let review = ScheduledReviewItem(
-                    id: item.id,
-                    objectID: item.id,
-                    kind: .phrase,
-                    prompt: item.prompt,
-                    answer: item.answer,
-                    source: item.source,
-                    lastReviewedDay: nil,
-                    nextDueDay: today,
-                    ease: Double(item.confidence) / 100,
-                    mistakeCount: 0,
-                    listeningFirst: true,
-                    speakingRetry: true
-                )
-                if !reviews.contains(where: { $0.id == review.id }) {
-                    reviews.append(review)
-                }
-            }
-        }
-
-        let reviewObjects = hasStartedLearning ? profile.savedLearningObjects : seededLearningObjects(profile.savedLearningObjects)
-        for object in reviewObjects {
+        for object in profile.savedLearningObjects {
             let review = reviewItem(for: object, now: Date())
             if !reviews.contains(where: { $0.id == review.id }) {
                 reviews.append(review)
@@ -886,7 +853,7 @@ final class LearningState: ObservableObject {
         return reviews
     }
 
-    private func seededSkillProgress(_ customProgress: [SkillProgress]) -> [SkillProgress] {
+    private func skillProgress(_ customProgress: [SkillProgress]) -> [SkillProgress] {
         var progress = customProgress
         let defaults = [
             SkillProgress(id: "speaking", title: "Speaking confidence", completed: 0, confidence: 56),
@@ -1022,6 +989,25 @@ final class LearningState: ObservableObject {
         profile.feedbackEvents = Array(profile.feedbackEvents.prefix(30))
     }
 
+    @discardableResult
+    private func addFeedbackReviewItemIfNeeded(_ feedback: LearningFeedback, source: String, in profile: inout LearningProfile, now: Date) -> String? {
+        let prompt = feedback.reviewItemPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        let answer = feedback.reviewItemAnswer.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !prompt.isEmpty, !answer.isEmpty else { return nil }
+
+        let object = SavedLearningObject(
+            id: "ai-review-\(stableID(source))-\(stableID(prompt + answer))",
+            kind: .mistake,
+            text: prompt,
+            translation: answer,
+            source: source,
+            note: "Suggested by speaking feedback.",
+            createdDay: dayString(for: now)
+        )
+        addLearningObject(object, in: &profile, now: now)
+        return "review-\(object.id)"
+    }
+
     private func makeFeedback(
         source: String,
         prompt: String = "",
@@ -1030,7 +1016,8 @@ final class LearningState: ObservableObject {
         naturalPhrase: String? = nil,
         pronunciationTip: String? = nil,
         savedTakeaway: String? = nil,
-        nextAction: String? = nil
+        nextAction: String? = nil,
+        aiFeedback: AIFeedback? = nil
     ) -> LearningFeedback {
         let day = dayString(for: Date())
         let seed = abs(stableID(source + attempt + correction).hashValue)
@@ -1038,26 +1025,46 @@ final class LearningState: ObservableObject {
         let fluency = 66 + seed % 16
         let meaning = 76 + seed % 12
         let clarity = (pronunciation + fluency + meaning) / 3
-        let betterPhrase = naturalPhrase ?? "Try: \(correction.replacingOccurrences(of: "Use: ", with: ""))"
+        let betterPhrase = aiFeedback?.naturalVersion ?? naturalPhrase ?? "Try: \(correction.replacingOccurrences(of: "Use: ", with: ""))"
+        let confidence = aiFeedback?.overallSpeakingConfidence
+        let mappedPronunciation = boundedScore(confidence.map { $0 - 4 } ?? pronunciation)
+        let mappedGrammar = boundedScore(confidence.map { $0 } ?? 68 + seed % 14)
+        let mappedVocabulary = boundedScore(confidence.map { $0 + 2 } ?? 74 + seed % 10)
+        let mappedFluency = boundedScore(confidence.map { $0 - 2 } ?? fluency)
+        let mappedMeaning = boundedScore(confidence.map { $0 + 3 } ?? meaning)
         return LearningFeedback(
             id: "feedback-\(stableID(source))-\(stableID(attempt + correction))-\(day)",
             source: source,
-            pronunciation: pronunciation,
-            grammar: 68 + seed % 14,
-            vocabulary: 74 + seed % 10,
-            fluency: fluency,
-            meaning: meaning,
-            confidence: 70 + seed % 18,
+            pronunciation: mappedPronunciation,
+            grammar: mappedGrammar,
+            vocabulary: mappedVocabulary,
+            fluency: mappedFluency,
+            meaning: mappedMeaning,
+            confidence: boundedScore(confidence ?? 70 + seed % 18),
             promptText: prompt,
             attemptedText: attempt,
-            correction: correction,
+            correction: aiFeedback?.grammarCorrection ?? correction,
             betterPhrase: betterPhrase,
-            pronunciationTip: pronunciationTip ?? "Say the phrase in one smooth breath and keep the final word clear.",
+            pronunciationTip: aiFeedback?.pronunciationNotes ?? pronunciationTip ?? "Say the phrase in one smooth breath and keep the final word clear.",
             claritySignal: claritySignal(for: clarity),
-            savedTakeaway: savedTakeaway ?? betterPhrase,
-            nextAction: nextAction ?? "Try one more spoken attempt.",
+            savedTakeaway: aiFeedback?.suggestedSavedPhrase ?? savedTakeaway ?? betterPhrase,
+            nextAction: aiFeedback?.tryNext ?? nextAction ?? "Try one more spoken attempt.",
+            grammarCorrection: aiFeedback?.grammarCorrection ?? "",
+            naturalVersion: aiFeedback?.naturalVersion ?? "",
+            pronunciationNotes: aiFeedback?.pronunciationNotes ?? "",
+            vocabularyImprovement: aiFeedback?.vocabularyImprovement ?? "",
+            fluencyTip: aiFeedback?.fluencyTip ?? "",
+            didWell: aiFeedback?.didWell ?? "",
+            tryNext: aiFeedback?.tryNext ?? "",
+            reviewItemPrompt: aiFeedback?.reviewItemSuggestion.prompt ?? "",
+            reviewItemAnswer: aiFeedback?.reviewItemSuggestion.answer ?? "",
+            feedbackProvider: aiFeedback == nil ? "local" : "openrouter",
             createdDay: day
         )
+    }
+
+    private func boundedScore(_ score: Int) -> Int {
+        min(100, max(0, score))
     }
 
     private func correctedLine(for step: LessonStep) -> String {
@@ -1268,6 +1275,8 @@ final class LearningState: ObservableObject {
 
     private static func sanitized(_ profile: LearningProfile) -> LearningProfile {
         var next = profile
+        next.schemaVersion = LearningProfile.currentSchemaVersion
+        next.learnerProfile = next.learnerProfile.sanitized
         let validIDs = Set(TargetLanguage.allCases.flatMap { BeginnerContent.lessons(for: $0).map(\.id) })
         next.completedLessonIDs = next.completedLessonIDs.intersection(validIDs)
         next.dailyGoal = min(max(next.dailyGoal, 1), 6)

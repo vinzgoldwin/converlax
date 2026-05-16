@@ -278,7 +278,7 @@ enum TargetLanguage: String, CaseIterable, Codable, Identifiable {
 
     var unitTitle: String {
         switch self {
-        case .english: "Conversation Essentials"
+        case .english: "English Speaking Path"
         case .french: "Beginner Essentials"
         case .spanish: "Spanish Essentials"
         case .italian: "Italian Essentials"
@@ -287,7 +287,7 @@ enum TargetLanguage: String, CaseIterable, Codable, Identifiable {
 
     var unitDescription: String {
         switch self {
-        case .english: "A complete starter unit for introductions, small talk, cafes, directions, help, plans, routines, shopping, and work."
+        case .english: "Practical conversation units for first chats, daily life, food, travel, work, calls, problems, opinions, and help."
         case .french: "A complete starter unit for greetings, cafe orders, directions, and hotel check-in."
         case .spanish, .italian: "Switch to English or French for the guided starter course."
         }
@@ -326,6 +326,180 @@ enum Level: String, CaseIterable, Codable, Identifiable {
         case .elementary: 2
         case .upperElementary: 3
         case .intermediate: 4
+        }
+    }
+}
+
+struct LearnerProfile: Codable, Equatable {
+    var displayName = ""
+    var nickname: String?
+    var avatarChoice: LearnerAvatarChoice = .melo
+    var nativeLanguage = ""
+    var learningReason: LearningReason = .speakWithConfidence
+    var speakingConfidence: SpeakingConfidenceLevel = .warmingUp
+    var dailySpeakingGoal: DailySpeakingGoal = .fiveMinutes
+    var practiceFocus: PracticeFocus = .everydayConversation
+    var reminderPreference: ReminderPreference?
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        displayName = (try? container.decodeIfPresent(String.self, forKey: .displayName)) ?? ""
+        nickname = (try? container.decodeIfPresent(String.self, forKey: .nickname)) ?? nil
+        avatarChoice = (try? container.decodeIfPresent(LearnerAvatarChoice.self, forKey: .avatarChoice)) ?? .melo
+        nativeLanguage = (try? container.decodeIfPresent(String.self, forKey: .nativeLanguage)) ?? ""
+        learningReason = (try? container.decodeIfPresent(LearningReason.self, forKey: .learningReason)) ?? .speakWithConfidence
+        speakingConfidence = (try? container.decodeIfPresent(SpeakingConfidenceLevel.self, forKey: .speakingConfidence)) ?? .warmingUp
+        dailySpeakingGoal = (try? container.decodeIfPresent(DailySpeakingGoal.self, forKey: .dailySpeakingGoal)) ?? .fiveMinutes
+        practiceFocus = (try? container.decodeIfPresent(PracticeFocus.self, forKey: .practiceFocus)) ?? .everydayConversation
+        reminderPreference = (try? container.decodeIfPresent(ReminderPreference.self, forKey: .reminderPreference)) ?? nil
+    }
+
+    var preferredName: String {
+        if let nickname = sanitizedOptional(nickname) {
+            return nickname
+        }
+        return sanitizedText(displayName, limit: 50)
+    }
+
+    var sanitized: LearnerProfile {
+        var next = self
+        next.displayName = sanitizedText(displayName, limit: 50)
+        next.nickname = sanitizedOptional(nickname, limit: 32)
+        next.nativeLanguage = sanitizedText(nativeLanguage, limit: 40)
+        return next
+    }
+
+    private func sanitizedText(_ value: String, limit: Int) -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return String(trimmed.prefix(limit))
+    }
+
+    private func sanitizedOptional(_ value: String?, limit: Int = 32) -> String? {
+        guard let value else { return nil }
+        let trimmed = sanitizedText(value, limit: limit)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
+enum LearnerAvatarChoice: String, CaseIterable, Codable, Identifiable {
+    case melo
+    case waving
+    case thinking
+    case celebrating
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .melo: "Melo"
+        case .waving: "Melo waving"
+        case .thinking: "Melo thinking"
+        case .celebrating: "Melo celebrating"
+        }
+    }
+
+    var mascotState: ConverlaxMascotState {
+        switch self {
+        case .melo: .avatar
+        case .waving: .waving
+        case .thinking: .thinking
+        case .celebrating: .celebrating
+        }
+    }
+}
+
+enum LearningReason: String, CaseIterable, Codable, Identifiable {
+    case speakWithConfidence
+    case travel
+    case work
+    case study
+    case friendsAndFamily
+    case dailyLife
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .speakWithConfidence: "Speak with confidence"
+        case .travel: "Travel"
+        case .work: "Work"
+        case .study: "Study"
+        case .friendsAndFamily: "Friends and family"
+        case .dailyLife: "Daily life"
+        }
+    }
+}
+
+enum SpeakingConfidenceLevel: String, CaseIterable, Codable, Identifiable {
+    case warmingUp
+    case cautious
+    case steady
+    case confident
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .warmingUp: "Warming up"
+        case .cautious: "Cautious"
+        case .steady: "Steady"
+        case .confident: "Confident"
+        }
+    }
+}
+
+enum DailySpeakingGoal: String, CaseIterable, Codable, Identifiable {
+    case threeMinutes
+    case fiveMinutes
+    case tenMinutes
+    case fifteenMinutes
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .threeMinutes: "3 minutes"
+        case .fiveMinutes: "5 minutes"
+        case .tenMinutes: "10 minutes"
+        case .fifteenMinutes: "15 minutes"
+        }
+    }
+}
+
+enum PracticeFocus: String, CaseIterable, Codable, Identifiable {
+    case everydayConversation
+    case pronunciation
+    case listeningThenSpeaking
+    case travel
+    case workAndStudy
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .everydayConversation: "Everyday conversation"
+        case .pronunciation: "Pronunciation"
+        case .listeningThenSpeaking: "Listening then speaking"
+        case .travel: "Travel"
+        case .workAndStudy: "Work and study"
+        }
+    }
+}
+
+enum ReminderPreference: String, CaseIterable, Codable, Identifiable {
+    case morning
+    case midday
+    case evening
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .morning: "Morning"
+        case .midday: "Midday"
+        case .evening: "Evening"
         }
     }
 }
@@ -379,14 +553,14 @@ enum SpeechPracticePhase: String, Codable, Hashable {
     var title: String {
         switch self {
         case .requestingPermission: "Requesting access"
-        case .permissionNeeded, .permissionDenied: "Microphone blocked"
+        case .permissionNeeded, .permissionDenied: "Voice needs access"
         case .ready: "Ready to speak"
         case .recording: "Recording"
         case .paused: "Paused"
         case .processing, .transcribing: "Transcribing"
         case .transcript: "Transcript ready"
         case .feedback: "Feedback ready"
-        case .accepted: "Accepted"
+        case .accepted: "Speaking saved"
         case .noSpeech: "No speech recognized"
         case .error: "Try again"
         }
@@ -396,11 +570,11 @@ enum SpeechPracticePhase: String, Codable, Hashable {
         switch self {
         case .requestingPermission: "Requesting access"
         case .permissionNeeded, .permissionDenied: "Try again"
-        case .ready: "Start recording"
-        case .recording: "Stop recording"
+        case .ready: "Start speaking"
+        case .recording: "Use this recording"
         case .paused: "Resume"
         case .processing, .transcribing: "Transcribing"
-        case .transcript: "Get feedback"
+        case .transcript: "Use this phrase"
         case .feedback: "Next turn"
         case .accepted: "Practice again"
         case .noSpeech, .error: "Try again"
@@ -435,6 +609,16 @@ struct LearningFeedback: Codable, Hashable, Identifiable {
     let claritySignal: String
     let savedTakeaway: String
     let nextAction: String
+    let grammarCorrection: String
+    let naturalVersion: String
+    let pronunciationNotes: String
+    let vocabularyImprovement: String
+    let fluencyTip: String
+    let didWell: String
+    let tryNext: String
+    let reviewItemPrompt: String
+    let reviewItemAnswer: String
+    let feedbackProvider: String
     let createdDay: String
 
     var averageScore: Int {
@@ -458,6 +642,16 @@ struct LearningFeedback: Codable, Hashable, Identifiable {
         claritySignal: String = "",
         savedTakeaway: String = "",
         nextAction: String = "Try one more spoken attempt.",
+        grammarCorrection: String = "",
+        naturalVersion: String = "",
+        pronunciationNotes: String = "",
+        vocabularyImprovement: String = "",
+        fluencyTip: String = "",
+        didWell: String = "",
+        tryNext: String = "",
+        reviewItemPrompt: String = "",
+        reviewItemAnswer: String = "",
+        feedbackProvider: String = "local",
         createdDay: String
     ) {
         self.id = id
@@ -476,6 +670,16 @@ struct LearningFeedback: Codable, Hashable, Identifiable {
         self.claritySignal = claritySignal
         self.savedTakeaway = savedTakeaway
         self.nextAction = nextAction
+        self.grammarCorrection = grammarCorrection
+        self.naturalVersion = naturalVersion
+        self.pronunciationNotes = pronunciationNotes
+        self.vocabularyImprovement = vocabularyImprovement
+        self.fluencyTip = fluencyTip
+        self.didWell = didWell
+        self.tryNext = tryNext
+        self.reviewItemPrompt = reviewItemPrompt
+        self.reviewItemAnswer = reviewItemAnswer
+        self.feedbackProvider = feedbackProvider
         self.createdDay = createdDay
     }
 
@@ -496,6 +700,16 @@ struct LearningFeedback: Codable, Hashable, Identifiable {
         case claritySignal
         case savedTakeaway
         case nextAction
+        case grammarCorrection
+        case naturalVersion
+        case pronunciationNotes
+        case vocabularyImprovement
+        case fluencyTip
+        case didWell
+        case tryNext
+        case reviewItemPrompt
+        case reviewItemAnswer
+        case feedbackProvider
         case createdDay
     }
 
@@ -517,6 +731,16 @@ struct LearningFeedback: Codable, Hashable, Identifiable {
         claritySignal = try container.decodeIfPresent(String.self, forKey: .claritySignal) ?? ""
         savedTakeaway = try container.decodeIfPresent(String.self, forKey: .savedTakeaway) ?? betterPhrase
         nextAction = try container.decodeIfPresent(String.self, forKey: .nextAction) ?? "Try one more spoken attempt."
+        grammarCorrection = try container.decodeIfPresent(String.self, forKey: .grammarCorrection) ?? ""
+        naturalVersion = try container.decodeIfPresent(String.self, forKey: .naturalVersion) ?? ""
+        pronunciationNotes = try container.decodeIfPresent(String.self, forKey: .pronunciationNotes) ?? ""
+        vocabularyImprovement = try container.decodeIfPresent(String.self, forKey: .vocabularyImprovement) ?? ""
+        fluencyTip = try container.decodeIfPresent(String.self, forKey: .fluencyTip) ?? ""
+        didWell = try container.decodeIfPresent(String.self, forKey: .didWell) ?? ""
+        tryNext = try container.decodeIfPresent(String.self, forKey: .tryNext) ?? ""
+        reviewItemPrompt = try container.decodeIfPresent(String.self, forKey: .reviewItemPrompt) ?? ""
+        reviewItemAnswer = try container.decodeIfPresent(String.self, forKey: .reviewItemAnswer) ?? ""
+        feedbackProvider = try container.decodeIfPresent(String.self, forKey: .feedbackProvider) ?? "local"
         createdDay = try container.decode(String.self, forKey: .createdDay)
     }
 }
@@ -805,7 +1029,10 @@ struct BeginnerLesson: Hashable, Identifiable {
 }
 
 struct LearningProfile: Codable, Equatable {
-    var schemaVersion = 3
+    static let currentSchemaVersion = 4
+
+    var schemaVersion = Self.currentSchemaVersion
+    var learnerProfile = LearnerProfile()
     var targetLanguage: TargetLanguage = .english
     var currentLevel: Level = .beginner
     var completedLessonIDs: Set<String> = []
@@ -827,7 +1054,7 @@ struct LearningProfile: Codable, Equatable {
     var hapticsEnabled = true
     var soundEnabled = true
     var tutorAudioEnabled = false
-    var voiceRecognitionEnabled = false
+    var voiceRecognitionEnabled = true
     var notificationsEnabled = true
 
     init() {}
@@ -835,6 +1062,7 @@ struct LearningProfile: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
+        learnerProfile = (try? container.decodeIfPresent(LearnerProfile.self, forKey: .learnerProfile)) ?? LearnerProfile()
         targetLanguage = try container.decodeIfPresent(TargetLanguage.self, forKey: .targetLanguage) ?? .french
         currentLevel = try container.decodeIfPresent(Level.self, forKey: .currentLevel) ?? .beginner
         completedLessonIDs = try container.decodeIfPresent(Set<String>.self, forKey: .completedLessonIDs) ?? []
@@ -856,7 +1084,7 @@ struct LearningProfile: Codable, Equatable {
         hapticsEnabled = try container.decodeIfPresent(Bool.self, forKey: .hapticsEnabled) ?? true
         soundEnabled = try container.decodeIfPresent(Bool.self, forKey: .soundEnabled) ?? true
         tutorAudioEnabled = try container.decodeIfPresent(Bool.self, forKey: .tutorAudioEnabled) ?? false
-        voiceRecognitionEnabled = try container.decodeIfPresent(Bool.self, forKey: .voiceRecognitionEnabled) ?? false
+        voiceRecognitionEnabled = try container.decodeIfPresent(Bool.self, forKey: .voiceRecognitionEnabled) ?? true
         notificationsEnabled = try container.decodeIfPresent(Bool.self, forKey: .notificationsEnabled) ?? true
     }
 }

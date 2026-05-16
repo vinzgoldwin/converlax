@@ -57,7 +57,7 @@ private struct CourseUnitIntro: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Unit 1")
+            Text("Speaking course")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(Color.primaryBlue)
             Text(language.unitTitle)
@@ -219,7 +219,7 @@ private struct FeaturedLessonCard: View {
 
     private var primaryActionTitle: String {
         if completed { return "Practice again" }
-        return isFirstSession ? "Start first lesson" : "Start lesson"
+        return isFirstSession ? "Start speaking" : "Continue speaking"
     }
 }
 
@@ -264,11 +264,16 @@ struct CourseDetailView: View {
 
                     VStack(alignment: .leading, spacing: 12) {
                         SectionHeader(title: "Choose a lesson", subtitle: "Each one builds a useful conversation.")
-                        ForEach(state.courseLessons) { lesson in
-                            NavigationLink(value: HomeRoute.lessonDetail(lesson)) {
-                                LessonRow(lesson: lesson, isCurrent: state.isCurrent(lesson), isCompleted: state.isCompleted(lesson))
+                        ForEach(groupedLessons) { group in
+                            VStack(alignment: .leading, spacing: 10) {
+                                CourseUnitSectionHeader(unit: group.unit, title: group.title)
+                                ForEach(group.lessons) { lesson in
+                                    NavigationLink(value: HomeRoute.lessonDetail(lesson)) {
+                                        LessonRow(lesson: lesson, isCurrent: state.isCurrent(lesson), isCompleted: state.isCompleted(lesson))
+                                    }
+                                    .buttonStyle(.plain)
+                                }
                             }
-                            .buttonStyle(.plain)
                         }
                     }
 
@@ -278,6 +283,60 @@ struct CourseDetailView: View {
             }
         }
         .navigationTitle("Course")
+    }
+
+    private var groupedLessons: [CourseLessonGroup] {
+        let lessonsByUnit = Dictionary(grouping: state.courseLessons, by: \.unit)
+        return lessonsByUnit.keys.sorted().map { unit in
+            CourseLessonGroup(
+                unit: unit,
+                title: unitTitle(for: unit),
+                lessons: lessonsByUnit[unit] ?? []
+            )
+        }
+    }
+
+    private func unitTitle(for unit: Int) -> String {
+        guard state.profile.targetLanguage == .english else {
+            return "Beginner essentials"
+        }
+
+        switch unit {
+        case 1:
+            return "First conversations"
+        case 2:
+            return "Around town"
+        case 3:
+            return "Work and calls"
+        case 4:
+            return "Travel and help"
+        default:
+            return "Conversation practice"
+        }
+    }
+}
+
+private struct CourseLessonGroup: Identifiable {
+    let unit: Int
+    let title: String
+    let lessons: [BeginnerLesson]
+
+    var id: Int { unit }
+}
+
+private struct CourseUnitSectionHeader: View {
+    let unit: Int
+    let title: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Unit \(unit)")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Color.primaryBlue)
+            Text(title)
+                .font(.headline.weight(.semibold))
+        }
+        .padding(.top, unit == 1 ? 0 : 8)
     }
 }
 
@@ -307,7 +366,7 @@ private struct CurrentCourseLessonStart: View {
             }
 
             NavigationLink(value: HomeRoute.lesson(lesson)) {
-                Label(state.isCompleted(lesson) ? "Start again" : "Start lesson", systemImage: "play.fill")
+                Label(state.isCompleted(lesson) ? "Speak again" : "Start speaking", systemImage: "mic.fill")
             }
             .buttonStyle(PrimaryButtonStyle())
             .accessibilityIdentifier("course-detail-start-button")

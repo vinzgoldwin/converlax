@@ -9,6 +9,8 @@ struct LessonPlayerView: View {
     @State private var savedCurrentLine = false
     @State private var speechPhase: SpeechPracticePhase = .ready
     @State private var transcript = ""
+    @State private var fallbackText = ""
+    @State private var showsTextFallback = false
     @State private var speechFeedback: LearningFeedback?
     @State private var speechErrorMessage: String?
     @StateObject private var speechRecognizer = SpeechRecognitionService()
@@ -46,12 +48,16 @@ struct LessonPlayerView: View {
                             savedCurrentLine: savedCurrentLine,
                             speechPhase: speechPhase,
                             transcript: transcript,
+                            fallbackText: $fallbackText,
+                            showsTextFallback: showsTextFallback || speechPhase == .permissionDenied,
                             speechFeedback: speechFeedback,
                             speechErrorMessage: speechErrorMessage,
                             isLastTurn: stepIndex == lesson.steps.count - 1,
                             onSaveLine: saveCurrentLine,
                             onSpeechPrimary: advanceSpeechState,
-                            onSpeechCancel: cancelSpeech
+                            onSpeechCancel: cancelSpeech,
+                            onShowTextFallback: { showsTextFallback = true },
+                            onSubmitTextFallback: submitFallbackText
                         )
                         .padding(.bottom, 18)
                     }
@@ -105,18 +111,14 @@ struct LessonPlayerView: View {
         case .requestingPermission, .processing, .transcribing:
             break
         case .transcript:
-            speechFeedback = state.acceptSpeechPractice(
-                lesson: lesson,
-                step: step,
-                transcript: transcript,
-                mode: "Speaking practice"
-            )
-            speechPhase = .feedback
+            Task { await generateSpeechFeedback() }
         case .feedback:
             advanceAfterSpeechAcceptance()
         case .accepted:
             speechPhase = .ready
             transcript = ""
+            fallbackText = ""
+            showsTextFallback = false
             speechFeedback = nil
             speechErrorMessage = nil
         }
@@ -126,6 +128,8 @@ struct LessonPlayerView: View {
         speechRecognizer.cancelRecording()
         speechPhase = .ready
         transcript = ""
+        fallbackText = ""
+        showsTextFallback = false
         speechFeedback = nil
         speechErrorMessage = nil
     }
@@ -133,6 +137,8 @@ struct LessonPlayerView: View {
     private func startSpeechRecording() {
         speechPhase = .requestingPermission
         transcript = ""
+        fallbackText = ""
+        showsTextFallback = false
         speechFeedback = nil
         speechErrorMessage = nil
 
@@ -161,6 +167,49 @@ struct LessonPlayerView: View {
         speechPhase = .transcript
     }
 
+    @MainActor
+    private func generateSpeechFeedback() async {
+        let cleanTranscript = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanTranscript.isEmpty else {
+            speechErrorMessage = "No clear speech was captured. Try again a little slower and closer to the mic."
+            speechPhase = .noSpeech
+            return
+        }
+
+        speechPhase = .processing
+        speechErrorMessage = nil
+
+        let aiFeedback: AIFeedback?
+        do {
+            aiFeedback = try await AIFeedbackService.shared.feedback(
+                transcript: cleanTranscript,
+                context: speechFeedbackContext(mode: "Speaking practice", step: step)
+            )
+        } catch {
+            aiFeedback = nil
+            speechErrorMessage = AIFeedbackService.fallbackMessage(for: error)
+        }
+
+        speechFeedback = state.acceptSpeechPractice(
+            lesson: lesson,
+            step: step,
+            transcript: cleanTranscript,
+            mode: "Speaking practice",
+            aiFeedback: aiFeedback
+        )
+        speechPhase = .feedback
+    }
+
+    private func submitFallbackText() {
+        let cleanText = fallbackText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanText.isEmpty else { return }
+
+        transcript = cleanText
+        fallbackText = ""
+        showsTextFallback = false
+        Task { await generateSpeechFeedback() }
+    }
+
     private func advanceAfterSpeechAcceptance() {
         speechPhase = .accepted
 
@@ -170,6 +219,8 @@ struct LessonPlayerView: View {
                 savedCurrentLine = false
                 speechPhase = .ready
                 transcript = ""
+                fallbackText = ""
+                showsTextFallback = false
                 speechFeedback = nil
                 speechErrorMessage = nil
             }
@@ -201,6 +252,8 @@ struct LessonPlayerView: View {
         savedCurrentLine = false
         speechFeedback = nil
         speechErrorMessage = nil
+        fallbackText = ""
+        showsTextFallback = false
 
         switch launchState {
         case "recording":
@@ -220,7 +273,7 @@ struct LessonPlayerView: View {
             speechPhase = .feedback
         case "permissionDenied", "permission":
             transcript = ""
-            speechErrorMessage = "Microphone access is denied. Allow Converlax in Settings to practice speaking."
+            speechErrorMessage = "Voice practice needs Microphone and Speech Recognition. Use text now or enable access later."
             speechPhase = .permissionDenied
         default:
             break
@@ -230,6 +283,27 @@ struct LessonPlayerView: View {
     private func sampleTranscript(for step: LessonStep) -> String {
         let filledBlank = step.prompt.replacingOccurrences(of: "___", with: step.correctAnswer ?? "coffee")
         return filledBlank.replacingOccurrences(of: "...", with: "Alex")
+    }
+
+    private func speechFeedbackContext(mode: String, step: LessonStep) -> AIFeedbackRequestContext {
+        AIFeedbackRequestContext(
+            mode: mode,
+            lessonTitle: lesson.title,
+            prompt: step.prompt,
+            expectedPhrase: expectedPhrase(for: step),
+            targetLanguage: state.profile.targetLanguage.rawValue,
+            proficiencyLevel: state.profile.currentLevel.code,
+            roleplayTitle: nil,
+            roleplaySetting: nil,
+            usefulPhrases: nil
+        )
+    }
+
+    private func expectedPhrase(for step: LessonStep) -> String {
+        if step.prompt.contains("___"), let answer = step.correctAnswer {
+            return step.prompt.replacingOccurrences(of: "___", with: answer)
+        }
+        return step.correctAnswer ?? step.prompt
     }
 }
 
@@ -242,7 +316,7 @@ enum LessonModeKind {
         switch self {
         case .video: "Watch and repeat"
         case .speakingDrill: "Practice speaking"
-        case .qa: "Answer prompts"
+        case .qa: "Speak answers"
         }
     }
 
@@ -250,7 +324,7 @@ enum LessonModeKind {
         switch self {
         case .video: "Watch"
         case .speakingDrill: "Speak"
-        case .qa: "Q&A"
+        case .qa: "Answers"
         }
     }
 
@@ -258,7 +332,7 @@ enum LessonModeKind {
         switch self {
         case .video: "Lesson watched"
         case .speakingDrill: "Speaking practice complete"
-        case .qa: "Prompt practice complete"
+        case .qa: "Answer practice complete"
         }
     }
 
@@ -266,7 +340,7 @@ enum LessonModeKind {
         switch self {
         case .video: "Watch and repeat"
         case .speakingDrill: "Practice speaking"
-        case .qa: "Answer prompts"
+        case .qa: "Spoken answer practice"
         }
     }
 
@@ -282,7 +356,7 @@ enum LessonModeKind {
         switch self {
         case .video: "play.rectangle.fill"
         case .speakingDrill: "mic.circle.fill"
-        case .qa: "questionmark.bubble.fill"
+        case .qa: "mic.circle.fill"
         }
     }
 
@@ -314,6 +388,8 @@ struct LessonModePlayerView: View {
     @State private var feedback: LearningFeedback?
     @State private var speechPhase: SpeechPracticePhase = .ready
     @State private var transcript = ""
+    @State private var fallbackText = ""
+    @State private var showsTextFallback = false
     @State private var speechFeedback: LearningFeedback?
     @State private var speechErrorMessage: String?
     @StateObject private var speechRecognizer = SpeechRecognitionService()
@@ -419,12 +495,16 @@ struct LessonModePlayerView: View {
                 feedback: feedback,
                 speechPhase: speechPhase,
                 transcript: transcript,
+                fallbackText: $fallbackText,
+                showsTextFallback: showsTextFallback || speechPhase == .permissionDenied,
                 speechFeedback: speechFeedback,
                 speechErrorMessage: speechErrorMessage,
                 onToggleAudio: { audioEnabled.toggle() },
                 onSaveLine: saveCurrentLine,
                 onSpeechPrimary: advanceSpeechState,
-                onSpeechCancel: resetSpeech
+                onSpeechCancel: resetSpeech,
+                onShowTextFallback: { showsTextFallback = true },
+                onSubmitTextFallback: submitFallbackText
             )
         case .speakingDrill:
             SpeakingDrillStepCard(
@@ -433,21 +513,32 @@ struct LessonModePlayerView: View {
                 savedCurrentLine: savedCurrentLine,
                 speechPhase: speechPhase,
                 transcript: transcript,
+                fallbackText: $fallbackText,
+                showsTextFallback: showsTextFallback || speechPhase == .permissionDenied,
                 speechFeedback: speechFeedback,
                 speechErrorMessage: speechErrorMessage,
                 onSaveLine: saveCurrentLine,
                 onSpeechPrimary: advanceSpeechState,
-                onSpeechCancel: resetSpeech
+                onSpeechCancel: resetSpeech,
+                onShowTextFallback: { showsTextFallback = true },
+                onSubmitTextFallback: submitFallbackText
             )
         case .qa:
-            QALessonStepCard(
+            SpeakingDrillStepCard(
                 step: step,
-                selectedAnswer: $selectedAnswer,
-                checked: checked,
                 accent: lesson.accent.color,
                 savedCurrentLine: savedCurrentLine,
-                feedback: feedback,
-                onSaveLine: saveCurrentLine
+                speechPhase: speechPhase,
+                transcript: transcript,
+                fallbackText: $fallbackText,
+                showsTextFallback: showsTextFallback || speechPhase == .permissionDenied,
+                speechFeedback: speechFeedback,
+                speechErrorMessage: speechErrorMessage,
+                onSaveLine: saveCurrentLine,
+                onSpeechPrimary: advanceSpeechState,
+                onSpeechCancel: resetSpeech,
+                onShowTextFallback: { showsTextFallback = true },
+                onSubmitTextFallback: submitFallbackText
             )
         }
     }
@@ -477,7 +568,7 @@ struct LessonModePlayerView: View {
         case .speakingDrill:
             return .speech
         case .qa:
-            return step.kind == .choice ? .choice : .read
+            return .speech
         }
     }
 
@@ -549,13 +640,7 @@ struct LessonModePlayerView: View {
         case .requestingPermission, .processing, .transcribing:
             break
         case .transcript:
-            speechFeedback = state.acceptSpeechPractice(
-                lesson: lesson,
-                step: step,
-                transcript: transcript,
-                mode: mode.modeName
-            )
-            speechPhase = .feedback
+            Task { await generateSpeechFeedback() }
         case .feedback:
             speakingAcceptedCount += 1
             speechPhase = .accepted
@@ -590,6 +675,8 @@ struct LessonModePlayerView: View {
         speechRecognizer.cancelRecording()
         speechPhase = .ready
         transcript = ""
+        fallbackText = ""
+        showsTextFallback = false
         speechFeedback = nil
         speechErrorMessage = nil
     }
@@ -604,6 +691,8 @@ struct LessonModePlayerView: View {
     private func startSpeechRecording() {
         speechPhase = .requestingPermission
         transcript = ""
+        fallbackText = ""
+        showsTextFallback = false
         speechFeedback = nil
         speechErrorMessage = nil
 
@@ -632,6 +721,51 @@ struct LessonModePlayerView: View {
         speechPhase = .transcript
     }
 
+    @MainActor
+    private func generateSpeechFeedback() async {
+        let cleanTranscript = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanTranscript.isEmpty else {
+            speechErrorMessage = "No clear speech was captured. Try again a little slower and closer to the mic."
+            speechPhase = .noSpeech
+            return
+        }
+
+        speechPhase = .processing
+        speechErrorMessage = nil
+
+        let aiFeedback: AIFeedback?
+        do {
+            aiFeedback = try await AIFeedbackService.shared.feedback(
+                transcript: cleanTranscript,
+                context: speechFeedbackContext(mode: mode.modeName, step: step)
+            )
+        } catch {
+            aiFeedback = nil
+            speechErrorMessage = AIFeedbackService.fallbackMessage(for: error)
+        }
+
+        speechFeedback = state.acceptSpeechPractice(
+            lesson: lesson,
+            step: step,
+            transcript: cleanTranscript,
+            mode: mode.modeName,
+            aiFeedback: aiFeedback
+        )
+        speechPhase = .feedback
+        fallbackText = ""
+        showsTextFallback = false
+    }
+
+    private func submitFallbackText() {
+        let cleanText = fallbackText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanText.isEmpty else { return }
+
+        transcript = cleanText
+        fallbackText = ""
+        showsTextFallback = false
+        Task { await generateSpeechFeedback() }
+    }
+
     private func applyLaunchSpeechStateIfNeeded() {
         guard
             !didApplyLaunchSpeechState,
@@ -644,6 +778,8 @@ struct LessonModePlayerView: View {
         let targetStep = modeSteps[targetIndex]
         stepIndex = targetIndex
         resetStepState()
+        fallbackText = ""
+        showsTextFallback = false
 
         switch launchState {
         case "recording":
@@ -663,7 +799,7 @@ struct LessonModePlayerView: View {
             speechPhase = .feedback
         case "permissionDenied", "permission":
             transcript = ""
-            speechErrorMessage = "Microphone access is denied. Allow Converlax in Settings to practice speaking."
+            speechErrorMessage = "Voice practice needs Microphone and Speech Recognition. Use text now or enable access later."
             speechPhase = .permissionDenied
         default:
             break
@@ -673,6 +809,27 @@ struct LessonModePlayerView: View {
     private func sampleTranscript(for step: LessonStep) -> String {
         let filledBlank = step.prompt.replacingOccurrences(of: "___", with: step.correctAnswer ?? "coffee")
         return filledBlank.replacingOccurrences(of: "...", with: "Alex")
+    }
+
+    private func speechFeedbackContext(mode: String, step: LessonStep) -> AIFeedbackRequestContext {
+        AIFeedbackRequestContext(
+            mode: mode,
+            lessonTitle: lesson.title,
+            prompt: step.prompt,
+            expectedPhrase: expectedPhrase(for: step),
+            targetLanguage: state.profile.targetLanguage.rawValue,
+            proficiencyLevel: state.profile.currentLevel.code,
+            roleplayTitle: nil,
+            roleplaySetting: nil,
+            usefulPhrases: nil
+        )
+    }
+
+    private func expectedPhrase(for step: LessonStep) -> String {
+        if step.prompt.contains("___"), let answer = step.correctAnswer {
+            return step.prompt.replacingOccurrences(of: "___", with: answer)
+        }
+        return step.correctAnswer ?? step.prompt
     }
 
     private var homeRouteArgument: String {
@@ -729,12 +886,16 @@ private struct VideoLessonStepCard: View {
     let feedback: LearningFeedback?
     let speechPhase: SpeechPracticePhase
     let transcript: String
+    @Binding var fallbackText: String
+    let showsTextFallback: Bool
     let speechFeedback: LearningFeedback?
     let speechErrorMessage: String?
     let onToggleAudio: () -> Void
     let onSaveLine: () -> Void
     let onSpeechPrimary: () -> Void
     let onSpeechCancel: () -> Void
+    let onShowTextFallback: () -> Void
+    let onSubmitTextFallback: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -788,7 +949,26 @@ private struct VideoLessonStepCard: View {
                     onPrimary: onSpeechPrimary,
                     onCancel: onSpeechCancel
                 )
+
+                if offersTextFallback {
+                    VoiceFallbackTextEntry(
+                        text: $fallbackText,
+                        isExpanded: showsTextFallback,
+                        placeholder: "Type what you wanted to say",
+                        onReveal: onShowTextFallback,
+                        onSubmit: onSubmitTextFallback
+                    )
+                }
             }
+        }
+    }
+
+    private var offersTextFallback: Bool {
+        switch speechPhase {
+        case .permissionNeeded, .permissionDenied, .noSpeech, .error:
+            true
+        default:
+            false
         }
     }
 }
@@ -799,11 +979,15 @@ private struct SpeakingDrillStepCard: View {
     let savedCurrentLine: Bool
     let speechPhase: SpeechPracticePhase
     let transcript: String
+    @Binding var fallbackText: String
+    let showsTextFallback: Bool
     let speechFeedback: LearningFeedback?
     let speechErrorMessage: String?
     let onSaveLine: () -> Void
     let onSpeechPrimary: () -> Void
     let onSpeechCancel: () -> Void
+    let onShowTextFallback: () -> Void
+    let onSubmitTextFallback: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -818,6 +1002,25 @@ private struct SpeakingDrillStepCard: View {
                 onPrimary: onSpeechPrimary,
                 onCancel: onSpeechCancel
             )
+
+            if offersTextFallback {
+                VoiceFallbackTextEntry(
+                    text: $fallbackText,
+                    isExpanded: showsTextFallback,
+                    placeholder: "Type what you wanted to say",
+                    onReveal: onShowTextFallback,
+                    onSubmit: onSubmitTextFallback
+                )
+            }
+        }
+    }
+
+    private var offersTextFallback: Bool {
+        switch speechPhase {
+        case .permissionNeeded, .permissionDenied, .noSpeech, .error:
+            true
+        default:
+            false
         }
     }
 }
@@ -986,12 +1189,16 @@ private struct VoiceFirstLessonTurn: View {
     let savedCurrentLine: Bool
     let speechPhase: SpeechPracticePhase
     let transcript: String
+    @Binding var fallbackText: String
+    let showsTextFallback: Bool
     let speechFeedback: LearningFeedback?
     let speechErrorMessage: String?
     let isLastTurn: Bool
     let onSaveLine: () -> Void
     let onSpeechPrimary: () -> Void
     let onSpeechCancel: () -> Void
+    let onShowTextFallback: () -> Void
+    let onSubmitTextFallback: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -1019,6 +1226,25 @@ private struct VoiceFirstLessonTurn: View {
                 onPrimary: onSpeechPrimary,
                 onCancel: onSpeechCancel
             )
+
+            if offersTextFallback {
+                VoiceFallbackTextEntry(
+                    text: $fallbackText,
+                    isExpanded: showsTextFallback,
+                    placeholder: "Type what you wanted to say",
+                    onReveal: onShowTextFallback,
+                    onSubmit: onSubmitTextFallback
+                )
+            }
+        }
+    }
+
+    private var offersTextFallback: Bool {
+        switch speechPhase {
+        case .permissionNeeded, .permissionDenied, .noSpeech, .error:
+            true
+        default:
+            false
         }
     }
 

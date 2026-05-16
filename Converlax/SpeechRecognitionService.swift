@@ -22,20 +22,20 @@ final class SpeechRecognitionService: ObservableObject {
         errorMessage = nil
 
         guard await requestPermissions() else {
-            errorMessage = "Microphone or speech recognition permission is denied. Enable both in Settings to use voice input."
+            errorMessage = "Voice practice needs Microphone and Speech Recognition. You can allow access in Settings or use text for this turn."
             return false
         }
 
         speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: localeIdentifier)) ?? SFSpeechRecognizer()
 
         guard let speechRecognizer, speechRecognizer.isAvailable else {
-            errorMessage = "Speech recognition could not start. Check your connection and try again."
+            errorMessage = "Speech recognition is unavailable right now. Try again, or use text for this turn."
             return false
         }
 
         recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
         guard let recognitionRequest else {
-            errorMessage = "Could not prepare speech recognition."
+            errorMessage = "Could not prepare voice input. Try again, or use text for this turn."
             return false
         }
 

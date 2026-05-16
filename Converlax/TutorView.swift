@@ -3,19 +3,22 @@ import SwiftUI
 struct TutorView: View {
     @ObservedObject var state: LearningState
     @State private var input = ""
-    @State private var isVoiceInputActive = false
+    @State private var isVoiceInputActive = true
     @State private var voicePhase: SpeechPracticePhase = .ready
     @State private var showHistory = false
     @State private var lastFeedback: LearningFeedback?
     @State private var noInputNotice: String?
+    @State private var feedbackNotice: String?
     @State private var voiceTranscript = ""
+    @State private var fallbackText = ""
+    @State private var showsTextFallback = false
     @State private var voiceErrorMessage: String?
     @State private var savedMessageIDs: Set<UUID> = []
     @StateObject private var speechRecognizer = SpeechRecognitionService()
     @State private var didApplyLaunchVoiceState = false
     @State private var messages = [
-        ChatMessage(text: "Use the tutor to rehearse phrases from your current unit.", isUser: false),
-        ChatMessage(text: "Ask a question, tap a suggestion, or use the mic for feedback.", isUser: false)
+        ChatMessage(text: "Say a phrase from your current unit, or ask what to say next.", isUser: false),
+        ChatMessage(text: "I will listen first, then give you a clearer English version.", isUser: false)
     ]
 
     private let suggestions = [
@@ -101,6 +104,9 @@ struct TutorView: View {
                 if let lastFeedback {
                     LearningFeedbackCard(feedback: lastFeedback)
                         .accessibilityIdentifier("tutor-correction-card")
+                    if lastFeedback.feedbackProvider == "local", let feedbackNotice {
+                        FeedbackFallbackNotice(text: feedbackNotice)
+                    }
                 }
             }
             .padding(20)
@@ -122,6 +128,21 @@ struct TutorView: View {
                 )
                 .padding(20)
                 .background(.regularMaterial)
+
+                if offersTextFallback {
+                    VoiceFallbackTextEntry(
+                        text: $fallbackText,
+                        isExpanded: showsTextFallback || voicePhase == .permissionDenied,
+                        placeholder: "Type your Tutor message",
+                        revealTitle: "Type instead",
+                        submitTitle: "Send text",
+                        onReveal: { showsTextFallback = true },
+                        onSubmit: submitTextFallback
+                    )
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 14)
+                    .background(.regularMaterial)
+                }
             } else {
                 TextComposer(
                     input: $input,
@@ -165,7 +186,7 @@ struct TutorView: View {
         case .requestingPermission, .processing, .transcribing:
             break
         case .transcript:
-            submitVoiceTranscript()
+            Task { await submitVoiceTranscript() }
         case .feedback, .accepted:
             resetVoiceInput()
         }
@@ -174,7 +195,10 @@ struct TutorView: View {
     private func startVoiceRecording() {
         voicePhase = .requestingPermission
         voiceTranscript = ""
+        fallbackText = ""
+        showsTextFallback = false
         voiceErrorMessage = nil
+        feedbackNotice = nil
 
         Task {
             let started = await speechRecognizer.startRecording()
@@ -190,12 +214,13 @@ struct TutorView: View {
     private func sendMessage() {
         let clean = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !clean.isEmpty else {
-            noInputNotice = "Type a phrase or use the mic so the Tutor can give feedback."
+            noInputNotice = "Start speaking, or type a fallback message if voice is not available."
             return
         }
         let word = state.courseSavedWords.last ?? state.courseLessons.first?.savedWords.first ?? BeginnerContent.lessons[0].savedWords[0]
         withAnimation {
             noInputNotice = nil
+            feedbackNotice = nil
             messages.append(ChatMessage(text: clean, isUser: true))
             messages.append(ChatMessage(text: "\(word.term) means \(word.translation). Try it in this sentence: \(word.example)", isUser: false, canSave: true))
             messages.append(ChatMessage(text: "Next best action: \(state.nextRecommendation.title).", isUser: false, canSave: true))
@@ -218,7 +243,8 @@ struct TutorView: View {
         voicePhase = .transcript
     }
 
-    private func submitVoiceTranscript() {
+    @MainActor
+    private func submitVoiceTranscript() async {
         let recognizedText = voiceTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !recognizedText.isEmpty else {
             voiceErrorMessage = "No clear speech was captured. Try again a little slower and closer to the mic."
@@ -227,19 +253,58 @@ struct TutorView: View {
         }
 
         noInputNotice = nil
+        voicePhase = .processing
+        voiceErrorMessage = nil
+
+        let aiFeedback: AIFeedback?
+        do {
+            aiFeedback = try await AIFeedbackService.shared.feedback(
+                transcript: recognizedText,
+                context: AIFeedbackRequestContext(
+                    mode: "Tutor voice",
+                    lessonTitle: state.currentLesson.title,
+                    prompt: "Tutor chat voice message",
+                    expectedPhrase: nil,
+                    targetLanguage: state.profile.targetLanguage.rawValue,
+                    proficiencyLevel: state.profile.currentLevel.code,
+                    roleplayTitle: nil,
+                    roleplaySetting: nil,
+                    usefulPhrases: state.savedLines.prefix(5).map(\.text)
+                )
+            )
+        } catch {
+            aiFeedback = nil
+            feedbackNotice = AIFeedbackService.fallbackMessage(for: error)
+        }
+
         withAnimation(.spring(response: 0.3, dampingFraction: 0.86)) {
-            addTutorResponse(for: recognizedText)
-            resetVoiceInput()
+            addTutorResponse(for: recognizedText, aiFeedback: aiFeedback)
+            resetVoiceInput(keepVoiceReady: true)
         }
     }
 
-    private func addTutorResponse(for userMessage: String) {
+    private func submitTextFallback() {
+        let cleanText = fallbackText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanText.isEmpty else { return }
+
+        noInputNotice = nil
+        feedbackNotice = nil
+        voiceTranscript = cleanText
+        fallbackText = ""
+        showsTextFallback = false
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.86)) {
+            addTutorResponse(for: cleanText)
+            resetVoiceInput(keepVoiceReady: true)
+        }
+    }
+
+    private func addTutorResponse(for userMessage: String, aiFeedback: AIFeedback? = nil) {
         let lesson = state.currentLesson
         withAnimation {
             messages.append(ChatMessage(text: userMessage, isUser: true))
             messages.append(ChatMessage(text: "Yes. Your next lesson is \(lesson.title.lowercased()). Start with: \(lesson.steps.first?.prompt ?? lesson.title)", isUser: false, canSave: true))
         }
-        lastFeedback = state.recordTutorCorrection(for: userMessage)
+        lastFeedback = state.recordTutorCorrection(for: userMessage, aiFeedback: aiFeedback)
     }
 
     private func cancelVoice() {
@@ -247,11 +312,22 @@ struct TutorView: View {
         resetVoiceInput()
     }
 
-    private func resetVoiceInput() {
+    private func resetVoiceInput(keepVoiceReady: Bool = false) {
         voicePhase = .ready
-        isVoiceInputActive = false
+        isVoiceInputActive = keepVoiceReady
         voiceTranscript = ""
+        fallbackText = ""
+        showsTextFallback = false
         voiceErrorMessage = nil
+    }
+
+    private var offersTextFallback: Bool {
+        switch voicePhase {
+        case .permissionNeeded, .permissionDenied, .noSpeech, .error:
+            true
+        default:
+            false
+        }
     }
 
     private func saveMessage(_ message: ChatMessage) {
@@ -271,8 +347,9 @@ struct TutorView: View {
         messages = Array(messages.prefix(2))
         lastFeedback = nil
         noInputNotice = nil
+        feedbackNotice = nil
         savedMessageIDs = []
-        resetVoiceInput()
+        resetVoiceInput(keepVoiceReady: true)
     }
 
     private func applyLaunchVoiceStateIfNeeded() {
@@ -294,7 +371,7 @@ struct TutorView: View {
             voiceTranscript = "How do I ask for directions politely?"
             voicePhase = .transcript
         case "permissionDenied", "permission":
-            voiceErrorMessage = "Microphone access is denied. Allow Converlax in Settings to use voice input."
+            voiceErrorMessage = "Voice practice needs Microphone and Speech Recognition. Use text now or enable access later."
             voicePhase = .permissionDenied
         default:
             isVoiceInputActive = false
@@ -345,7 +422,7 @@ private struct TextComposer: View {
                 }
                 .accessibilityLabel("Start voice input")
 
-                TextField("Send a message", text: $input)
+                TextField("Text fallback", text: $input)
                     .textFieldStyle(.plain)
                     .padding(.horizontal, 14)
                     .frame(height: 42)

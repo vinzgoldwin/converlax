@@ -23,6 +23,7 @@
 		0D4A0000000000000000000B /* PhaseOneContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D4B0000000000000000000B /* PhaseOneContent.swift */; };
 		0D4A0000000000000000000C /* PhaseOneViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D4B0000000000000000000C /* PhaseOneViews.swift */; };
 		0D4A0000000000000000000D /* SpeechRecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D4B0000000000000000000D /* SpeechRecognitionService.swift */; };
+		0D4A0000000000000000000E /* AIFeedbackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D4B0000000000000000000E /* AIFeedbackService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -43,6 +44,7 @@
 		0D4B0000000000000000000B /* PhaseOneContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhaseOneContent.swift; sourceTree = "<group>"; };
 		0D4B0000000000000000000C /* PhaseOneViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhaseOneViews.swift; sourceTree = "<group>"; };
 		0D4B0000000000000000000D /* SpeechRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechRecognitionService.swift; sourceTree = "<group>"; };
+		0D4B0000000000000000000E /* AIFeedbackService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIFeedbackService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -90,6 +92,7 @@
 				0D4B0000000000000000000B /* PhaseOneContent.swift */,
 				0D4B0000000000000000000C /* PhaseOneViews.swift */,
 				0D4B0000000000000000000D /* SpeechRecognitionService.swift */,
+				0D4B0000000000000000000E /* AIFeedbackService.swift */,
 				0D3E81B92C9D1D1500A0C001 /* Assets.xcassets */,
 			);
 			path = Converlax;
@@ -179,6 +182,7 @@
 				0D4A0000000000000000000B /* PhaseOneContent.swift in Sources */,
 				0D4A0000000000000000000C /* PhaseOneViews.swift in Sources */,
 				0D4A0000000000000000000D /* SpeechRecognitionService.swift in Sources */,
+				0D4A0000000000000000000E /* AIFeedbackService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

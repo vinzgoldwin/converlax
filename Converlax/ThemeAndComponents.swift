@@ -303,11 +303,12 @@ struct ConverlaxAssetBadge: View {
 
 extension BeginnerLesson {
     var visualAsset: ConverlaxAssetKind {
-        if id.contains("direction") { return .askDirections }
-        if id.contains("hotel") { return .bookAccommodation }
-        if id.contains("order") || id.contains("coffee") { return .askInfo }
-        if id.contains("greeting") || id.contains("small-talk") || id.contains("intro") { return .freeTalk }
-        if id.contains("work") { return .roleplay }
+        if id.contains("direction") || id.contains("transport") || id.contains("ticket") { return .askDirections }
+        if id.contains("hotel") || id.contains("travel") || id.contains("airport") { return .bookAccommodation }
+        if id.contains("order") || id.contains("coffee") || id.contains("restaurant") || id.contains("shopping") { return .askInfo }
+        if id.contains("small-talk") || id.contains("intro") || id.contains("free-time") || id.contains("plans") { return .freeTalk }
+        if id.contains("work") || id.contains("meeting") || id.contains("phone") || id.contains("opinion") || id.contains("agree") { return .roleplay }
+        if id.contains("help") || id.contains("problem") || id.contains("doctor") || id.contains("pharmacy") || id.contains("emergency") { return .askInfo }
         if id.contains("review") { return .review }
         return .customLesson
     }
@@ -450,6 +451,10 @@ struct LearningFeedbackCard: View {
                 Spacer(minLength: 10)
             }
 
+            if isSpeechFeedback {
+                FeedbackConfidenceLine(confidence: feedback.confidence)
+            }
+
             if let attemptText {
                 FeedbackCoachLine(title: attemptTitle, text: attemptText, symbol: attemptSymbol, color: .primaryBlue)
             }
@@ -458,8 +463,28 @@ struct LearningFeedbackCard: View {
                 FeedbackCoachLine(title: "Natural version", text: naturalVersion, symbol: "quote.bubble.fill", color: .mintSuccess)
             }
 
+            if let grammarCorrection {
+                FeedbackCoachLine(title: "Grammar", text: grammarCorrection, symbol: "textformat", color: .primaryBlue)
+            }
+
+            if let vocabularyImprovement {
+                FeedbackCoachLine(title: "Vocabulary", text: vocabularyImprovement, symbol: "character.book.closed.fill", color: .violetAccent)
+            }
+
             if let coachTip {
                 FeedbackCoachLine(title: "Coach tip", text: coachTip, symbol: "waveform", color: .warmAmber)
+            }
+
+            if let didWell {
+                FeedbackCoachLine(title: "Did well", text: didWell, symbol: "checkmark.seal.fill", color: .mintSuccess)
+            }
+
+            if let tryNext {
+                FeedbackCoachLine(title: "Try next", text: tryNext, symbol: "arrow.forward.circle.fill", color: .primaryBlue)
+            }
+
+            if let reviewItem {
+                FeedbackCoachLine(title: "Review later", text: reviewItem, symbol: "arrow.clockwise", color: .warmAmber)
             }
 
             if let savedTakeaway {
@@ -520,11 +545,48 @@ struct LearningFeedbackCard: View {
     }
 
     private var naturalVersion: String? {
-        cleanCoachText(feedback.betterPhrase) ?? cleanCoachText(feedback.correction)
+        cleanCoachText(feedback.naturalVersion) ?? cleanCoachText(feedback.betterPhrase) ?? cleanCoachText(feedback.correction)
+    }
+
+    private var grammarCorrection: String? {
+        let grammar = cleanCoachText(feedback.grammarCorrection)
+        guard grammar != naturalVersion else { return nil }
+        return grammar
+    }
+
+    private var vocabularyImprovement: String? {
+        clean(feedback.vocabularyImprovement)
     }
 
     private var coachTip: String? {
-        clean(feedback.pronunciationTip)
+        let rawTips = [
+            clean(feedback.pronunciationNotes) ?? clean(feedback.pronunciationTip),
+            clean(feedback.fluencyTip)
+        ]
+        var tips: [String] = []
+        for tip in rawTips.compactMap({ $0 }) where !tips.contains(tip) {
+            tips.append(tip)
+        }
+
+        guard !tips.isEmpty else { return nil }
+        return tips.joined(separator: " ")
+    }
+
+    private var didWell: String? {
+        clean(feedback.didWell)
+    }
+
+    private var tryNext: String? {
+        clean(feedback.tryNext.isEmpty ? feedback.nextAction : feedback.tryNext)
+    }
+
+    private var reviewItem: String? {
+        guard
+            let prompt = clean(feedback.reviewItemPrompt),
+            let answer = clean(feedback.reviewItemAnswer)
+        else { return nil }
+
+        return "\(prompt) \(answer)"
     }
 
     private var savedTakeaway: String? {
@@ -563,6 +625,53 @@ struct LearningFeedbackCard: View {
         }
 
         return clean(cleaned)
+    }
+}
+
+struct FeedbackFallbackNotice: View {
+    let text: String
+
+    var body: some View {
+        Label(text, systemImage: "wifi.slash")
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Color.warmAmber)
+            .padding(.vertical, 2)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+private struct FeedbackConfidenceLine: View {
+    let confidence: Int
+
+    private var progress: Double {
+        Double(min(100, max(0, confidence))) / 100
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack {
+                Text("Speaking confidence")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("\(min(100, max(0, confidence)))%")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.primaryBlue)
+            }
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.appBackground.opacity(0.82))
+                    Capsule()
+                        .fill(Color.primaryBlue)
+                        .frame(width: proxy.size.width * progress)
+                }
+            }
+            .frame(height: 7)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Speaking confidence \(confidence) percent")
     }
 }
 
@@ -747,13 +856,13 @@ struct SpeechPracticePanel: View {
         case .recording:
             "Listening for your answer..."
         case .requestingPermission:
-            "Converlax needs microphone and speech recognition access before recording."
+            "iOS will ask for microphone and speech recognition access before the first recording."
         case .processing, .transcribing:
             "Turning your speech into text..."
         case .transcript:
             "Your transcript will appear here before feedback."
         case .permissionNeeded, .permissionDenied:
-            "Voice input is unavailable until access is enabled."
+            "Voice input is unavailable for now. You can still type this turn."
         case .noSpeech:
             "Nothing clear was captured."
         case .error:
@@ -831,6 +940,8 @@ struct SpeechPracticePanel: View {
         switch phase {
         case .permissionNeeded, .permissionDenied, .noSpeech, .error:
             true
+        case .feedback:
+            errorMessage != nil
         default:
             false
         }
@@ -842,6 +953,8 @@ struct SpeechPracticePanel: View {
             "lock.fill"
         case .noSpeech:
             "waveform.slash"
+        case .feedback:
+            "wifi.slash"
         default:
             "exclamationmark.triangle.fill"
         }
@@ -854,9 +967,11 @@ struct SpeechPracticePanel: View {
     private var messageText: String {
         switch phase {
         case .permissionNeeded, .permissionDenied:
-            return errorMessage ?? "Microphone or speech recognition is blocked. Open Settings > Privacy & Security, allow Converlax for Microphone and Speech Recognition, then return to try again."
+            return errorMessage ?? "Voice practice needs Microphone and Speech Recognition. Allow access in Settings when you are ready, or use text for this turn."
         case .noSpeech:
             return errorMessage ?? "No speech was recognized. Hold the phone close, speak one clear sentence, and try again."
+        case .feedback:
+            return errorMessage ?? "Feedback is ready."
         default:
             return errorMessage ?? "Voice input stopped unexpectedly. Try again with a shorter answer."
         }
@@ -867,7 +982,7 @@ struct SpeechPracticePanel: View {
         case .requestingPermission:
             "Waiting for iOS permission."
         case .permissionNeeded, .permissionDenied:
-            "Enable Microphone and Speech Recognition in Settings."
+            "Use text now or enable access later."
         case .ready:
             "Record one clear answer."
         case .recording:
@@ -887,6 +1002,50 @@ struct SpeechPracticePanel: View {
         case .error:
             "Retry when you are ready."
         }
+    }
+}
+
+struct VoiceFallbackTextEntry: View {
+    @Binding var text: String
+    let isExpanded: Bool
+    let placeholder: String
+    var revealTitle = "Use text instead"
+    var submitTitle = "Use text answer"
+    let onReveal: () -> Void
+    let onSubmit: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if isExpanded {
+                TextField(placeholder, text: $text, axis: .vertical)
+                    .textFieldStyle(.plain)
+                    .lineLimit(2...4)
+                    .padding(12)
+                    .background(Color.appBackground.opacity(0.72), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.clayStroke.opacity(0.8), lineWidth: 1)
+                    )
+
+                Button(submitTitle, action: onSubmit)
+                    .buttonStyle(SecondaryButtonStyle())
+                    .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            } else {
+                Button(action: onReveal) {
+                    Label(revealTitle, systemImage: "keyboard")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.primaryBlue)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.plain)
+                .background(Color.claySurface.opacity(0.72), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.clayStroke.opacity(0.7), lineWidth: 1)
+                )
+            }
+        }
+        .accessibilityIdentifier("voice-text-fallback")
     }
 }
 
