@@ -86,6 +86,7 @@ struct VocabLessonView: View {
     @State private var savedLine = false
     @State private var audioEnabled = false
     @State private var feedback: LearningFeedback?
+    @State private var completionResult: CompletionCelebrationResult?
 
     private var practiceStep: LessonStep {
         lesson.steps.first { $0.kind == .choice } ?? lesson.steps[0]
@@ -109,15 +110,17 @@ struct VocabLessonView: View {
             VStack(alignment: .leading, spacing: 22) {
                 LessonProgressBar(progress: finished ? 1 : (checked ? 0.72 : 0.42))
 
-                VStack(alignment: .leading, spacing: 14) {
-                    Text(finished ? "Completed" : "Translate")
-                        .font(.title3.weight(.bold))
-                    Text(finished ? savedWordsSummary : practiceStep.prompt)
-                        .font(.headline)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(16)
-                        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    if !finished {
+                if finished, let completionResult {
+                    CompletionCelebrationView(result: completionResult, mascotState: .success)
+                } else {
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text("Translate")
+                            .font(.title3.weight(.bold))
+                        Text(practiceStep.prompt)
+                            .font(.headline)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(16)
+                            .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                         Text(practiceStep.helper)
                             .font(.footnote)
                             .foregroundStyle(.secondary)
@@ -201,10 +204,17 @@ struct VocabLessonView: View {
             checked = false
             savedLine = false
             feedback = nil
+            completionResult = nil
         } else {
             selectedAnswer = selectedAnswer ?? practiceStep.correctAnswer ?? answers.first
             if checked {
+                let previousProfile = state.profile
                 state.completeLesson(lesson)
+                completionResult = state.completionCelebration(
+                    from: previousProfile,
+                    title: "Vocab complete",
+                    subtitle: savedWordsSummary
+                )
                 finished = true
             } else {
                 feedback = state.recordPracticeResult(
@@ -327,6 +337,7 @@ struct VerbLessonView: View {
     @State private var savedLine = false
     @State private var audioEnabled = false
     @State private var feedback: LearningFeedback?
+    @State private var completionResult: CompletionCelebrationResult?
 
     private var practiceStep: LessonStep {
         lesson.steps.first { $0.kind == .choice } ?? lesson.steps[0]
@@ -348,8 +359,8 @@ struct VerbLessonView: View {
                 LessonProgressBar(progress: finished ? 1 : (checked ? 0.8 : 0.58))
                 Text(finished ? "Verb lesson complete" : "Fill in the blank")
                     .font(.title3.weight(.bold))
-                if finished {
-                    VerbCompletionPanel(lesson: lesson, savedLine: savedLine)
+                if finished, let completionResult {
+                    CompletionCelebrationView(result: completionResult, mascotState: .success)
                 } else {
                     VerbPrompt(prompt: practiceStep.prompt, helper: practiceStep.helper, selectedAnswer: selectedAnswer)
                     HStack(spacing: 14) {
@@ -442,8 +453,16 @@ struct VerbLessonView: View {
             finished = false
             savedLine = false
             feedback = nil
+            completionResult = nil
         } else if checked {
+            let previousProfile = state.profile
             state.completeLesson(lesson)
+            completionResult = state.completionCelebration(
+                from: previousProfile,
+                title: "Verb lesson complete",
+                subtitle: "You finished \(lesson.title.lowercased()).",
+                savedItemsCreated: max(savedLine ? 1 : 0, state.profile.savedLearningObjects.count - previousProfile.savedLearningObjects.count)
+            )
             finished = true
         } else {
             selectedAnswer = selectedAnswer ?? correctAnswer

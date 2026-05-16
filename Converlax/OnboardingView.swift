@@ -180,7 +180,6 @@ struct OnboardingView: View {
     }
 
     private func subtitle(for language: TargetLanguage) -> String {
-        guard language.isAvailable else { return "Coming soon" }
         return language == .english ? "Start with practical English conversation" : "Start with practical French conversation"
     }
 }
@@ -274,7 +273,7 @@ struct ChoiceRow: View {
         .disabled(!enabled)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(title)
-        .accessibilityHint(enabled ? subtitle : "This course is not available yet.")
+        .accessibilityHint(enabled ? subtitle : "Choose an active course language to start.")
     }
 }
 

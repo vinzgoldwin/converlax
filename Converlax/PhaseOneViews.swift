@@ -9,15 +9,19 @@ struct PracticeHomeView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    SectionHeader(title: "Start speaking", subtitle: "Open Free Talk or choose a situation.")
+                    SectionHeader(
+                        title: "How do I speak now?",
+                        subtitle: "Pick the shortest route into a spoken turn."
+                    )
 
                     NavigationLink(value: PracticeRoute.session) {
-                        HeroActionCard(title: "Open Free Talk", subtitle: "Answer one prompt now", symbol: "mic.circle.fill", color: .primaryBlue, asset: .freeTalk)
+                        HeroActionCard(title: "Start speaking", subtitle: "Speak once, get feedback, save what matters", symbol: "mic.circle.fill", color: .primaryBlue, asset: .freeTalk)
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("practice-start-speaking")
 
-                    practiceActions
+                    chooseSituationAction
+                    practiceTools
                 }
                 .padding(20)
             }
@@ -50,31 +54,28 @@ struct PracticeHomeView: View {
         }
     }
 
-    private var practiceActions: some View {
-        VStack(spacing: 0) {
-            NavigationLink(value: PracticeRoute.topics) {
-                SettingsLikeRow(symbol: "person.2.wave.2.fill", title: "Choose a situation", subtitle: "Pick a real-world scenario", asset: .roleplay)
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("practice-choose-situation")
+    private var chooseSituationAction: some View {
+        NavigationLink(value: PracticeRoute.topics) {
+            PracticeSecondaryRow(symbol: "person.2.wave.2.fill", title: "Choose a situation", subtitle: "Roleplay a real-world moment")
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("practice-choose-situation")
+    }
 
-            Divider().padding(.leading, 72)
-
+    private var practiceTools: some View {
+        HStack(spacing: 12) {
             NavigationLink(value: PracticeRoute.createRoleplay) {
-                SettingsLikeRow(symbol: "plus.bubble.fill", title: "Create a situation", subtitle: "Use your own moment", asset: .customLesson)
+                PracticeToolButton(title: "Custom practice", symbol: "plus.bubble.fill", color: .warmAmber)
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("practice-create-custom")
 
-            Divider().padding(.leading, 72)
-
             NavigationLink(value: PracticeRoute.tutor) {
-                SettingsLikeRow(symbol: "bubble.left.and.bubble.right.fill", title: "Ask tutor", subtitle: "Get help before speaking", asset: .askInfo)
+                PracticeToolButton(title: "Get a line to say", symbol: "bubble.left.and.bubble.right.fill", color: .primaryBlue)
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("practice-tutor")
         }
-        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 }
 
@@ -85,6 +86,26 @@ struct ReviewHomeView: View {
         state.reviewItems.count
     }
 
+    private var personalSavedLineCount: Int {
+        state.profile.savedLines.count
+    }
+
+    private var primaryReviewRoute: ReviewRoute {
+        reviewCount == 0 ? .savedLinesReview : .smartReview
+    }
+
+    private var primaryReviewTitle: String {
+        reviewCount == 0 ? "Practice saved lines" : "Review due items"
+    }
+
+    private var primaryReviewSubtitle: String {
+        reviewCount == 0 ? "No review due right now" : "\(reviewCount) ready from saved content and practice"
+    }
+
+    private var savedLinesSubtitle: String {
+        "\(personalSavedLineCount) saved \(personalSavedLineCount == 1 ? "line" : "lines")"
+    }
+
     var body: some View {
         ZStack {
             Color.appBackground.ignoresSafeArea()
@@ -92,13 +113,13 @@ struct ReviewHomeView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     SectionHeader(
-                        title: reviewCount == 0 ? "Nothing due" : "Due today",
-                        subtitle: reviewCount == 0 ? state.nextRecommendation.reason : "Keep saved words and lines active."
+                        title: "What should I review now?",
+                        subtitle: reviewCount == 0 ? "No due items. Use saved lines instead." : "\(reviewCount) due from saved content and practice."
                     )
-                    NavigationLink(value: ReviewRoute.smartReview) {
+                    NavigationLink(value: primaryReviewRoute) {
                         HeroActionCard(
-                            title: reviewCount == 0 ? "Review is clear" : "Review due items",
-                            subtitle: reviewCount == 0 ? state.nextRecommendation.title : "\(reviewCount) ready from saved content and practice",
+                            title: primaryReviewTitle,
+                            subtitle: primaryReviewSubtitle,
                             symbol: "bolt.circle.fill",
                             color: .primaryBlue,
                             asset: .review
@@ -106,24 +127,17 @@ struct ReviewHomeView: View {
                     }
                     .buttonStyle(.plain)
 
-                    VStack(spacing: 0) {
+                    if reviewCount > 0 && personalSavedLineCount > 0 {
                         NavigationLink(value: ReviewRoute.savedLinesReview) {
-                            SettingsLikeRow(symbol: "bookmark.fill", title: "Practice saved lines", subtitle: "\(state.savedLines.count) lines ready")
+                            SettingsLikeRow(symbol: "bookmark.fill", title: "Review saved lines", subtitle: savedLinesSubtitle)
                         }
                         .buttonStyle(.plain)
-
-                        Divider().padding(.leading, 62)
-
-                        NavigationLink(value: ReviewRoute.reviewInfo) {
-                            SettingsLikeRow(symbol: "info.circle.fill", title: "Review timing", subtitle: "Why items come back")
-                        }
-                        .buttonStyle(.plain)
+                        .background(Color.claySurface.opacity(0.68), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(Color.clayStroke.opacity(0.66), lineWidth: 1)
+                        )
                     }
-                    .background(Color.claySurface.opacity(0.68), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(Color.clayStroke.opacity(0.66), lineWidth: 1)
-                    )
                 }
                 .padding(20)
             }
@@ -141,7 +155,7 @@ struct ReviewHomeView: View {
             case .savedLineSearch:
                 SavedLinesView(state: state, searchable: true)
             case .reviewInfo:
-                InfoDetailView(title: "Review timing", subtitle: "Saved words, saved lines, and recent mistakes come back when they are ready to practice.")
+                InfoDetailView(title: "How review works", subtitle: "Saved words, saved lines, and recent mistakes come back when they are ready to practice.")
             }
         }
     }
@@ -155,10 +169,8 @@ struct SpeakProfileHomeView: View {
             Color.appBackground.ignoresSafeArea()
 
             ScrollView {
-                VStack(spacing: 18) {
-                    profileHeader
-                    profileStats
-                    profileLinks
+                VStack {
+                    journeyDashboard
                 }
                 .padding(20)
             }
@@ -178,113 +190,308 @@ struct SpeakProfileHomeView: View {
             case .settings:
                 SettingsView(state: state)
             case .membership:
-                InfoDetailView(title: "Membership", subtitle: "Plan status is mocked for Phase 1 and will move here when billing and account sync are connected.")
+                InfoDetailView(title: "Membership", subtitle: "Review plan, billing, and renewal details.")
             case .editProfile:
-                InfoDetailView(title: "Learner profile", subtitle: "Name, avatar, and account syncing are waiting on backend requirements.")
+                InfoDetailView(title: "Learner profile", subtitle: "Manage your learner name, avatar, and course identity.")
             case .referrals:
-                InfoDetailView(title: "Invite a friend", subtitle: "Share Converlax when referrals are available.")
+                InfoDetailView(title: "Invite a friend", subtitle: "Share Converlax with someone who wants speaking practice.")
             case .notifications:
                 NotificationPreferencesView(state: state)
             case .support:
                 InfoDetailView(title: "Get support", subtitle: "Find help, report an issue, or send lesson feedback.")
             case .appLanguage:
-                InfoDetailView(title: "App language", subtitle: "Interface language selection will appear after localization is connected.")
+                InfoDetailView(title: "App language", subtitle: "Choose the interface language for menus and settings.")
             case .courseLanguage:
                 LevelSelectionView(state: state)
             case .voiceRecognition:
                 VoiceRecognitionSettingsView(state: state)
             case .login:
-                InfoDetailView(title: "Log in", subtitle: "Sign in when account syncing is available.")
+                InfoDetailView(title: "Log in", subtitle: "Sign in to sync lessons, saved lines, and practice history.")
             case .resetPassword:
-                InfoDetailView(title: "Reset password", subtitle: "Update your password when account syncing is available.")
+                InfoDetailView(title: "Reset password", subtitle: "Update the password for your Converlax account.")
             }
         }
     }
 
-    private var profileHeader: some View {
-        VStack(alignment: .leading, spacing: 16) {
+    private var journeyDashboard: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            SectionHeader(
+                title: "What have I accomplished?",
+                subtitle: "\(state.journeyProgress.totalXP) XP earned across lessons, speaking, review, and saved content."
+            )
+            journeyProgressPanel
+            recentJourneyPanel
+            journeyNavigation
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var journeyProgressPanel: some View {
+        let progress = state.journeyProgress
+
+        return VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .center, spacing: 14) {
-                ConverlaxMascotView(state: .avatar, size: 74, isAnimated: false)
+                ConverlaxMascotView(state: .avatar, size: 66, isAnimated: false)
 
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("Learner")
-                        .font(.title2.weight(.bold))
-                    Text("\(state.profile.currentLevel.rawValue) \(state.profile.targetLanguage.rawValue)")
-                        .font(.subheadline)
+                    Text("Level \(progress.levelNumber) · \(progress.currentTitle)")
+                        .font(.title3.weight(.bold))
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.82)
+                    Text("\(state.profile.currentLevel.rawValue) \(state.profile.targetLanguage.rawValue) learner")
+                        .font(.subheadline.weight(.medium))
                         .foregroundStyle(.secondary)
                 }
 
-                Spacer(minLength: 8)
-
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("\(state.profile.streak)")
-                        .font(.title2.weight(.bold))
-                        .foregroundStyle(Color.warmAmber)
-                    Text("day streak")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
+                Spacer(minLength: 0)
             }
 
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Course progress")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Text("\(state.completedLessonCount)/\(state.courseLessons.count) lessons")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Color.primaryBlue)
-                }
-                LessonProgressBar(progress: state.courseProgress)
+            VStack(alignment: .leading, spacing: 9) {
+                LessonProgressBar(progress: progress.levelProgress)
+
+                Text("\(progress.xpInCurrentLevel) XP earned in this level")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.primaryBlue)
             }
         }
-        .frame(maxWidth: .infinity)
         .padding(18)
         .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.clayStroke.opacity(0.75), lineWidth: 1)
+        )
     }
 
-    private var profileStats: some View {
-        HStack(spacing: 12) {
-            StatCard(value: "\(state.profile.dailyGoal)", label: "Daily goal", color: .mintSuccess)
-            StatCard(value: "\(savedContentCount)", label: "Saved", color: .primaryBlue)
-            StatCard(value: "\(state.usageSessions.count)", label: "Sessions", color: .warmAmber)
-        }
-    }
-
-    private var profileLinks: some View {
+    private var recentJourneyPanel: some View {
         VStack(alignment: .leading, spacing: 12) {
-            VStack(spacing: 0) {
-                NavigationLink(value: ProfileRoute.savedLines) {
-                    SettingsLikeRow(symbol: "bookmark.fill", title: "Practice saved lines", subtitle: "\(state.savedLines.count) ready")
+            Text("Recent journey")
+                .font(.headline.weight(.semibold))
+
+            if recentJourneyItems.isEmpty {
+                Text("No accomplishments yet.")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, minHeight: 54, alignment: .leading)
+                    .padding(.horizontal, 14)
+                    .background(Color.claySurface.opacity(0.74), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(Color.clayStroke.opacity(0.66), lineWidth: 1)
+                    )
+            } else {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(recentJourneyItems) { item in
+                        JourneyRecentRow(item: item)
+                    }
                 }
-
-                Divider().padding(.leading, 72)
-
-                NavigationLink(value: ProfileRoute.practiceHistory) {
-                    SettingsLikeRow(symbol: "clock.fill", title: "Practice history", subtitle: "\(state.usageSessions.count) sessions")
-                }
-
-                Divider().padding(.leading, 72)
-
-                NavigationLink(value: ProfileRoute.activities) {
-                    SettingsLikeRow(symbol: "list.bullet.rectangle.fill", title: "Recent activity", subtitle: "\(state.activities.count) updates")
-                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 6)
+                .background(Color.claySurface.opacity(0.74), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color.clayStroke.opacity(0.66), lineWidth: 1)
+                )
             }
-            .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        .padding(.top, 2)
+    }
 
-            VStack(spacing: 0) {
-                NavigationLink(value: ProfileRoute.settings) {
-                    SettingsLikeRow(symbol: "gearshape.fill", title: "Adjust settings", subtitle: "Language, voice, reminders")
-                }
+    private var journeyNavigation: some View {
+        VStack(spacing: 0) {
+            NavigationLink(value: ProfileRoute.savedLines) {
+                JourneyNavigationRow(asset: .savedLines, title: "Saved content", detail: "\(personalSavedContentCount) personal items")
             }
-            .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+
+            Divider().padding(.leading, 58)
+
+            NavigationLink(value: ProfileRoute.practiceHistory) {
+                JourneyNavigationRow(asset: .historyUsage, title: "Practice history", detail: "\(state.profile.usageSessions.count) sessions")
+            }
         }
         .buttonStyle(.plain)
+        .padding(.horizontal, 14)
+        .background(Color.claySurface.opacity(0.72), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.clayStroke.opacity(0.62), lineWidth: 1)
+        )
     }
 
-    private var savedContentCount: Int {
-        state.savedLines.count + state.savedLearningObjects.count + state.favoriteRoleplays.count
+    private var personalSavedContentCount: Int {
+        state.profile.savedWords.count + state.profile.savedLines.count + state.profile.savedLearningObjects.count + state.profile.favoriteRoleplayIDs.count
+    }
+
+    private var recentJourneyItems: [AchievementTimelineItem] {
+        let completedLessonActivity = state.profile.activities.first { activity in
+            activity.id.hasPrefix("lesson-") || activity.symbol == "checkmark.seal.fill"
+        }
+        let savedPhrase = state.profile.savedLearningObjects.first { object in
+            object.kind == .line || object.kind == .phrase || object.kind == .roleplayPhrase || object.kind == .tutorMessage
+        }
+        let savedLine = state.profile.savedLines.first
+        let savedWord = state.profile.savedWords.first
+        let speakingSummary = state.profile.sessionSummaries.first { summary in
+            summary.id.hasPrefix("summary-usage-session-") || summary.title.localizedCaseInsensitiveContains("Free Talk")
+        }
+        let speakingSession = state.profile.usageSessions.first
+
+        var items: [AchievementTimelineItem] = []
+
+        if state.completedLessonCount > 0 {
+            items.append(AchievementTimelineItem(
+                id: "completed-lesson",
+                title: "Completed lesson",
+                detail: completedLessonActivity?.title ?? completedLessonFallbackDetail,
+                dateLabel: completedLessonActivity?.dateLabel ?? "Done",
+                symbol: "checkmark.seal.fill",
+                color: .mintSuccess,
+                isComplete: true
+            ))
+        }
+
+        if let savedPhrase {
+            items.append(AchievementTimelineItem(
+                id: "saved-phrase",
+                title: "Saved phrase",
+                detail: savedPhrase.text,
+                dateLabel: "Saved",
+                symbol: "bookmark.fill",
+                color: .warmAmber,
+                isComplete: true
+            ))
+        } else if let savedLine {
+            items.append(AchievementTimelineItem(
+                id: "saved-phrase",
+                title: "Saved phrase",
+                detail: savedLine.text,
+                dateLabel: "Saved",
+                symbol: "bookmark.fill",
+                color: .warmAmber,
+                isComplete: true
+            ))
+        } else if let savedWord {
+            items.append(AchievementTimelineItem(
+                id: "saved-phrase",
+                title: "Saved phrase",
+                detail: savedWord.term,
+                dateLabel: "Saved",
+                symbol: "bookmark.fill",
+                color: .warmAmber,
+                isComplete: true
+            ))
+        }
+
+        if let speakingSummary {
+            items.append(AchievementTimelineItem(
+                id: "practiced-speaking",
+                title: "Practiced speaking",
+                detail: speakingSummary.title,
+                dateLabel: speakingSummary.dateLabel,
+                symbol: "mic.fill",
+                color: .primaryBlue,
+                isComplete: true
+            ))
+        } else if let speakingSession {
+            items.append(AchievementTimelineItem(
+                id: "practiced-speaking",
+                title: "Practiced speaking",
+                detail: speakingSession.title,
+                dateLabel: speakingSession.dateLabel,
+                symbol: "mic.fill",
+                color: .primaryBlue,
+                isComplete: true
+            ))
+        }
+
+        return Array(items.prefix(3))
+    }
+
+    private var completedLessonFallbackDetail: String {
+        guard state.completedLessonCount > 0 else {
+            return "Finish a course lesson to mark this step."
+        }
+
+        return "\(state.completedLessonCount) completed \(state.completedLessonCount == 1 ? "lesson" : "lessons")"
+    }
+}
+
+private struct AchievementTimelineItem: Identifiable {
+    let id: String
+    let title: String
+    let detail: String
+    let dateLabel: String
+    let symbol: String
+    let color: Color
+    let isComplete: Bool
+}
+
+private struct JourneyRecentRow: View {
+    let item: AchievementTimelineItem
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: item.symbol)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(iconColor)
+                .frame(width: 28, height: 28)
+                .background(iconColor.opacity(item.isComplete ? 0.12 : 0.08), in: Circle())
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(item.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.converlaxInk)
+
+                    Spacer(minLength: 6)
+
+                    Text(item.dateLabel)
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(iconColor)
+                }
+
+                Text(item.detail)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.vertical, 8)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var iconColor: Color {
+        item.isComplete ? item.color : .secondary
+    }
+}
+
+private struct JourneyNavigationRow: View {
+    let asset: ConverlaxAssetKind
+    let title: String
+    let detail: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ConverlaxAssetBadge(kind: asset, size: 42)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+        }
+        .padding(.vertical, 13)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -371,8 +578,8 @@ private struct LessonDetailHero: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(18)
-        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(16)
+        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
@@ -403,10 +610,10 @@ private struct LessonPracticePreview: View {
                 }
             }
         }
-        .padding(16)
-        .background(Color.claySurface.opacity(0.72), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(14)
+        .background(Color.claySurface.opacity(0.72), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(Color.clayStroke.opacity(0.8), lineWidth: 1)
         )
     }
@@ -516,9 +723,9 @@ struct LessonToolsMenu: View {
             .frame(maxWidth: .infinity)
             .frame(minHeight: 48)
             .padding(.horizontal, 16)
-            .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .stroke(Color.clayStroke, lineWidth: 1)
             )
         }
@@ -550,23 +757,39 @@ private struct FreeTalkSessionView: View {
     @State private var finished = false
     @State private var summary: LearningSessionSummary?
     @State private var feedback: LearningFeedback?
+    @State private var speechPhase: SpeechPracticePhase = .ready
+    @State private var transcript = ""
+    @State private var speechErrorMessage: String?
+    @StateObject private var speechRecognizer = SpeechRecognitionService()
+    @State private var completionResult: CompletionCelebrationResult?
 
     private let prompt = "Tell me about your day using one sentence. Then ask me a question back."
-    private let mockTranscript = "I usually study English at night. How about you?"
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    LessonProgressBar(progress: finished ? 1 : 0.45)
-                    SectionHeader(title: finished ? "Session saved" : "Answer one prompt", subtitle: finished ? "Saved in Profile > Practice history." : "Speak naturally, then save the session.")
-                    ConverlaxMascotView(state: finished ? .success : .listening, size: 116)
-                        .frame(maxWidth: .infinity)
-                    Text(finished ? "You practiced open conversation. Your history and saved material are under Profile." : prompt)
-                        .font(.title3.weight(.semibold))
-                        .padding(18)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    if finished, let completionResult {
+                        CompletionCelebrationView(result: completionResult)
+                    } else {
+                        LessonProgressBar(progress: 0.45)
+                        SectionHeader(title: "Answer one prompt", subtitle: "Speak naturally, then save the session.")
+                        Text(prompt)
+                            .font(.title3.weight(.semibold))
+                            .padding(16)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                        SpeechPracticePanel(
+                            phase: speechPhase,
+                            transcript: transcript,
+                            feedback: nil,
+                            accent: .primaryBlue,
+                            errorMessage: speechErrorMessage,
+                            onPrimary: handlePrimaryAction,
+                            onCancel: cancelSpeech
+                        )
+                    }
 
                     if let feedback {
                         LearningFeedbackCard(feedback: feedback)
@@ -583,38 +806,123 @@ private struct FreeTalkSessionView: View {
                 .padding(.bottom, 4)
             }
 
-            Button(finished ? "Practice again" : "Save session") {
-                handlePrimaryAction()
+            if finished {
+                Button("Practice again") {
+                    resetSession()
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .accessibilityIdentifier("free-talk-primary-action")
             }
-            .buttonStyle(PrimaryButtonStyle())
-            .accessibilityIdentifier("free-talk-primary-action")
         }
         .padding(20)
         .background(Color.appBackground.ignoresSafeArea())
         .navigationTitle("Free Talk")
         .toolbar(.hidden, for: .tabBar)
         .accessibilityIdentifier("free-talk-session")
+        .onChange(of: speechRecognizer.transcript) { _, newValue in
+            transcript = newValue
+        }
+        .onDisappear {
+            speechRecognizer.cancelRecording()
+        }
     }
 
     private func handlePrimaryAction() {
-        if finished {
-            finished = false
-            summary = nil
-            feedback = nil
-        } else {
-            let result = state.recordConversationSession(
-                title: "Free Talk",
-                detail: "Open speaking session",
-                minutes: 5,
-                transcript: mockTranscript,
-                strongPhrases: ["How about you?", "I usually study English at night."],
-                weakPhrases: ["I study English in night."],
-                prompt: prompt
-            )
-            summary = result.summary
-            feedback = result.feedback
-            finished = true
+        switch speechPhase {
+        case .permissionNeeded, .permissionDenied, .ready, .paused, .noSpeech, .error:
+            startSpeechRecording()
+        case .recording:
+            finishSpeechRecording()
+        case .requestingPermission, .processing, .transcribing:
+            break
+        case .transcript:
+            saveSession()
+        case .feedback, .accepted:
+            resetSession()
         }
+    }
+
+    private func startSpeechRecording() {
+        speechPhase = .requestingPermission
+        transcript = ""
+        feedback = nil
+        summary = nil
+        speechErrorMessage = nil
+
+        Task {
+            let started = await speechRecognizer.startRecording()
+            if started {
+                speechPhase = .recording
+            } else {
+                speechErrorMessage = speechRecognizer.errorMessage
+                speechPhase = speechRecognizer.errorMessage?.localizedCaseInsensitiveContains("permission") == true ? .permissionDenied : .error
+            }
+        }
+    }
+
+    private func finishSpeechRecording() {
+        speechPhase = .transcribing
+        let capturedTranscript = speechRecognizer.stopRecording()
+        transcript = capturedTranscript
+
+        guard !capturedTranscript.isEmpty else {
+            speechErrorMessage = "No clear speech was captured. Try again a little slower and closer to the mic."
+            speechPhase = .noSpeech
+            return
+        }
+
+        speechPhase = .transcript
+    }
+
+    private func saveSession() {
+        let previousProfile = state.profile
+        let result = state.recordConversationSession(
+            title: "Free Talk",
+            detail: "Open speaking session",
+            minutes: 5,
+            transcript: transcript,
+            strongPhrases: strongPhrases(from: transcript),
+            weakPhrases: weakPhrases(from: transcript),
+            prompt: prompt
+        )
+        summary = result.summary
+        feedback = result.feedback
+        completionResult = state.completionCelebration(
+            from: previousProfile,
+            title: "Free Talk complete",
+            subtitle: "You finished an open speaking session.",
+            nextActionTitle: result.summary.nextRecommendation,
+            nextActionDetail: "Saved under Practice history."
+        )
+        speechPhase = .accepted
+        finished = true
+    }
+
+    private func cancelSpeech() {
+        speechRecognizer.cancelRecording()
+        speechPhase = .ready
+        transcript = ""
+        speechErrorMessage = nil
+    }
+
+    private func resetSession() {
+        speechRecognizer.cancelRecording()
+        finished = false
+        summary = nil
+        feedback = nil
+        completionResult = nil
+        speechPhase = .ready
+        transcript = ""
+        speechErrorMessage = nil
+    }
+
+    private func strongPhrases(from transcript: String) -> [String] {
+        let sentences = transcript.split(whereSeparator: { ".?!".contains($0) }).map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+        return Array(sentences.filter { !$0.isEmpty }.prefix(2))
+    }
+
+    private func weakPhrases(from transcript: String) -> [String] {
+        transcript.split(separator: " ").count < 5 ? [transcript] : []
     }
 }
 
@@ -633,9 +941,9 @@ private struct PracticeSavedHint: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.claySurface.opacity(0.72), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Color.claySurface.opacity(0.72), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(Color.clayStroke.opacity(0.8), lineWidth: 1)
         )
     }
@@ -649,11 +957,11 @@ struct CreateRoleplayView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             SectionHeader(title: "Create a situation", subtitle: "Describe what you want to practice.")
-            ConverlaxAssetBadge(kind: generated ? .roleplay : .customLesson, size: 112)
+            ConverlaxAssetBadge(kind: generated ? .roleplay : .customLesson, size: 82)
                 .frame(maxWidth: .infinity)
             TextField("Situation to practice", text: $prompt, axis: .vertical)
                 .padding(16)
-                .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             if generated, let roleplay = state.roleplays.first {
                 RoleplayRow(roleplay: roleplay, favorite: state.isFavorite(roleplay))
             }
@@ -670,19 +978,21 @@ struct CreateRoleplayView: View {
 }
 
 private enum SituationFilter: String, CaseIterable, Identifiable {
-    case all = "All"
+    case all = "Recommended"
     case topics = "Topics"
-    case favorites = "Favorites"
+    case favorites = "Saved"
     case community = "Community"
 
     var id: String { rawValue }
 
     var emptyTitle: String {
         switch self {
-        case .all, .topics:
-            "No situations"
+        case .all:
+            "No recommended situations"
+        case .topics:
+            "No topics"
         case .favorites:
-            "No favorites yet"
+            "No saved situations yet"
         case .community:
             "No community situations"
         }
@@ -690,8 +1000,10 @@ private enum SituationFilter: String, CaseIterable, Identifiable {
 
     var emptyDescription: String {
         switch self {
-        case .all, .topics:
+        case .all:
             "New situations will appear here."
+        case .topics:
+            "Situation topics will appear here."
         case .favorites:
             "Save a situation to keep it here."
         case .community:
@@ -715,14 +1027,9 @@ private struct SituationBrowserView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    SectionHeader(title: "Choose a situation", subtitle: "Pick a scenario, browse topics, or filter saved situations.")
+                    SectionHeader(title: "Choose a situation", subtitle: "Pick a recommended scenario or browse by topic.")
 
-                    Picker("Situation filter", selection: $filter) {
-                        ForEach(SituationFilter.allCases) { filter in
-                            Text(filter.rawValue).tag(filter)
-                        }
-                    }
-                    .pickerStyle(.segmented)
+                    SituationFilterBar(selection: $filter)
                     .accessibilityIdentifier("situation-filter")
 
                     situationContent
@@ -788,6 +1095,34 @@ private struct SituationBrowserView: View {
     }
 }
 
+private struct SituationFilterBar: View {
+    @Binding var selection: SituationFilter
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(SituationFilter.allCases) { filter in
+                    Button {
+                        selection = filter
+                    } label: {
+                        Text(filter.rawValue)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(selection == filter ? Color.primaryBlue : Color.converlaxInk.opacity(0.72))
+                            .padding(.horizontal, 11)
+                            .frame(height: 32)
+                            .background(selection == filter ? Color.primaryBlue.opacity(0.1) : Color.claySurface.opacity(0.48), in: Capsule())
+                            .overlay(
+                                Capsule()
+                                    .stroke(selection == filter ? Color.primaryBlue.opacity(0.26) : Color.clayStroke.opacity(0.52), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+}
+
 private struct TopicDetailView: View {
     let topic: RoleplayTopic
     @ObservedObject var state: LearningState
@@ -812,29 +1147,45 @@ private struct RoleplayDetailView: View {
     @State private var completed = false
     @State private var summary: LearningSessionSummary?
     @State private var feedback: LearningFeedback?
+    @State private var speechPhase: SpeechPracticePhase = .ready
+    @State private var transcript = ""
+    @State private var speechErrorMessage: String?
+    @StateObject private var speechRecognizer = SpeechRecognitionService()
+    @State private var completionResult: CompletionCelebrationResult?
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 HeroActionCard(title: roleplay.title, subtitle: roleplay.subtitle, symbol: roleplay.isCommunity ? "person.3.fill" : "person.2.wave.2.fill", color: roleplay.isCommunity ? .violetAccent : .primaryBlue, asset: roleplay.isCommunity ? .community : .roleplay)
+
+                if completed, let completionResult {
+                    CompletionCelebrationView(result: completionResult)
+
+                    Button("Practice again") {
+                        resetSession()
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .accessibilityIdentifier("roleplay-primary-action")
+                } else {
+                    RoleplayConversationPrompt(roleplay: roleplay)
+
+                    SpeechPracticePanel(
+                        phase: speechPhase,
+                        transcript: transcript,
+                        feedback: nil,
+                        accent: .primaryBlue,
+                        errorMessage: speechErrorMessage,
+                        onPrimary: handlePrimaryAction,
+                        onCancel: cancelSpeech
+                    )
+                    .accessibilityIdentifier("roleplay-primary-action")
+                }
+
                 HStack(spacing: 12) {
                     StatCard(value: "\(roleplay.minutes)", label: "Minutes", color: .primaryBlue)
                     StatCard(value: roleplay.difficulty.code, label: "Level", color: .warmAmber)
                 }
-                ForEach(roleplay.lines) { line in
-                    SavedLineRow(line: line) {
-                        state.saveLine(line)
-                    }
-                }
-                Button(state.isFavorite(roleplay) ? "Remove saved situation" : "Save situation") {
-                    state.toggleFavorite(roleplay)
-                }
-                .buttonStyle(SecondaryButtonStyle())
-                Button(completed ? "Practice again" : "Start situation") {
-                    handlePrimaryAction()
-                }
-                .buttonStyle(PrimaryButtonStyle())
-                .accessibilityIdentifier("roleplay-primary-action")
+
                 if let feedback {
                     LearningFeedbackCard(feedback: feedback)
                 }
@@ -844,6 +1195,22 @@ private struct RoleplayDetailView: View {
                 if completed {
                     PracticeSavedHint()
                 }
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Useful lines")
+                        .font(.headline.weight(.semibold))
+
+                    ForEach(roleplay.lines) { line in
+                        SavedLineRow(line: line) {
+                            state.saveLine(line)
+                        }
+                    }
+
+                    Button(state.isFavorite(roleplay) ? "Remove saved situation" : "Save situation") {
+                        state.toggleFavorite(roleplay)
+                    }
+                    .buttonStyle(SecondaryButtonStyle())
+                }
             }
             .padding(20)
         }
@@ -851,27 +1218,171 @@ private struct RoleplayDetailView: View {
         .navigationTitle("Situation")
         .toolbar(.hidden, for: .tabBar)
         .accessibilityIdentifier("roleplay-detail")
+        .onChange(of: speechRecognizer.transcript) { _, newValue in
+            transcript = newValue
+        }
+        .onDisappear {
+            speechRecognizer.cancelRecording()
+        }
     }
 
     private func handlePrimaryAction() {
-        if completed {
-            completed = false
-            summary = nil
-            feedback = nil
-        } else {
-            let result = state.recordConversationSession(
-                title: roleplay.title,
-                detail: roleplay.setting,
-                minutes: roleplay.minutes,
-                transcript: roleplay.lines.map(\.text).joined(separator: " "),
-                strongPhrases: roleplay.lines.prefix(1).map(\.text),
-                weakPhrases: roleplay.lines.dropFirst().prefix(1).map(\.text),
-                prompt: "Roleplay at \(roleplay.setting): \(roleplay.subtitle)"
-            )
-            summary = result.summary
-            feedback = result.feedback
-            completed = true
+        switch speechPhase {
+        case .permissionNeeded, .permissionDenied, .ready, .paused, .noSpeech, .error:
+            startSpeechRecording()
+        case .recording:
+            finishSpeechRecording()
+        case .requestingPermission, .processing, .transcribing:
+            break
+        case .transcript:
+            saveSession()
+        case .feedback, .accepted:
+            resetSession()
         }
+    }
+
+    private func startSpeechRecording() {
+        speechPhase = .requestingPermission
+        transcript = ""
+        feedback = nil
+        summary = nil
+        speechErrorMessage = nil
+
+        Task {
+            let started = await speechRecognizer.startRecording()
+            if started {
+                speechPhase = .recording
+            } else {
+                speechErrorMessage = speechRecognizer.errorMessage
+                speechPhase = speechRecognizer.errorMessage?.localizedCaseInsensitiveContains("permission") == true ? .permissionDenied : .error
+            }
+        }
+    }
+
+    private func finishSpeechRecording() {
+        speechPhase = .transcribing
+        let capturedTranscript = speechRecognizer.stopRecording()
+        transcript = capturedTranscript
+
+        guard !capturedTranscript.isEmpty else {
+            speechErrorMessage = "No clear speech was captured. Try again a little slower and closer to the mic."
+            speechPhase = .noSpeech
+            return
+        }
+
+        speechPhase = .transcript
+    }
+
+    private func saveSession() {
+        let previousProfile = state.profile
+        let result = state.recordConversationSession(
+            title: roleplay.title,
+            detail: roleplay.setting,
+            minutes: roleplay.minutes,
+            transcript: transcript,
+            strongPhrases: matchingRoleplayLines(in: transcript),
+            weakPhrases: [],
+            prompt: "Roleplay at \(roleplay.setting): \(roleplay.subtitle)"
+        )
+        summary = result.summary
+        feedback = result.feedback
+        completionResult = state.completionCelebration(
+            from: previousProfile,
+            title: "Situation complete",
+            subtitle: "You finished \(roleplay.title.lowercased()).",
+            nextActionTitle: result.summary.nextRecommendation,
+            nextActionDetail: "Saved under Practice history."
+        )
+        speechPhase = .accepted
+        completed = true
+    }
+
+    private func cancelSpeech() {
+        speechRecognizer.cancelRecording()
+        speechPhase = .ready
+        transcript = ""
+        speechErrorMessage = nil
+    }
+
+    private func resetSession() {
+        speechRecognizer.cancelRecording()
+        completed = false
+        summary = nil
+        feedback = nil
+        completionResult = nil
+        speechPhase = .ready
+        transcript = ""
+        speechErrorMessage = nil
+    }
+
+    private func matchingRoleplayLines(in transcript: String) -> [String] {
+        let lowercasedTranscript = transcript.lowercased()
+        let matches = roleplay.lines.map(\.text).filter { line in
+            lowercasedTranscript.contains(line.lowercased())
+        }
+        return matches.isEmpty ? Array(roleplay.lines.prefix(1).map(\.text)) : Array(matches.prefix(2))
+    }
+}
+
+private struct RoleplayConversationPrompt: View {
+    let roleplay: RoleplayScenario
+
+    private var starterLine: SavedLine? {
+        roleplay.lines.first
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 10) {
+                ConverlaxMascotView(state: .avatar, size: 42, isAnimated: false)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(roleplay.setting)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Color.primaryBlue)
+                    Text(roleplay.subtitle)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            RoleplayBubble(
+                title: "Prompt",
+                text: "You are at \(roleplay.setting.lowercased()). \(roleplay.subtitle).",
+                color: .claySurface
+            )
+
+            if let starterLine {
+                RoleplayBubble(title: "Your turn", text: starterLine.text, color: Color.primaryBlue.opacity(0.1))
+            }
+        }
+        .padding(16)
+        .background(Color.claySurface.opacity(0.72), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.clayStroke.opacity(0.82), lineWidth: 1)
+        )
+    }
+}
+
+private struct RoleplayBubble: View {
+    let title: String
+    let text: String
+    let color: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.secondary)
+            Text(text)
+                .font(.subheadline.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(color, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
@@ -960,9 +1471,11 @@ private struct CommunityView: View {
 }
 
 private struct SmartReviewView: View {
+    @Environment(\.dismiss) private var dismiss
     @ObservedObject var state: LearningState
     @State private var index = 0
     @State private var showAnswer = false
+    @State private var didCompleteReview = false
 
     var items: [ScheduledReviewItem] {
         state.dueReviewItems
@@ -974,7 +1487,11 @@ private struct SmartReviewView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            if items.isEmpty {
+            if didCompleteReview {
+                ReviewCompletionResultView {
+                    dismiss()
+                }
+            } else if items.isEmpty {
                 ContentUnavailableView("No review due", systemImage: "checkmark.seal.fill", description: Text("Saved phrases and mistakes will appear here."))
             } else {
                 LessonProgressBar(progress: Double(index + 1) / Double(max(items.count, 1)))
@@ -987,29 +1504,25 @@ private struct SmartReviewView: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
-            ConverlaxMascotView(state: showAnswer ? .success : .thinking, size: 104)
-                .frame(maxWidth: .infinity)
-            Text(item.prompt)
-                .font(.title3.weight(.semibold))
-                .padding(18)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            if showAnswer {
-                Text(item.answer)
-                    .font(.headline)
-                    .foregroundStyle(Color.mintSuccess)
-            }
-            Spacer()
+                Text(item.prompt)
+                    .font(.title3.weight(.semibold))
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                if showAnswer {
+                    Text(item.answer)
+                        .font(.headline)
+                        .foregroundStyle(Color.mintSuccess)
+                }
+                Spacer()
                 if showAnswer {
                     HStack(spacing: 12) {
                         Button("Need practice") {
-                            state.recordReview(item, remembered: false)
-                            advanceReview()
+                            recordCurrentReview(remembered: false)
                         }
                         .buttonStyle(SecondaryButtonStyle())
                         Button("Remembered") {
-                            state.recordReview(item, remembered: true)
-                            advanceReview()
+                            recordCurrentReview(remembered: true)
                         }
                         .buttonStyle(PrimaryButtonStyle())
                     }
@@ -1026,9 +1539,67 @@ private struct SmartReviewView: View {
         .navigationTitle("Review due items")
     }
 
+    private func recordCurrentReview(remembered: Bool) {
+        state.recordReview(item, remembered: remembered)
+
+        if state.dueReviewItems.isEmpty {
+            didCompleteReview = true
+            showAnswer = false
+        } else {
+            advanceReview()
+        }
+    }
+
     private func advanceReview() {
         index = min(index, max(items.count - 1, 0))
         showAnswer = false
+    }
+}
+
+private struct ReviewCompletionResultView: View {
+    let onDone: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Spacer(minLength: 0)
+
+            VStack(alignment: .leading, spacing: 16) {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.title.weight(.bold))
+                    .foregroundStyle(Color.mintSuccess)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Review complete")
+                        .font(.title2.weight(.bold))
+                }
+
+                HStack(spacing: 10) {
+                    Label("+XP", systemImage: "sparkles")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.warmAmber)
+
+                    Label("Review accuracy improved", systemImage: "chart.line.uptrend.xyaxis")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.primaryBlue)
+                }
+                .labelStyle(.titleAndIcon)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.clayStroke.opacity(0.72), lineWidth: 1)
+            )
+
+            Button("Back to Review") {
+                onDone()
+            }
+            .buttonStyle(PrimaryButtonStyle())
+
+            Spacer(minLength: 0)
+        }
     }
 }
 
@@ -1241,7 +1812,7 @@ private struct SettingsView: View {
                     symbol: "textformat",
                     title: "Change app language",
                     detail: "Use Converlax in another language.",
-                    status: "Later"
+                    status: "Language"
                 )
             }
             Section("Preferences") {
@@ -1264,28 +1835,28 @@ private struct SettingsView: View {
                 SettingsStatusRow(
                     symbol: "creditcard.fill",
                     title: "Manage membership",
-                    detail: "Choose a plan when accounts are available.",
-                    status: "Preview"
+                    detail: "Plan and billing details.",
+                    status: "Account"
                 )
                 SettingsStatusRow(
                     symbol: "person.crop.circle.fill",
                     title: "Edit profile",
-                    detail: "Update your learner name and avatar.",
-                    status: "Local"
+                    detail: "Learner name, avatar, and course identity.",
+                    status: "Profile"
                 )
                 SettingsStatusRow(
                     symbol: "person.badge.key.fill",
                     title: "Sign in",
-                    detail: "Sync your practice when accounts are available.",
-                    status: "Backend"
+                    detail: "Sync lessons, saved lines, and practice history.",
+                    status: "Sync"
                 )
             }
             Section("Sharing") {
                 SettingsStatusRow(
                     symbol: "gift.fill",
                     title: "Invite a friend",
-                    detail: "Share Converlax when referrals are available.",
-                    status: "Later"
+                    detail: "Share Converlax with another learner.",
+                    status: "Share"
                 )
             }
             Section("Support") {
@@ -1293,7 +1864,7 @@ private struct SettingsView: View {
                     symbol: "questionmark.circle.fill",
                     title: "Get support",
                     detail: "Find help, report an issue, or send lesson feedback.",
-                    status: "Later"
+                    status: "Help"
                 )
             }
         }
@@ -1324,7 +1895,7 @@ private struct ProfileRecordSummaryRow: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -1415,7 +1986,7 @@ private struct NotificationPreferencesView: View {
     var body: some View {
         Form {
             Toggle("Set reminders", isOn: Binding(get: { state.profile.notificationsEnabled }, set: state.setNotificationsEnabled))
-            Text("Reminder scheduling is mocked in Phase 1, so this only saves your preference.")
+            Text("Choose whether Converlax should remind you to practice.")
                 .foregroundStyle(.secondary)
         }
         .navigationTitle("Notifications")
@@ -1428,7 +1999,7 @@ private struct VoiceRecognitionSettingsView: View {
     var body: some View {
         Form {
             Toggle("Speak by voice", isOn: Binding(get: { state.profile.voiceRecognitionEnabled }, set: state.setVoiceRecognitionEnabled))
-            Text("Speech recognition is a local placeholder until speech services are connected.")
+            Text("Speech recognition uses your microphone and Apple's speech recognition to transcribe practice audio.")
                 .foregroundStyle(.secondary)
         }
         .navigationTitle("Voice")
@@ -1481,10 +2052,10 @@ struct HeroActionCard: View {
     var body: some View {
         HStack(alignment: .center, spacing: 16) {
             if let asset {
-                ConverlaxAssetBadge(kind: asset, size: 70)
+                ConverlaxAssetBadge(kind: asset, size: 58)
             } else {
                 AvatarBadge(symbol: symbol, color: color)
-                    .frame(width: 58, height: 58)
+                    .frame(width: 48, height: 48)
             }
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
@@ -1501,14 +2072,14 @@ struct HeroActionCard: View {
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(color)
         }
-        .frame(maxWidth: .infinity, minHeight: 104, alignment: .leading)
-        .padding(18)
-        .background(color.opacity(0.09), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
+        .padding(16)
+        .background(color.opacity(0.09), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(color.opacity(0.2), lineWidth: 1)
         )
-        .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
@@ -1543,7 +2114,7 @@ private struct TopicRow: View {
     let topic: RoleplayTopic
 
     var body: some View {
-        HeroActionCard(title: topic.title, subtitle: topic.subtitle, symbol: topic.symbol, color: topic.colorName.color, asset: topic.visualAsset)
+        SettingsLikeRow(symbol: topic.symbol, title: topic.title, subtitle: topic.subtitle, color: topic.colorName.color)
     }
 }
 
@@ -1580,12 +2151,12 @@ private struct RoleplayRow: View {
         .frame(minHeight: 58)
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(Color.claySurface.opacity(0.62), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Color.claySurface.opacity(0.62), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(Color.clayStroke.opacity(0.65), lineWidth: 1)
         )
-        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -1648,10 +2219,11 @@ private struct SettingsLikeRow: View {
     let title: String
     let subtitle: String
     var asset: ConverlaxAssetKind? = nil
+    var color: Color = .primaryBlue
 
     var body: some View {
         HStack(spacing: 12) {
-            AvatarBadge(symbol: symbol, color: .primaryBlue)
+            AvatarBadge(symbol: symbol, color: color)
                 .frame(width: 36, height: 36)
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
@@ -1672,5 +2244,74 @@ private struct SettingsLikeRow: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .contentShape(Rectangle())
+    }
+}
+
+private struct PracticeSecondaryRow: View {
+    let symbol: String
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbol)
+                .font(.footnote.weight(.bold))
+                .foregroundStyle(Color.primaryBlue)
+                .frame(width: 28, height: 28)
+                .background(Color.primaryBlue.opacity(0.09), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary.opacity(0.72))
+        }
+        .frame(minHeight: 44)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 2)
+        .contentShape(Rectangle())
+    }
+}
+
+private struct PracticeToolButton: View {
+    let title: String
+    let symbol: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbol)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(color)
+                .frame(width: 30, height: 30)
+                .background(color.opacity(0.1), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+
+            Text(title)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.primary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, minHeight: 54, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Color.claySurface.opacity(0.58), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.clayStroke.opacity(0.58), lineWidth: 1)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }

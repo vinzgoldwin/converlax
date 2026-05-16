@@ -2,19 +2,18 @@ import SwiftUI
 
 struct CourseHomeView: View {
     @ObservedObject var state: LearningState
-    @Binding var activeSheet: ActiveSheet?
 
     var body: some View {
         ZStack {
             Color.appBackground.ignoresSafeArea()
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    CourseHeader(state: state, activeSheet: $activeSheet)
-                    CourseTrackContent(state: state, activeSheet: $activeSheet)
+                VStack(alignment: .leading, spacing: 12) {
+                    CourseHeader(state: state)
+                    CourseTrackContent(state: state)
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 14)
+                .padding(.top, 12)
             }
             .safeAreaInset(edge: .bottom) {
                 Color.clear.frame(height: 96)
@@ -27,137 +26,29 @@ struct CourseHomeView: View {
 
 private struct CourseTrackContent: View {
     @ObservedObject var state: LearningState
-    @Binding var activeSheet: ActiveSheet?
 
     var body: some View {
         CurrentLessonLink(state: state)
-        if state.hasStartedLearning {
-            HomeProgressRow(state: state, activeSheet: $activeSheet)
-            HomeQuickActions(state: state)
-        } else {
-            FirstSessionHomeNote(state: state)
-        }
+        HomeSecondaryActionRow(state: state)
     }
 }
 
 private struct CourseHeader: View {
     @ObservedObject var state: LearningState
-    @Binding var activeSheet: ActiveSheet?
 
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(state.hasStartedLearning ? "Start today's lesson" : "Ready for your first lesson")
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
+        VStack(alignment: .leading, spacing: 5) {
+            Text("What should I do next?")
+                .font(.title2.weight(.bold))
+                .foregroundStyle(.primary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
 
-                Button {
-                    activeSheet = .level
-                } label: {
-                    HStack(spacing: 7) {
-                        Text(state.profile.targetLanguage.sampleNote)
-                            .lineLimit(1)
-                        Text(state.profile.currentLevel.code)
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(Color.primaryBlue)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 4)
-                            .background(Color.primaryBlue.opacity(0.1), in: Capsule())
-                        Image(systemName: "chevron.down")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(.secondary)
-                    }
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .padding(.horizontal, 11)
-                    .padding(.vertical, 7)
-                    .background(Color.claySurface, in: Capsule())
-                }
-                .accessibilityLabel("Current level \(state.profile.currentLevel.rawValue)")
-            }
-
-            Spacer(minLength: 8)
-
-            ConverlaxMascotView(state: .waving, size: 58)
-                .accessibilityHidden(true)
+            Text("Continue the lesson that is ready for your \(state.profile.currentLevel.rawValue.lowercased()) \(state.profile.targetLanguage.rawValue) practice.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
-    }
-}
-
-private struct HomeProgressRow: View {
-    @ObservedObject var state: LearningState
-    @Binding var activeSheet: ActiveSheet?
-
-    private var recommendation: NextLearningRecommendation {
-        state.nextRecommendation
-    }
-
-    var body: some View {
-        HStack(spacing: 14) {
-            Button {
-                activeSheet = .streak
-            } label: {
-                HStack(spacing: 9) {
-                    ConverlaxAssetBadge(kind: .streak, size: 34)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Streak")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                        Text("\(state.profile.streak) days")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                    }
-                }
-                .frame(minWidth: 92, alignment: .leading)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("\(state.profile.streak) day streak")
-
-            Rectangle()
-                .fill(Color.clayStroke)
-                .frame(width: 1)
-                .padding(.vertical, 4)
-
-            VStack(alignment: .leading, spacing: 7) {
-                HStack {
-                    Text("Unit progress")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Text("\(state.completedLessonCount)/\(state.courseLessons.count)")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.secondary)
-                }
-
-                LessonProgressBar(progress: state.courseProgress)
-
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: recommendation.symbol)
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Color.primaryBlue)
-                        .frame(width: 16, height: 16)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(recommendation.title)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.primaryBlue)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.82)
-                        Text(recommendation.detail)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                    }
-                }
-            }
-        }
-        .padding(14)
-        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.clayStroke.opacity(0.72), lineWidth: 1)
-        )
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -165,19 +56,16 @@ private struct CourseUnitIntro: View {
     let language: TargetLanguage
 
     var body: some View {
-        HStack(spacing: 14) {
-            ConverlaxMascotView(state: .idle, size: 84)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Unit 1")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Text(language.unitTitle)
-                    .font(.title2.weight(.bold))
-                Text(language.unitDescription)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Unit 1")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.primaryBlue)
+            Text(language.unitTitle)
+                .font(.title2.weight(.bold))
+            Text(language.unitDescription)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
@@ -198,56 +86,28 @@ private struct CurrentLessonLink: View {
     }
 }
 
-private struct FirstSessionHomeNote: View {
+private struct HomeSecondaryActionRow: View {
     @ObservedObject var state: LearningState
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            AvatarBadge(symbol: "sparkles", color: .warmAmber)
-                .frame(width: 38, height: 38)
-
-            VStack(alignment: .leading, spacing: 5) {
-                Text("You are set for \(state.profile.currentLevel.code) \(state.profile.targetLanguage.rawValue).")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                Text("Tap the lesson card to learn and say your first useful line.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+        NavigationLink(value: HomeRoute.courseDetail) {
+            SecondaryLearningAction(title: "See course path", subtitle: remainingLessonSummary, symbol: "map.fill", color: .primaryBlue)
         }
-        .padding(14)
-        .background(Color.claySurface.opacity(0.7), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("home-course-path-action")
+        .background(Color.claySurface.opacity(0.68), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(Color.clayStroke.opacity(0.66), lineWidth: 1)
         )
     }
-}
 
-private struct HomeQuickActions: View {
-    @ObservedObject var state: LearningState
+    private var remainingLessonCount: Int {
+        max(0, state.courseLessons.count - state.completedLessonCount)
+    }
 
-    var body: some View {
-        VStack(spacing: 0) {
-            NavigationLink(value: HomeRoute.courseDetail) {
-                SecondaryLearningAction(title: "See all lessons", subtitle: "Course path", symbol: "map.fill", color: .primaryBlue)
-            }
-            .accessibilityIdentifier("home-course-path-action")
-
-            Divider().padding(.leading, 62)
-
-            NavigationLink(value: HomeRoute.speakingDrill(state.currentLesson)) {
-                SecondaryLearningAction(title: "Practice speaking", subtitle: "Speak now", symbol: "mic.fill", color: .mintSuccess)
-            }
-            .accessibilityIdentifier("home-extra-practice-action")
-        }
-        .buttonStyle(.plain)
-        .background(Color.claySurface.opacity(0.68), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.clayStroke.opacity(0.66), lineWidth: 1)
-        )
+    private var remainingLessonSummary: String {
+        remainingLessonCount == 1 ? "1 lesson left" : "\(remainingLessonCount) lessons left"
     }
 }
 
@@ -286,47 +146,13 @@ private struct SecondaryLearningAction: View {
     }
 }
 
-private struct QuickActionCard: View {
-    let title: String
-    let subtitle: String
-    let symbol: String
-    let color: Color
-    var asset: ConverlaxAssetKind? = nil
-
-    var body: some View {
-        HStack(spacing: 12) {
-            AvatarBadge(symbol: symbol, color: color)
-                .frame(width: 36, height: 36)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            if asset != nil {
-                Image(systemName: "sparkle")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(color.opacity(0.8))
-                    .accessibilityHidden(true)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 14)
-        .frame(minHeight: 56)
-        .background(Color.claySurface.opacity(0.62), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-    }
-}
-
 private struct FeaturedLessonCard: View {
     let lesson: BeginnerLesson
     let completed: Bool
     var isFirstSession = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top, spacing: 12) {
                 ConverlaxAssetBadge(kind: lesson.visualAsset, size: 62)
 
@@ -351,20 +177,10 @@ private struct FeaturedLessonCard: View {
                     .background(.white.opacity(0.14), in: Capsule())
             }
 
-            VStack(alignment: .leading, spacing: 7) {
-                Text(lesson.subtitle)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.82))
-                    .lineLimit(2)
-
-                Text(supportingLine)
-                    .font(.callout.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(2)
-            }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            Text(supportingLine)
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(.white)
+                .lineLimit(2)
 
             HStack(spacing: 8) {
                 Image(systemName: completed ? "arrow.clockwise" : "play.fill")
@@ -380,16 +196,13 @@ private struct FeaturedLessonCard: View {
             .foregroundStyle(Color.primaryBlue)
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 16)
-            .padding(.vertical, 15)
-            .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(.vertical, 13)
+            .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .padding(16)
         .foregroundStyle(.white)
-        .background(
-            LinearGradient(colors: [Color.primaryBlue, Color.converlaxTeal, Color.mintSuccess.opacity(0.88)], startPoint: .topLeading, endPoint: .bottomTrailing),
-            in: RoundedRectangle(cornerRadius: 24, style: .continuous)
-        )
-        .shadow(color: lesson.accent.color.opacity(0.24), radius: 20, y: 10)
+        .background(Color.primaryBlue, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shadow(color: Color.primaryBlue.opacity(0.12), radius: 10, y: 5)
     }
 
     private var eyebrow: String {
@@ -476,7 +289,7 @@ private struct CurrentCourseLessonStart: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 14) {
                 ConverlaxAssetBadge(kind: lesson.visualAsset, size: 58)
 
@@ -499,8 +312,8 @@ private struct CurrentCourseLessonStart: View {
             .buttonStyle(PrimaryButtonStyle())
             .accessibilityIdentifier("course-detail-start-button")
         }
-        .padding(18)
-        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(16)
+        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
@@ -538,15 +351,15 @@ private struct LessonRow: View {
             Image(systemName: isCompleted ? "checkmark.circle.fill" : "chevron.right")
                 .foregroundStyle(isCompleted ? Color.mintSuccess : Color.secondary.opacity(0.7))
         }
-        .frame(minHeight: 58)
-        .padding(.horizontal, 14)
+        .frame(minHeight: 56)
+        .padding(.horizontal, 8)
         .padding(.vertical, 10)
-        .background(Color.claySurface.opacity(isCurrent ? 0.82 : 0.58), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(isCurrent ? Color.primaryBlue.opacity(0.08) : Color.clear, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(isCurrent ? Color.primaryBlue.opacity(0.34) : Color.clayStroke.opacity(0.62), lineWidth: isCurrent ? 1.25 : 1)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(isCurrent ? Color.primaryBlue.opacity(0.28) : Color.clayStroke.opacity(0.42), lineWidth: isCurrent ? 1.25 : 1)
         )
-        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 

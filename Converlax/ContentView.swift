@@ -3,7 +3,6 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var learningState = LearningState()
     @State private var selectedTab: AppTab
-    @State private var activeSheet: ActiveSheet?
     @State private var isShowingForcedOnboarding: Bool
     @State private var homePath: [HomeRoute]
     @State private var practicePath: [PracticeRoute]
@@ -25,7 +24,6 @@ struct ContentView: View {
                 MainTabView(
                     state: learningState,
                     selectedTab: $selectedTab,
-                    activeSheet: $activeSheet,
                     homePath: $homePath,
                     practicePath: $practicePath,
                     reviewPath: $reviewPath,
@@ -49,7 +47,6 @@ struct ContentView: View {
 private struct MainTabView: View {
     @ObservedObject var state: LearningState
     @Binding var selectedTab: AppTab
-    @Binding var activeSheet: ActiveSheet?
     @Binding var homePath: [HomeRoute]
     @Binding var practicePath: [PracticeRoute]
     @Binding var reviewPath: [ReviewRoute]
@@ -58,7 +55,7 @@ private struct MainTabView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             NavigationStack(path: $homePath) {
-                CourseHomeView(state: state, activeSheet: $activeSheet)
+                CourseHomeView(state: state)
                     .accessibilityIdentifier("screen-home")
                     .navigationDestination(for: HomeRoute.self) { route in
                         switch route {
@@ -124,18 +121,6 @@ private struct MainTabView: View {
                 .tag(AppTab.profile)
         }
         .tint(Color.primaryBlue)
-        .sheet(item: $activeSheet) { sheet in
-            switch sheet {
-            case .level:
-                LevelSelectionView(state: state)
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
-            case .streak:
-                StreakDetailView(state: state)
-                    .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)
-            }
-        }
     }
 }
 

@@ -3,14 +3,19 @@ import SwiftUI
 struct TutorView: View {
     @ObservedObject var state: LearningState
     @State private var input = ""
-    @State private var voiceState: TutorVoiceState = .keyboard
+    @State private var isVoiceInputActive = false
+    @State private var voicePhase: SpeechPracticePhase = .ready
     @State private var showHistory = false
     @State private var lastFeedback: LearningFeedback?
     @State private var noInputNotice: String?
+    @State private var voiceTranscript = ""
+    @State private var voiceErrorMessage: String?
     @State private var savedMessageIDs: Set<UUID> = []
+    @StateObject private var speechRecognizer = SpeechRecognitionService()
+    @State private var didApplyLaunchVoiceState = false
     @State private var messages = [
-        ChatMessage(text: "Hi there. I can help you rehearse the phrases from your current unit.", isUser: false),
-        ChatMessage(text: "Ask me a question, tap a suggestion, or practice one of your saved words.", isUser: false)
+        ChatMessage(text: "Use the tutor to rehearse phrases from your current unit.", isUser: false),
+        ChatMessage(text: "Ask a question, tap a suggestion, or use the mic for feedback.", isUser: false)
     ]
 
     private let suggestions = [
@@ -59,6 +64,15 @@ struct TutorView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
+        .onChange(of: speechRecognizer.transcript) { _, newValue in
+            voiceTranscript = newValue
+        }
+        .onAppear {
+            applyLaunchVoiceStateIfNeeded()
+        }
+        .onDisappear {
+            speechRecognizer.cancelRecording()
+        }
     }
 
     private var messageList: some View {
@@ -95,18 +109,19 @@ struct TutorView: View {
 
     private var composer: some View {
         Group {
-            if voiceState != .keyboard {
-                VoiceInputPanel(
-                    state: voiceState,
-                    onCancel: { voiceState = .keyboard },
-                    onSubmit: {
-                        if voiceState == .response {
-                            voiceState = .keyboard
-                        } else {
-                            submitVoice()
-                        }
-                    }
+            if isVoiceInputActive {
+                SpeechPracticePanel(
+                    phase: voicePhase,
+                    transcript: voiceTranscript,
+                    feedback: nil,
+                    accent: .primaryBlue,
+                    errorMessage: voiceErrorMessage,
+                    primaryActionTitle: tutorVoiceActionTitle,
+                    onPrimary: handleVoicePrimaryAction,
+                    onCancel: cancelVoice
                 )
+                .padding(20)
+                .background(.regularMaterial)
             } else {
                 TextComposer(
                     input: $input,
@@ -119,6 +134,15 @@ struct TutorView: View {
         }
     }
 
+    private var tutorVoiceActionTitle: String? {
+        switch voicePhase {
+        case .transcript:
+            "Send to Tutor"
+        default:
+            nil
+        }
+    }
+
     private func sendSuggestion(_ suggestion: String) {
         input = suggestion
         sendMessage()
@@ -127,7 +151,39 @@ struct TutorView: View {
     private func startVoice() {
         noInputNotice = nil
         withAnimation(.spring(response: 0.3, dampingFraction: 0.86)) {
-            voiceState = .recording
+            isVoiceInputActive = true
+        }
+        startVoiceRecording()
+    }
+
+    private func handleVoicePrimaryAction() {
+        switch voicePhase {
+        case .permissionNeeded, .permissionDenied, .ready, .paused, .noSpeech, .error:
+            startVoiceRecording()
+        case .recording:
+            finishVoiceRecording()
+        case .requestingPermission, .processing, .transcribing:
+            break
+        case .transcript:
+            submitVoiceTranscript()
+        case .feedback, .accepted:
+            resetVoiceInput()
+        }
+    }
+
+    private func startVoiceRecording() {
+        voicePhase = .requestingPermission
+        voiceTranscript = ""
+        voiceErrorMessage = nil
+
+        Task {
+            let started = await speechRecognizer.startRecording()
+            if started {
+                voicePhase = .recording
+            } else {
+                voiceErrorMessage = speechRecognizer.errorMessage
+                voicePhase = speechRecognizer.errorMessage?.localizedCaseInsensitiveContains("permission") == true ? .permissionDenied : .error
+            }
         }
     }
 
@@ -148,20 +204,54 @@ struct TutorView: View {
         input = ""
     }
 
-    private func submitVoice() {
-        voiceState = .loading
-        noInputNotice = nil
-        addTutorResponse()
-        voiceState = .response
+    private func finishVoiceRecording() {
+        voicePhase = .transcribing
+        let recognizedText = speechRecognizer.stopRecording()
+        voiceTranscript = recognizedText
+
+        guard !recognizedText.isEmpty else {
+            voiceErrorMessage = "No clear speech was captured. Try again a little slower and closer to the mic."
+            voicePhase = .noSpeech
+            return
+        }
+
+        voicePhase = .transcript
     }
 
-    private func addTutorResponse() {
+    private func submitVoiceTranscript() {
+        let recognizedText = voiceTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !recognizedText.isEmpty else {
+            voiceErrorMessage = "No clear speech was captured. Try again a little slower and closer to the mic."
+            voicePhase = .noSpeech
+            return
+        }
+
+        noInputNotice = nil
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.86)) {
+            addTutorResponse(for: recognizedText)
+            resetVoiceInput()
+        }
+    }
+
+    private func addTutorResponse(for userMessage: String) {
         let lesson = state.currentLesson
         withAnimation {
-            messages.append(ChatMessage(text: "Can we rehearse my next lesson?", isUser: true))
+            messages.append(ChatMessage(text: userMessage, isUser: true))
             messages.append(ChatMessage(text: "Yes. Your next lesson is \(lesson.title.lowercased()). Start with: \(lesson.steps.first?.prompt ?? lesson.title)", isUser: false, canSave: true))
         }
-        lastFeedback = state.recordTutorCorrection(for: "Can we rehearse my next lesson?")
+        lastFeedback = state.recordTutorCorrection(for: userMessage)
+    }
+
+    private func cancelVoice() {
+        speechRecognizer.cancelRecording()
+        resetVoiceInput()
+    }
+
+    private func resetVoiceInput() {
+        voicePhase = .ready
+        isVoiceInputActive = false
+        voiceTranscript = ""
+        voiceErrorMessage = nil
     }
 
     private func saveMessage(_ message: ChatMessage) {
@@ -177,10 +267,38 @@ struct TutorView: View {
     }
 
     private func resetConversation() {
+        speechRecognizer.cancelRecording()
         messages = Array(messages.prefix(2))
         lastFeedback = nil
         noInputNotice = nil
         savedMessageIDs = []
+        resetVoiceInput()
+    }
+
+    private func applyLaunchVoiceStateIfNeeded() {
+        guard
+            !didApplyLaunchVoiceState,
+            let launchState = ProcessInfo.processInfo.converlaxArgumentValue(after: "-ConverlaxTutorVoiceState")
+        else { return }
+
+        didApplyLaunchVoiceState = true
+        isVoiceInputActive = true
+        voiceTranscript = ""
+        voiceErrorMessage = nil
+        noInputNotice = nil
+
+        switch launchState {
+        case "recording":
+            voicePhase = .recording
+        case "transcript", "response":
+            voiceTranscript = "How do I ask for directions politely?"
+            voicePhase = .transcript
+        case "permissionDenied", "permission":
+            voiceErrorMessage = "Microphone access is denied. Allow Converlax in Settings to use voice input."
+            voicePhase = .permissionDenied
+        default:
+            isVoiceInputActive = false
+        }
     }
 
     private func stableMessageID(_ text: String) -> String {
@@ -189,22 +307,6 @@ struct TutorView: View {
         }
         let collapsed = String(characters).split(separator: "-").joined(separator: "-")
         return String(collapsed.prefix(48)).isEmpty ? "message" : String(collapsed.prefix(48))
-    }
-}
-
-private enum TutorVoiceState: Equatable {
-    case keyboard
-    case recording
-    case loading
-    case response
-
-    var title: String {
-        switch self {
-        case .keyboard: "Keyboard"
-        case .recording: "Listening"
-        case .loading: "Thinking"
-        case .response: "Response ready"
-        }
     }
 }
 
@@ -276,8 +378,6 @@ private struct ChatBubble: View {
         HStack(alignment: .bottom) {
             if message.isUser {
                 Spacer(minLength: 48)
-            } else {
-                ConverlaxMascotView(state: .avatar, size: 34, isAnimated: false)
             }
 
             VStack(alignment: .trailing, spacing: 6) {
@@ -286,7 +386,7 @@ private struct ChatBubble: View {
                     .foregroundStyle(message.isUser ? .white : .primary)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 11)
-                    .background(message.isUser ? Color.primaryBlue : .white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .background(message.isUser ? Color.primaryBlue : .white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
 
                 if message.canSave && !message.isUser {
                     Button(action: onSave) {
@@ -300,7 +400,7 @@ private struct ChatBubble: View {
             }
 
             if !message.isUser {
-                Spacer(minLength: 44)
+                Spacer(minLength: 48)
             }
         }
     }
@@ -331,55 +431,8 @@ private struct TranslationCard: View {
                     .foregroundStyle(Color.primaryBlue)
             }
             .padding(14)
-            .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.clayStroke))
-        }
-    }
-}
-
-private struct VoiceInputPanel: View {
-    let state: TutorVoiceState
-    let onCancel: () -> Void
-    let onSubmit: () -> Void
-
-    var body: some View {
-        VStack(spacing: 22) {
-            ConverlaxMascotView(state: mascotState, size: 112)
-            Text(state.title)
-                .font(.headline.weight(.semibold))
-            ConverlaxWaveform(color: state == .loading ? .warmAmber : .primaryBlue, isActive: state != .response)
-
-            HStack(spacing: 26) {
-                Button(action: onCancel) {
-                    Image(systemName: "xmark")
-                        .foregroundStyle(.red)
-                        .frame(width: 54, height: 54)
-                        .background(Color.red.opacity(0.08), in: Circle())
-                }
-                .accessibilityLabel("Cancel voice input")
-
-                Button(action: onSubmit) {
-                    Image(systemName: state == .response ? "keyboard" : "arrow.up")
-                        .font(.title2.weight(.bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 72, height: 72)
-                        .background(Color.primaryBlue, in: Circle())
-                        .shadow(color: .primaryBlue.opacity(0.25), radius: 18, y: 8)
-                }
-                .accessibilityLabel("Send voice input")
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 28)
-        .background(.regularMaterial)
-    }
-
-    private var mascotState: ConverlaxMascotState {
-        switch state {
-        case .keyboard: .idle
-        case .recording: .listening
-        case .loading: .thinking
-        case .response: .speaking
+            .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.clayStroke))
         }
     }
 }

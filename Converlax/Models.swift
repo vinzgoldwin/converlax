@@ -1,5 +1,19 @@
 import SwiftUI
 
+extension ProcessInfo {
+    func converlaxArgumentValue(after flag: String) -> String? {
+        let arguments = arguments
+        guard let flagIndex = arguments.firstIndex(of: flag), arguments.indices.contains(flagIndex + 1) else {
+            return nil
+        }
+        return arguments[flagIndex + 1]
+    }
+
+    var converlaxInitialHomeRoute: String? {
+        converlaxArgumentValue(after: "-ConverlaxInitialHomeRoute")
+    }
+}
+
 enum AppTab: Hashable {
     case home
     case practice
@@ -24,18 +38,6 @@ enum AppTab: Hashable {
             return .profile
         default:
             return .home
-        }
-    }
-}
-
-enum ActiveSheet: Identifiable {
-    case level
-    case streak
-
-    var id: String {
-        switch self {
-        case .level: "level"
-        case .streak: "streak"
         }
     }
 }
@@ -257,8 +259,8 @@ enum TargetLanguage: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .english: "English"
         case .french: "French"
-        case .spanish: "Spanish preview"
-        case .italian: "Italian preview"
+        case .spanish: "Spanish"
+        case .italian: "Italian"
         }
     }
 
@@ -266,8 +268,8 @@ enum TargetLanguage: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .english: "Beginner English"
         case .french: "Beginner French"
-        case .spanish: "Beginner Spanish preview"
-        case .italian: "Beginner Italian preview"
+        case .spanish: "Beginner Spanish"
+        case .italian: "Beginner Italian"
         }
     }
 
@@ -275,8 +277,8 @@ enum TargetLanguage: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .english: "Conversation Essentials"
         case .french: "Beginner Essentials"
-        case .spanish: "Spanish Preview"
-        case .italian: "Italian Preview"
+        case .spanish: "Spanish Essentials"
+        case .italian: "Italian Essentials"
         }
     }
 
@@ -284,7 +286,7 @@ enum TargetLanguage: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .english: "A complete starter unit for introductions, small talk, cafes, directions, help, plans, routines, shopping, and work."
         case .french: "A complete starter unit for greetings, cafe orders, directions, and hotel check-in."
-        case .spanish, .italian: "This course path is not available yet."
+        case .spanish, .italian: "Switch to English or French for the guided starter course."
         }
     }
 }
@@ -310,7 +312,7 @@ enum Level: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .beginner: "Introduce yourself, order food, and handle simple travel moments."
         case .elementary: "Talk about routines, places, and daily experiences."
-        case .upperElementary: "Handle local topics, appointments, and confident small talk."
+        case .upperElementary: "Handle everyday topics, appointments, and confident small talk."
         case .intermediate: "Explain opinions, narrate events, and keep a conversation moving."
         }
     }
@@ -357,41 +359,48 @@ enum SavedLearningKind: String, Codable, Hashable {
 }
 
 enum SpeechPracticePhase: String, Codable, Hashable {
+    case requestingPermission
     case permissionNeeded
+    case permissionDenied
     case ready
     case recording
     case paused
     case processing
+    case transcribing
     case transcript
     case feedback
     case accepted
+    case noSpeech
     case error
 
     var title: String {
         switch self {
-        case .permissionNeeded: "Mic permission needed"
+        case .requestingPermission: "Requesting access"
+        case .permissionNeeded, .permissionDenied: "Microphone blocked"
         case .ready: "Ready to speak"
         case .recording: "Recording"
         case .paused: "Paused"
-        case .processing: "Processing"
+        case .processing, .transcribing: "Transcribing"
         case .transcript: "Transcript ready"
         case .feedback: "Feedback ready"
         case .accepted: "Accepted"
+        case .noSpeech: "No speech recognized"
         case .error: "Try again"
         }
     }
 
     var actionTitle: String {
         switch self {
-        case .permissionNeeded: "Enable mock mic"
+        case .requestingPermission: "Requesting access"
+        case .permissionNeeded, .permissionDenied: "Try again"
         case .ready: "Start recording"
         case .recording: "Stop recording"
         case .paused: "Resume"
-        case .processing: "Processing"
+        case .processing, .transcribing: "Transcribing"
         case .transcript: "Get feedback"
-        case .feedback: "Accept"
+        case .feedback: "Next turn"
         case .accepted: "Practice again"
-        case .error: "Retry"
+        case .noSpeech, .error: "Try again"
         }
     }
 }
@@ -610,6 +619,164 @@ struct NextLearningRecommendation: Equatable {
     let detail: String
     let reason: String
     let symbol: String
+}
+
+struct CompletionCelebrationResult: Equatable {
+    let title: String
+    let subtitle: String
+    let xpEarned: Int
+    let levelBefore: Int
+    let levelAfter: Int
+    let levelProgressBefore: Double
+    let levelProgressAfter: Double
+    let savedItemsCreated: Int
+    let nextActionTitle: String
+    let nextActionDetail: String
+
+    var levelProgressTitle: String {
+        levelAfter > levelBefore ? "Reached Level \(levelAfter)" : "Level \(levelAfter) progress moved"
+    }
+
+    var levelProgressDetail: String {
+        let beforePercent = Int((levelProgressBefore * 100).rounded())
+        let afterPercent = Int((levelProgressAfter * 100).rounded())
+        if levelAfter > levelBefore {
+            return "Level \(levelBefore) \(beforePercent)% to Level \(levelAfter) \(afterPercent)%"
+        }
+        return "\(beforePercent)% to \(afterPercent)%"
+    }
+}
+
+struct JourneyProgress: Equatable {
+    let totalXP: Int
+    let levelNumber: Int
+    let currentTitle: String
+    let currentTitleDetail: String
+    let nextTitle: String
+    let nextLearnerTitle: LearnerTitle?
+    let nextTitleUnlockLevel: Int?
+    let xpToNextTitle: Int
+    let xpRemaining: Int
+    let xpInCurrentLevel: Int
+    let xpPerLevel: Int
+    let xpSources: [JourneyXPSource]
+    let unlockedLearnerTitles: [LearnerTitle]
+    let unlockedMilestones: [JourneyMilestone]
+
+    var levelProgress: Double {
+        guard xpPerLevel > 0 else { return 0 }
+        return Double(xpInCurrentLevel) / Double(xpPerLevel)
+    }
+
+    init(profile: LearningProfile, completedLessonCount: Int, totalLessonCount: Int) {
+        let speakingSessionCount = profile.sessionSummaries.filter { $0.id.hasPrefix("summary-usage-session-") }.count
+        let reviewedItemCount = profile.scheduledReviews.filter { $0.lastReviewedDay != nil }.count
+        let savedLineCount = profile.savedLines.count
+        let streakDayCount = max(profile.streak, 0)
+
+        let sources = [
+            JourneyXPSource(id: "lessons", title: "Lessons", count: completedLessonCount, xp: completedLessonCount * 120),
+            JourneyXPSource(id: "speaking", title: "Speaking", count: speakingSessionCount, xp: speakingSessionCount * 80),
+            JourneyXPSource(id: "reviews", title: "Reviews", count: reviewedItemCount, xp: reviewedItemCount * 35),
+            JourneyXPSource(id: "saved-lines", title: "Saved lines", count: savedLineCount, xp: savedLineCount * 25),
+            JourneyXPSource(id: "streak", title: "Streak", count: streakDayCount, xp: streakDayCount * 30)
+        ]
+        let levelSize = 500
+        let earnedXP = sources.reduce(0) { $0 + $1.xp }
+        let computedLevelNumber = max(1, (earnedXP / levelSize) + 1)
+        let computedXPInCurrentLevel = earnedXP % levelSize
+        let computedXPRemaining = max(0, levelSize - computedXPInCurrentLevel)
+
+        xpSources = sources
+        totalXP = earnedXP
+        xpPerLevel = levelSize
+        levelNumber = computedLevelNumber
+        xpInCurrentLevel = computedXPInCurrentLevel
+        xpRemaining = computedXPRemaining
+
+        let titleCatalog = JourneyProgress.learnerTitles
+        let unlockedTitles = titleCatalog.filter { $0.unlockLevel <= computedLevelNumber }
+        let currentLearnerTitle = unlockedTitles.last ?? titleCatalog[0]
+        let upcomingLearnerTitle = titleCatalog.first { $0.unlockLevel > computedLevelNumber }
+
+        unlockedLearnerTitles = unlockedTitles
+        currentTitle = currentLearnerTitle.name
+        currentTitleDetail = currentLearnerTitle.detail
+        nextLearnerTitle = upcomingLearnerTitle
+        nextTitle = upcomingLearnerTitle?.name ?? currentLearnerTitle.name
+        nextTitleUnlockLevel = upcomingLearnerTitle?.unlockLevel
+        if let upcomingLearnerTitle {
+            let levelsToEarnBeforeUnlock = max(0, upcomingLearnerTitle.unlockLevel - computedLevelNumber - 1)
+            xpToNextTitle = levelsToEarnBeforeUnlock * levelSize + computedXPRemaining
+        } else {
+            xpToNextTitle = 0
+        }
+
+        let milestoneCatalog = JourneyProgress.milestones(
+            completedLessonCount: completedLessonCount,
+            totalLessonCount: totalLessonCount,
+            speakingSessionCount: speakingSessionCount,
+            reviewedItemCount: reviewedItemCount,
+            savedLineCount: savedLineCount,
+            streakDayCount: streakDayCount
+        )
+
+        unlockedMilestones = milestoneCatalog.filter(\.isUnlocked)
+    }
+
+    private static let learnerTitles: [LearnerTitle] = [
+        LearnerTitle(id: "first-steps", name: "First Steps", unlockLevel: 1, detail: "Started the learning path"),
+        LearnerTitle(id: "phrase-builder", name: "Phrase Builder", unlockLevel: 2, detail: "Building useful everyday phrases"),
+        LearnerTitle(id: "conversation-starter", name: "Conversation Starter", unlockLevel: 3, detail: "Ready to open simple exchanges"),
+        LearnerTitle(id: "steady-speaker", name: "Steady Speaker", unlockLevel: 5, detail: "Practicing speech with consistency"),
+        LearnerTitle(id: "review-navigator", name: "Review Navigator", unlockLevel: 7, detail: "Keeping saved language active"),
+        LearnerTitle(id: "everyday-communicator", name: "Everyday Communicator", unlockLevel: 10, detail: "Handling common situations with confidence"),
+        LearnerTitle(id: "confident-conversationalist", name: "Confident Conversationalist", unlockLevel: 14, detail: "Sustaining longer beginner conversations")
+    ]
+
+    private static func milestones(
+        completedLessonCount: Int,
+        totalLessonCount: Int,
+        speakingSessionCount: Int,
+        reviewedItemCount: Int,
+        savedLineCount: Int,
+        streakDayCount: Int
+    ) -> [JourneyMilestone] {
+        [
+            JourneyMilestone(id: "path-finder", title: "Path Finder", detail: "Journey started", symbol: "map.fill", isUnlocked: true),
+            JourneyMilestone(id: "daily-starter", title: "Daily Starter", detail: "Complete one lesson", symbol: "checkmark.seal.fill", isUnlocked: completedLessonCount >= 1),
+            JourneyMilestone(id: "first-voice", title: "First Voice", detail: "Finish one speaking session", symbol: "mic.fill", isUnlocked: speakingSessionCount >= 1),
+            JourneyMilestone(id: "review-builder", title: "Review Builder", detail: "Review one saved item", symbol: "bolt.fill", isUnlocked: reviewedItemCount >= 1),
+            JourneyMilestone(id: "line-collector", title: "Line Collector", detail: "Save five lines", symbol: "bookmark.fill", isUnlocked: savedLineCount >= 5),
+            JourneyMilestone(id: "course-climber", title: "Course Climber", detail: "Complete three lessons", symbol: "figure.walk", isUnlocked: completedLessonCount >= 3),
+            JourneyMilestone(id: "streak-keeper", title: "Streak Keeper", detail: "Reach a three-day streak", symbol: "flame.fill", isUnlocked: streakDayCount >= 3),
+            JourneyMilestone(id: "voice-regular", title: "Voice Regular", detail: "Finish five speaking sessions", symbol: "waveform", isUnlocked: speakingSessionCount >= 5),
+            JourneyMilestone(id: "review-regular", title: "Review Regular", detail: "Review ten saved items", symbol: "arrow.clockwise", isUnlocked: reviewedItemCount >= 10),
+            JourneyMilestone(id: "unit-finisher", title: "Unit Finisher", detail: "Complete the current course unit", symbol: "trophy.fill", isUnlocked: totalLessonCount > 0 && completedLessonCount >= totalLessonCount)
+        ]
+    }
+}
+
+struct JourneyXPSource: Equatable, Identifiable {
+    let id: String
+    let title: String
+    let count: Int
+    let xp: Int
+}
+
+struct LearnerTitle: Equatable, Identifiable {
+    let id: String
+    let name: String
+    let unlockLevel: Int
+    let detail: String
+}
+
+struct JourneyMilestone: Equatable, Identifiable {
+    let id: String
+    let title: String
+    let detail: String
+    let symbol: String
+    let isUnlocked: Bool
 }
 
 struct LessonStep: Codable, Hashable, Identifiable {

@@ -5,15 +5,15 @@ struct LessonPlayerView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var lesson: BeginnerLesson
     @State private var stepIndex = 0
-    @State private var selectedAnswer: String?
-    @State private var checked = false
     @State private var completed = false
-    @State private var audioEnabled = false
     @State private var savedCurrentLine = false
-    @State private var feedback: LearningFeedback?
     @State private var speechPhase: SpeechPracticePhase = .ready
     @State private var transcript = ""
     @State private var speechFeedback: LearningFeedback?
+    @State private var speechErrorMessage: String?
+    @StateObject private var speechRecognizer = SpeechRecognitionService()
+    @State private var didApplyLaunchSpeechState = false
+    @State private var completionResult: CompletionCelebrationResult?
 
     init(lesson: BeginnerLesson, state: LearningState) {
         _lesson = State(initialValue: lesson)
@@ -24,11 +24,11 @@ struct LessonPlayerView: View {
         ZStack {
             Color.appBackground.ignoresSafeArea()
 
-            VStack(alignment: .leading, spacing: 22) {
-                LessonProgressBar(progress: progress)
-
+            VStack(alignment: .leading, spacing: 18) {
                 if completed {
-                    CompletionPanel(lesson: lesson, savedWords: lesson.savedWords)
+                    if let completionResult {
+                        CompletionCelebrationView(result: completionResult)
+                    }
                     Spacer()
                     Button(action: dismiss.callAsFunction) {
                         Text("Back to course")
@@ -36,16 +36,19 @@ struct LessonPlayerView: View {
                     .buttonStyle(PrimaryButtonStyle())
                 } else {
                     ScrollView {
-                        LessonStepCard(
+                        VoiceFirstLessonTurn(
+                            lesson: lesson,
                             step: step,
-                            selectedAnswer: $selectedAnswer,
-                            checked: checked,
+                            stepIndex: stepIndex,
+                            stepCount: lesson.steps.count,
+                            progress: progress,
                             accent: lesson.accent.color,
                             savedCurrentLine: savedCurrentLine,
-                            feedback: feedback,
                             speechPhase: speechPhase,
                             transcript: transcript,
                             speechFeedback: speechFeedback,
+                            speechErrorMessage: speechErrorMessage,
+                            isLastTurn: stepIndex == lesson.steps.count - 1,
                             onSaveLine: saveCurrentLine,
                             onSpeechPrimary: advanceSpeechState,
                             onSpeechCancel: cancelSpeech
@@ -53,30 +56,23 @@ struct LessonPlayerView: View {
                         .padding(.bottom, 18)
                     }
                     .scrollIndicators(.hidden)
-
-                    Button(action: advance) {
-                        Text(buttonTitle)
-                    }
-                    .buttonStyle(PrimaryButtonStyle(isEnabled: canAdvance))
-                    .disabled(!canAdvance)
                 }
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
-            .padding(.bottom, 104)
+            .padding(.bottom, 28)
         }
         .navigationTitle(lesson.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    audioEnabled.toggle()
-                } label: {
-                    Image(systemName: audioEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
-                }
-                .accessibilityLabel(audioEnabled ? "Turn off lesson audio" : "Turn on lesson audio")
-            }
+        .onChange(of: speechRecognizer.transcript) { _, newValue in
+            transcript = newValue
+        }
+        .onAppear {
+            applyLaunchSpeechStateIfNeeded()
+        }
+        .onDisappear {
+            speechRecognizer.cancelRecording()
         }
     }
 
@@ -86,53 +82,6 @@ struct LessonPlayerView: View {
 
     private var progress: Double {
         Double(stepIndex + 1) / Double(lesson.steps.count)
-    }
-
-    private var canAdvance: Bool {
-        step.kind != .choice || selectedAnswer != nil
-    }
-
-    private var buttonTitle: String {
-        if step.kind == .choice && !checked {
-            return "Check"
-        }
-
-        return stepIndex == lesson.steps.count - 1 ? "Finish lesson" : "Continue"
-    }
-
-    private func advance() {
-        guard canAdvance else { return }
-
-        if step.kind == .choice && !checked {
-            selectedAnswer = selectedAnswer ?? step.correctAnswer
-            feedback = state.recordPracticeResult(
-                lesson: lesson,
-                step: step,
-                selectedAnswer: selectedAnswer,
-                correct: selectedAnswer == step.correctAnswer,
-                mode: "Lesson check"
-            )
-            checked = true
-            return
-        }
-
-        if stepIndex < lesson.steps.count - 1 {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
-                stepIndex += 1
-                selectedAnswer = nil
-                checked = false
-                savedCurrentLine = false
-                feedback = nil
-                speechPhase = .ready
-                transcript = ""
-                speechFeedback = nil
-            }
-        } else {
-            state.completeLesson(lesson)
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
-                completed = true
-            }
-        }
     }
 
     private func saveCurrentLine() {
@@ -149,44 +98,138 @@ struct LessonPlayerView: View {
 
     private func advanceSpeechState() {
         switch speechPhase {
-        case .permissionNeeded, .ready, .paused, .error:
-            speechPhase = .recording
+        case .permissionNeeded, .permissionDenied, .ready, .paused, .noSpeech, .error:
+            startSpeechRecording()
         case .recording:
-            transcript = step.prompt.replacingOccurrences(of: "...", with: "coffee")
-            if transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                speechPhase = .error
-            } else {
-                speechFeedback = state.acceptSpeechPractice(
-                    lesson: lesson,
-                    step: step,
-                    transcript: transcript,
-                    mode: "Speaking practice"
-                )
-                speechPhase = .feedback
-            }
-        case .processing:
+            finishSpeechRecording()
+        case .requestingPermission, .processing, .transcribing:
             break
         case .transcript:
-            speechPhase = .feedback
             speechFeedback = state.acceptSpeechPractice(
                 lesson: lesson,
                 step: step,
                 transcript: transcript,
                 mode: "Speaking practice"
             )
+            speechPhase = .feedback
         case .feedback:
-            speechPhase = .accepted
+            advanceAfterSpeechAcceptance()
         case .accepted:
             speechPhase = .ready
             transcript = ""
             speechFeedback = nil
+            speechErrorMessage = nil
         }
     }
 
     private func cancelSpeech() {
+        speechRecognizer.cancelRecording()
         speechPhase = .ready
         transcript = ""
         speechFeedback = nil
+        speechErrorMessage = nil
+    }
+
+    private func startSpeechRecording() {
+        speechPhase = .requestingPermission
+        transcript = ""
+        speechFeedback = nil
+        speechErrorMessage = nil
+
+        Task {
+            let started = await speechRecognizer.startRecording()
+            if started {
+                speechPhase = .recording
+            } else {
+                speechErrorMessage = speechRecognizer.errorMessage
+                speechPhase = speechRecognizer.errorMessage?.localizedCaseInsensitiveContains("permission") == true ? .permissionDenied : .error
+            }
+        }
+    }
+
+    private func finishSpeechRecording() {
+        speechPhase = .transcribing
+        let capturedTranscript = speechRecognizer.stopRecording()
+        transcript = capturedTranscript
+
+        guard !capturedTranscript.isEmpty else {
+            speechErrorMessage = "No clear speech was captured. Try again a little slower and closer to the mic."
+            speechPhase = .noSpeech
+            return
+        }
+
+        speechPhase = .transcript
+    }
+
+    private func advanceAfterSpeechAcceptance() {
+        speechPhase = .accepted
+
+        if stepIndex < lesson.steps.count - 1 {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+                stepIndex += 1
+                savedCurrentLine = false
+                speechPhase = .ready
+                transcript = ""
+                speechFeedback = nil
+                speechErrorMessage = nil
+            }
+        } else {
+            let previousProfile = state.profile
+            state.completeLesson(lesson)
+            completionResult = state.completionCelebration(
+                from: previousProfile,
+                title: "Lesson complete",
+                subtitle: "You finished \(lesson.title.lowercased())."
+            )
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+                completed = true
+            }
+        }
+    }
+
+    private func applyLaunchSpeechStateIfNeeded() {
+        guard
+            !didApplyLaunchSpeechState,
+            ProcessInfo.processInfo.converlaxInitialHomeRoute == "lesson",
+            let launchState = ProcessInfo.processInfo.converlaxArgumentValue(after: "-ConverlaxLessonSpeechState"),
+            let targetIndex = lesson.steps.firstIndex(where: { $0.kind == .speak || $0.kind == .choice })
+        else { return }
+
+        didApplyLaunchSpeechState = true
+        let targetStep = lesson.steps[targetIndex]
+        stepIndex = targetIndex
+        savedCurrentLine = false
+        speechFeedback = nil
+        speechErrorMessage = nil
+
+        switch launchState {
+        case "recording":
+            transcript = ""
+            speechPhase = .recording
+        case "transcript", "transcriptReady":
+            transcript = sampleTranscript(for: targetStep)
+            speechPhase = .transcript
+        case "feedback":
+            transcript = sampleTranscript(for: targetStep)
+            speechFeedback = state.acceptSpeechPractice(
+                lesson: lesson,
+                step: targetStep,
+                transcript: transcript,
+                mode: "Speaking practice"
+            )
+            speechPhase = .feedback
+        case "permissionDenied", "permission":
+            transcript = ""
+            speechErrorMessage = "Microphone access is denied. Allow Converlax in Settings to practice speaking."
+            speechPhase = .permissionDenied
+        default:
+            break
+        }
+    }
+
+    private func sampleTranscript(for step: LessonStep) -> String {
+        let filledBlank = step.prompt.replacingOccurrences(of: "___", with: step.correctAnswer ?? "coffee")
+        return filledBlank.replacingOccurrences(of: "...", with: "Alex")
     }
 }
 
@@ -272,9 +315,13 @@ struct LessonModePlayerView: View {
     @State private var speechPhase: SpeechPracticePhase = .ready
     @State private var transcript = ""
     @State private var speechFeedback: LearningFeedback?
+    @State private var speechErrorMessage: String?
+    @StateObject private var speechRecognizer = SpeechRecognitionService()
+    @State private var didApplyLaunchSpeechState = false
     @State private var answeredCount = 0
     @State private var correctCount = 0
     @State private var speakingAcceptedCount = 0
+    @State private var completionResult: CompletionCelebrationResult?
 
     private var modeSteps: [LessonStep] {
         mode.steps(from: lesson)
@@ -302,16 +349,10 @@ struct LessonModePlayerView: View {
 
                 if completed {
                     ScrollView {
-                        LessonModeCompletionPanel(
-                            mode: mode,
-                            lesson: lesson,
-                            answeredCount: answeredCount,
-                            correctCount: correctCount,
-                            speakingAcceptedCount: speakingAcceptedCount,
-                            savedLineCount: savedStepIDs.count,
-                            savedWords: lesson.savedWords
-                        )
-                        .padding(.bottom, 8)
+                        if let completionResult {
+                            CompletionCelebrationView(result: completionResult)
+                                .padding(.bottom, 8)
+                        }
                     }
                     .scrollIndicators(.hidden)
 
@@ -353,6 +394,15 @@ struct LessonModePlayerView: View {
                 .accessibilityLabel(audioEnabled ? "Turn off lesson audio" : "Turn on lesson audio")
             }
         }
+        .onChange(of: speechRecognizer.transcript) { _, newValue in
+            transcript = newValue
+        }
+        .onAppear {
+            applyLaunchSpeechStateIfNeeded()
+        }
+        .onDisappear {
+            speechRecognizer.cancelRecording()
+        }
     }
 
     @ViewBuilder
@@ -370,6 +420,7 @@ struct LessonModePlayerView: View {
                 speechPhase: speechPhase,
                 transcript: transcript,
                 speechFeedback: speechFeedback,
+                speechErrorMessage: speechErrorMessage,
                 onToggleAudio: { audioEnabled.toggle() },
                 onSaveLine: saveCurrentLine,
                 onSpeechPrimary: advanceSpeechState,
@@ -383,6 +434,7 @@ struct LessonModePlayerView: View {
                 speechPhase: speechPhase,
                 transcript: transcript,
                 speechFeedback: speechFeedback,
+                speechErrorMessage: speechErrorMessage,
                 onSaveLine: saveCurrentLine,
                 onSpeechPrimary: advanceSpeechState,
                 onSpeechCancel: resetSpeech
@@ -454,7 +506,14 @@ struct LessonModePlayerView: View {
                 resetStepState()
             }
         } else {
+            let previousProfile = state.profile
             state.completeLesson(lesson)
+            completionResult = state.completionCelebration(
+                from: previousProfile,
+                title: mode.completionTitle,
+                subtitle: "You finished \(lesson.title.lowercased()) in \(mode.shortTitle.lowercased()) mode.",
+                savedItemsCreated: max(savedStepIDs.count, state.profile.savedLearningObjects.count - previousProfile.savedLearningObjects.count)
+            )
             withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
                 completed = true
             }
@@ -483,22 +542,11 @@ struct LessonModePlayerView: View {
 
     private func advanceSpeechState() {
         switch speechPhase {
-        case .permissionNeeded, .ready, .paused, .error:
-            speechPhase = .recording
+        case .permissionNeeded, .permissionDenied, .ready, .paused, .noSpeech, .error:
+            startSpeechRecording()
         case .recording:
-            transcript = mockTranscript(for: step)
-            if transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                speechPhase = .error
-            } else {
-                speechFeedback = state.acceptSpeechPractice(
-                    lesson: lesson,
-                    step: step,
-                    transcript: transcript,
-                    mode: mode.modeName
-                )
-                speechPhase = .feedback
-            }
-        case .processing:
+            finishSpeechRecording()
+        case .requestingPermission, .processing, .transcribing:
             break
         case .transcript:
             speechFeedback = state.acceptSpeechPractice(
@@ -524,7 +572,14 @@ struct LessonModePlayerView: View {
                 resetStepState()
             }
         } else {
+            let previousProfile = state.profile
             state.completeLesson(lesson)
+            completionResult = state.completionCelebration(
+                from: previousProfile,
+                title: mode.completionTitle,
+                subtitle: "You finished \(lesson.title.lowercased()) in \(mode.shortTitle.lowercased()) mode.",
+                savedItemsCreated: max(savedStepIDs.count, state.profile.savedLearningObjects.count - previousProfile.savedLearningObjects.count)
+            )
             withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
                 completed = true
             }
@@ -532,9 +587,11 @@ struct LessonModePlayerView: View {
     }
 
     private func resetSpeech() {
+        speechRecognizer.cancelRecording()
         speechPhase = .ready
         transcript = ""
         speechFeedback = nil
+        speechErrorMessage = nil
     }
 
     private func resetStepState() {
@@ -544,14 +601,89 @@ struct LessonModePlayerView: View {
         resetSpeech()
     }
 
-    private func mockTranscript(for step: LessonStep) -> String {
-        if step.prompt.contains("...") {
-            return step.prompt.replacingOccurrences(of: "...", with: "Kevin")
+    private func startSpeechRecording() {
+        speechPhase = .requestingPermission
+        transcript = ""
+        speechFeedback = nil
+        speechErrorMessage = nil
+
+        Task {
+            let started = await speechRecognizer.startRecording()
+            if started {
+                speechPhase = .recording
+            } else {
+                speechErrorMessage = speechRecognizer.errorMessage
+                speechPhase = speechRecognizer.errorMessage?.localizedCaseInsensitiveContains("permission") == true ? .permissionDenied : .error
+            }
         }
-        if step.prompt.contains("___"), let answer = step.correctAnswer {
-            return step.prompt.replacingOccurrences(of: "___", with: answer)
+    }
+
+    private func finishSpeechRecording() {
+        speechPhase = .transcribing
+        let capturedTranscript = speechRecognizer.stopRecording()
+        transcript = capturedTranscript
+
+        guard !capturedTranscript.isEmpty else {
+            speechErrorMessage = "No clear speech was captured. Try again a little slower and closer to the mic."
+            speechPhase = .noSpeech
+            return
         }
-        return step.prompt
+
+        speechPhase = .transcript
+    }
+
+    private func applyLaunchSpeechStateIfNeeded() {
+        guard
+            !didApplyLaunchSpeechState,
+            ProcessInfo.processInfo.converlaxInitialHomeRoute == homeRouteArgument,
+            let launchState = ProcessInfo.processInfo.converlaxArgumentValue(after: "-ConverlaxLessonSpeechState"),
+            let targetIndex = modeSteps.firstIndex(where: { $0.kind == .speak || $0.kind == .choice })
+        else { return }
+
+        didApplyLaunchSpeechState = true
+        let targetStep = modeSteps[targetIndex]
+        stepIndex = targetIndex
+        resetStepState()
+
+        switch launchState {
+        case "recording":
+            transcript = ""
+            speechPhase = .recording
+        case "transcript", "transcriptReady":
+            transcript = sampleTranscript(for: targetStep)
+            speechPhase = .transcript
+        case "feedback":
+            transcript = sampleTranscript(for: targetStep)
+            speechFeedback = state.acceptSpeechPractice(
+                lesson: lesson,
+                step: targetStep,
+                transcript: transcript,
+                mode: mode.modeName
+            )
+            speechPhase = .feedback
+        case "permissionDenied", "permission":
+            transcript = ""
+            speechErrorMessage = "Microphone access is denied. Allow Converlax in Settings to practice speaking."
+            speechPhase = .permissionDenied
+        default:
+            break
+        }
+    }
+
+    private func sampleTranscript(for step: LessonStep) -> String {
+        let filledBlank = step.prompt.replacingOccurrences(of: "___", with: step.correctAnswer ?? "coffee")
+        return filledBlank.replacingOccurrences(of: "...", with: "Alex")
+    }
+
+    private var homeRouteArgument: String {
+        switch mode {
+        case .video:
+            "videoLesson"
+        case .speakingDrill:
+            "speakingDrill"
+        case .qa:
+            "qaLesson"
+        }
     }
 }
 
@@ -583,7 +715,7 @@ private struct LessonModeHeader: View {
                 .foregroundStyle(lesson.accent.color)
         }
         .padding(16)
-        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -598,6 +730,7 @@ private struct VideoLessonStepCard: View {
     let speechPhase: SpeechPracticePhase
     let transcript: String
     let speechFeedback: LearningFeedback?
+    let speechErrorMessage: String?
     let onToggleAudio: () -> Void
     let onSaveLine: () -> Void
     let onSpeechPrimary: () -> Void
@@ -606,7 +739,7 @@ private struct VideoLessonStepCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             ZStack(alignment: .bottomLeading) {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: [lesson.accent.color.opacity(0.82), Color.converlaxInk.opacity(0.86)],
@@ -651,6 +784,7 @@ private struct VideoLessonStepCard: View {
                     transcript: transcript,
                     feedback: speechFeedback,
                     accent: lesson.accent.color,
+                    errorMessage: speechErrorMessage,
                     onPrimary: onSpeechPrimary,
                     onCancel: onSpeechCancel
                 )
@@ -666,6 +800,7 @@ private struct SpeakingDrillStepCard: View {
     let speechPhase: SpeechPracticePhase
     let transcript: String
     let speechFeedback: LearningFeedback?
+    let speechErrorMessage: String?
     let onSaveLine: () -> Void
     let onSpeechPrimary: () -> Void
     let onSpeechCancel: () -> Void
@@ -674,22 +809,12 @@ private struct SpeakingDrillStepCard: View {
         VStack(alignment: .leading, spacing: 16) {
             LessonPromptBlock(step: step, savedCurrentLine: savedCurrentLine, onSaveLine: onSaveLine)
 
-            VStack(alignment: .leading, spacing: 10) {
-                Label("Pronunciation pass", systemImage: "waveform")
-                    .font(.headline.weight(.semibold))
-                Text("Record the line, review the transcript, then accept the feedback to continue.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-
             SpeechPracticePanel(
                 phase: speechPhase,
                 transcript: transcript,
                 feedback: speechFeedback,
                 accent: accent,
+                errorMessage: speechErrorMessage,
                 onPrimary: onSpeechPrimary,
                 onCancel: onSpeechCancel
             )
@@ -742,7 +867,7 @@ private struct LessonPromptBlock: View {
             .disabled(savedCurrentLine)
         }
         .padding(18)
-        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -820,7 +945,7 @@ private struct LessonModeCompletionPanel: View {
             }
         }
         .padding(20)
-        .background(Color.claySurface.opacity(0.72), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(Color.claySurface.opacity(0.72), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
@@ -851,84 +976,151 @@ private struct CompletionMetricRow: View {
     }
 }
 
-private struct LessonStepCard: View {
+private struct VoiceFirstLessonTurn: View {
+    let lesson: BeginnerLesson
     let step: LessonStep
-    @Binding var selectedAnswer: String?
-    let checked: Bool
+    let stepIndex: Int
+    let stepCount: Int
+    let progress: Double
     let accent: Color
     let savedCurrentLine: Bool
-    let feedback: LearningFeedback?
     let speechPhase: SpeechPracticePhase
     let transcript: String
     let speechFeedback: LearningFeedback?
+    let speechErrorMessage: String?
+    let isLastTurn: Bool
     let onSaveLine: () -> Void
     let onSpeechPrimary: () -> Void
     let onSpeechCancel: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack {
-                Text(step.title)
-                    .font(.title3.weight(.bold))
-                Spacer()
-                ConverlaxAssetBadge(kind: step.kind.visualAsset, size: 42)
-            }
+        VStack(alignment: .leading, spacing: 16) {
+            VoiceLessonHeader(
+                lesson: lesson,
+                stepIndex: stepIndex,
+                stepCount: stepCount,
+                progress: progress
+            )
 
-            Text(step.prompt)
-                .font(.title2.weight(.semibold))
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(18)
-                .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            VoicePromptBlock(
+                step: step,
+                helperText: helperText,
+                savedCurrentLine: savedCurrentLine,
+                onSaveLine: onSaveLine
+            )
 
-            Text(step.helper)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            Button(action: onSaveLine) {
-                Label(savedCurrentLine ? "Saved line" : "Save line", systemImage: savedCurrentLine ? "bookmark.fill" : "bookmark")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.primaryBlue)
-            }
-            .buttonStyle(.plain)
-            .disabled(savedCurrentLine)
-
-            switch step.kind {
-            case .teach:
-                EmptyView()
-            case .choice:
-                ChoiceAnswers(step: step, selectedAnswer: $selectedAnswer, checked: checked, accent: accent)
-            case .speak:
-                SpeechPracticePanel(
-                    phase: speechPhase,
-                    transcript: transcript,
-                    feedback: speechFeedback,
-                    accent: accent,
-                    onPrimary: onSpeechPrimary,
-                    onCancel: onSpeechCancel
-                )
-            }
-
-            if checked, let correctAnswer = step.correctAnswer {
-                HStack {
-                    Image(systemName: selectedAnswer == correctAnswer ? "checkmark.circle.fill" : "xmark.circle.fill")
-                    Text(selectedAnswer == correctAnswer ? "Correct" : "Correct answer: \(correctAnswer)")
-                        .font(.headline.weight(.semibold))
-                }
-                .foregroundStyle(selectedAnswer == correctAnswer ? Color.mintSuccess : Color.red)
-            }
-
-            if let feedback {
-                LearningFeedbackCard(feedback: feedback)
-            }
+            SpeechPracticePanel(
+                phase: speechPhase,
+                transcript: transcript,
+                feedback: speechFeedback,
+                accent: accent,
+                errorMessage: speechErrorMessage,
+                primaryActionTitle: voiceActionTitle,
+                onPrimary: onSpeechPrimary,
+                onCancel: onSpeechCancel
+            )
         }
     }
 
-    private var iconName: String {
-        switch step.kind {
-        case .teach: "book.closed.fill"
-        case .choice: "checklist"
-        case .speak: "mic.fill"
+    private var voiceActionTitle: String? {
+        switch speechPhase {
+        case .feedback, .accepted:
+            isLastTurn ? "Finish lesson" : "Next prompt"
+        default:
+            nil
         }
+    }
+
+    private var helperText: String? {
+        let trimmedHelper = step.helper.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedHelper.isEmpty else { return nil }
+
+        let prompt = step.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedHelper.localizedCaseInsensitiveCompare(prompt) != .orderedSame else { return nil }
+
+        let lowercasedHelper = trimmedHelper.lowercased()
+        if step.kind == .choice && (lowercasedHelper.contains("choose") || lowercasedHelper.contains("pick")) {
+            return nil
+        }
+
+        return trimmedHelper
+    }
+}
+
+private struct VoiceLessonHeader: View {
+    let lesson: BeginnerLesson
+    let stepIndex: Int
+    let stepCount: Int
+    let progress: Double
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                ConverlaxAssetBadge(kind: lesson.visualAsset, size: 38)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(lesson.title)
+                        .font(.subheadline.weight(.bold))
+                        .lineLimit(1)
+                    Text("Turn \(stepIndex + 1) of \(max(stepCount, 1))")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Text("\(Int((progress * 100).rounded()))%")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.primaryBlue)
+            }
+
+            LessonProgressBar(progress: progress)
+        }
+        .padding(14)
+        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+private struct VoicePromptBlock: View {
+    let step: LessonStep
+    let helperText: String?
+    let savedCurrentLine: Bool
+    let onSaveLine: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(step.title)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.secondary)
+                    Text(step.prompt)
+                        .font(.title2.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Button(action: onSaveLine) {
+                    Image(systemName: savedCurrentLine ? "bookmark.fill" : "bookmark")
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(savedCurrentLine ? Color.primaryBlue : Color.secondary)
+                        .frame(width: 36, height: 36)
+                        .background(Color.appBackground.opacity(0.76), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .disabled(savedCurrentLine)
+                .accessibilityLabel(savedCurrentLine ? "Line saved" : "Save line")
+            }
+
+            if let helperText {
+                Text(helperText)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(16)
+        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -1037,6 +1229,6 @@ private struct CompletionPanel: View {
             }
         }
         .padding(20)
-        .background(Color.claySurface.opacity(0.72), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(Color.claySurface.opacity(0.72), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }

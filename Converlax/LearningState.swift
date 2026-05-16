@@ -163,6 +163,10 @@ final class LearningState: ObservableObject {
         )
     }
 
+    var journeyProgress: JourneyProgress {
+        journeyProgress(for: profile)
+    }
+
     var roleplayTopics: [RoleplayTopic] {
         PhaseOneContent.topics
     }
@@ -217,6 +221,37 @@ final class LearningState: ObservableObject {
         if index == 0 { return true }
         let previous = courseLessons[index - 1]
         return isCompleted(previous) || isCompleted(lesson)
+    }
+
+    func completionCelebration(
+        from previousProfile: LearningProfile,
+        title: String,
+        subtitle: String,
+        savedItemsCreated: Int? = nil,
+        nextActionTitle: String? = nil,
+        nextActionDetail: String? = nil
+    ) -> CompletionCelebrationResult {
+        let previousProgress = journeyProgress(for: previousProfile)
+        let currentProgress = journeyProgress
+        let savedObjectDelta = max(0, profile.savedLearningObjects.count - previousProfile.savedLearningObjects.count)
+        let savedContentDelta = max(
+            0,
+            profile.savedLines.count - previousProfile.savedLines.count + profile.savedWords.count - previousProfile.savedWords.count
+        )
+        let recommendation = nextRecommendation
+
+        return CompletionCelebrationResult(
+            title: title,
+            subtitle: subtitle,
+            xpEarned: max(0, currentProgress.totalXP - previousProgress.totalXP),
+            levelBefore: previousProgress.levelNumber,
+            levelAfter: currentProgress.levelNumber,
+            levelProgressBefore: previousProgress.levelProgress,
+            levelProgressAfter: currentProgress.levelProgress,
+            savedItemsCreated: savedItemsCreated ?? max(savedObjectDelta, savedContentDelta),
+            nextActionTitle: nextActionTitle ?? recommendation.title,
+            nextActionDetail: nextActionDetail ?? recommendation.detail
+        )
     }
 
     func completeOnboarding(language: TargetLanguage, level: Level) {
@@ -332,7 +367,7 @@ final class LearningState: ObservableObject {
         if inserted || createdDailySession {
             updateStreak(in: &next, now: now)
             addFeedback(
-                mockFeedback(
+                makeFeedback(
                     source: lesson.title,
                     prompt: lesson.title,
                     attempt: "Completed lesson",
@@ -440,7 +475,7 @@ final class LearningState: ObservableObject {
         let correction = correct
             ? "Good: \(correctedLine)"
             : "Use: \(correctedLine)"
-        let feedback = mockFeedback(
+        let feedback = makeFeedback(
             source: mode,
             prompt: step.prompt,
             attempt: attempted,
@@ -490,12 +525,13 @@ final class LearningState: ObservableObject {
     @discardableResult
     func acceptSpeechPractice(lesson: BeginnerLesson, step: LessonStep, transcript: String, mode: String, now: Date = Date()) -> LearningFeedback {
         var next = profile
-        let correctedLine = correctedSpeechLine(for: step, transcript: transcript)
+        let cleanTranscript = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        let correctedLine = correctedSpeechLine(for: step, transcript: cleanTranscript)
         let naturalLine = naturalPhrase(for: step, fallback: self.correctedLine(for: step))
-        let feedback = mockFeedback(
-            source: mode,
+        let feedback = makeFeedback(
+            source: speechFeedbackSource(for: mode),
             prompt: step.prompt,
-            attempt: transcript,
+            attempt: cleanTranscript,
             correction: correctedLine,
             naturalPhrase: naturalLine,
             pronunciationTip: rhythmTip(for: correctedLine),
@@ -603,7 +639,7 @@ final class LearningState: ObservableObject {
         }
 
         let sessionPrompt = prompt.isEmpty ? detail : prompt
-        let feedback = mockFeedback(
+        let feedback = makeFeedback(
             source: title,
             prompt: sessionPrompt,
             attempt: transcript,
@@ -658,7 +694,7 @@ final class LearningState: ObservableObject {
     func recordTutorCorrection(for message: String, now: Date = Date()) -> LearningFeedback {
         var next = profile
         let natural = tutorNaturalPhrase(for: message)
-        let feedback = mockFeedback(
+        let feedback = makeFeedback(
             source: "Tutor",
             prompt: "Tutor chat",
             attempt: message,
@@ -867,6 +903,16 @@ final class LearningState: ObservableObject {
         return progress
     }
 
+    private func journeyProgress(for snapshot: LearningProfile) -> JourneyProgress {
+        let lessons = BeginnerContent.lessons(for: snapshot.targetLanguage)
+        let completedCount = lessons.filter { snapshot.completedLessonIDs.contains($0.id) }.count
+        return JourneyProgress(
+            profile: snapshot,
+            completedLessonCount: completedCount,
+            totalLessonCount: lessons.count
+        )
+    }
+
     private func personalDueReviewItems() -> [ScheduledReviewItem] {
         dueReviewItems.filter(isPersonalReviewItem)
     }
@@ -976,7 +1022,7 @@ final class LearningState: ObservableObject {
         profile.feedbackEvents = Array(profile.feedbackEvents.prefix(30))
     }
 
-    private func mockFeedback(
+    private func makeFeedback(
         source: String,
         prompt: String = "",
         attempt: String = "",
@@ -1019,6 +1065,10 @@ final class LearningState: ObservableObject {
             return step.prompt.replacingOccurrences(of: "___", with: answer)
         }
         return step.correctAnswer ?? step.prompt
+    }
+
+    private func speechFeedbackSource(for mode: String) -> String {
+        mode.localizedCaseInsensitiveContains("speaking") ? mode : "\(mode) speaking"
     }
 
     private func correctedSpeechLine(for step: LessonStep, transcript: String) -> String {
@@ -1106,9 +1156,6 @@ final class LearningState: ObservableObject {
         }
         if lowercased.contains("saved words") {
             return "Can we practice my saved words?"
-        }
-        if lowercased.contains("next lesson") {
-            return "Can we rehearse my next lesson?"
         }
         return message.hasSuffix("?") ? message : "\(message)."
     }
