@@ -22,6 +22,8 @@ Converlax is a speaking-practice iOS app. Keep the product calm, direct, and eas
 - Avoid literal UX-framework headings such as "What should I do now?" Use natural app copy like "Continue from here", "Start speaking", "Due today", and "Your journey".
 - Keep subtitles short or remove them when the primary card already explains the action.
 - Make empty states useful: route users to the next productive action, not a dead screen.
+- Never use sparkle icons. They make the product feel generic and less calm.
+- Generate and use app illustration assets with transparent backgrounds. Do not ship opaque white or colored square backplates unless the UI explicitly calls for a framed tile.
 
 ## Journey UX
 
@@ -33,6 +35,14 @@ Converlax is a speaking-practice iOS app. Keep the product calm, direct, and eas
   - Saved content, practice history, and settings rows.
 - Do not show XP source breakdowns, full title catalogs, or full milestone lists on the main Profile screen.
 - Completion moments should be brief: acknowledge progress, show a small reward, then offer the next action.
+
+## Motion UX
+
+- Use animation to clarify state changes, not to decorate the app.
+- Keep motion brief, soft, and local: gentle lift/fade, compact progress movement, quiet waveform/listening feedback, and row removal transitions are appropriate.
+- Avoid loud celebration patterns such as confetti, screen-wide particles, excessive bouncing, or looping effects that distract from speaking practice.
+- Respect calm root screens: animations should support the one dominant action and should not introduce extra controls or feature-menu behavior.
+- Prefer local SwiftUI state for micro-interactions and use existing shared components when adding motion.
 
 ## SwiftUI Implementation
 

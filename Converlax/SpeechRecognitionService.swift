@@ -5,6 +5,7 @@ import Speech
 final class SpeechRecognitionService: ObservableObject {
     @Published private(set) var transcript = ""
     @Published private(set) var isRecording = false
+    @Published private(set) var voiceLevel: Double = 0
     @Published private(set) var errorMessage: String?
 
     private let audioEngine = AVAudioEngine()
@@ -22,20 +23,20 @@ final class SpeechRecognitionService: ObservableObject {
         errorMessage = nil
 
         guard await requestPermissions() else {
-            errorMessage = "Voice practice needs Microphone and Speech Recognition. You can allow access in Settings or use text for this turn."
+            errorMessage = "Voice practice needs Microphone and Speech Recognition. You can allow access in Settings, then try again."
             return false
         }
 
         speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: localeIdentifier)) ?? SFSpeechRecognizer()
 
         guard let speechRecognizer, speechRecognizer.isAvailable else {
-            errorMessage = "Speech recognition is unavailable right now. Try again, or use text for this turn."
+            errorMessage = "Speech recognition is unavailable right now. Try again in a moment."
             return false
         }
 
         recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
         guard let recognitionRequest else {
-            errorMessage = "Could not prepare voice input. Try again, or use text for this turn."
+            errorMessage = "Could not prepare voice input. Try again in a moment."
             return false
         }
 
@@ -53,6 +54,7 @@ final class SpeechRecognitionService: ObservableObject {
             let recordingFormat = inputNode.outputFormat(forBus: 0)
             inputNode.removeTap(onBus: 0)
             inputNode.installTap(onBus: 0, bufferSize: 1_024, format: recordingFormat) { buffer, _ in
+                Self.publishVoiceLevel(from: buffer, to: self)
                 recognitionRequest.append(buffer)
             }
 
@@ -95,6 +97,7 @@ final class SpeechRecognitionService: ObservableObject {
         recognitionRequest = nil
         recognitionTask = nil
         isRecording = false
+        voiceLevel = 0
 
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         return trimmedTranscript
@@ -110,7 +113,30 @@ final class SpeechRecognitionService: ObservableObject {
         recognitionTask = nil
         recognitionRequest = nil
         isRecording = false
+        voiceLevel = 0
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+
+    private nonisolated static func publishVoiceLevel(from buffer: AVAudioPCMBuffer, to service: SpeechRecognitionService) {
+        guard
+            let channelData = buffer.floatChannelData?[0],
+            buffer.frameLength > 0
+        else { return }
+
+        let frameCount = Int(buffer.frameLength)
+        var sum: Float = 0
+
+        for frame in 0..<frameCount {
+            let sample = channelData[frame]
+            sum += sample * sample
+        }
+
+        let rms = sqrt(sum / Float(frameCount))
+        let normalizedLevel = min(1, max(0, Double(rms) * 24))
+
+        Task { @MainActor in
+            service.voiceLevel = service.voiceLevel * 0.62 + normalizedLevel * 0.38
+        }
     }
 
     private func requestPermissions() async -> Bool {
@@ -123,7 +149,7 @@ final class SpeechRecognitionService: ObservableObject {
         guard speechAllowed else { return false }
 
         return await withCheckedContinuation { continuation in
-            AVAudioSession.sharedInstance().requestRecordPermission { allowed in
+            AVAudioApplication.requestRecordPermission { allowed in
                 continuation.resume(returning: allowed)
             }
         }

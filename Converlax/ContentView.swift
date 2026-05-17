@@ -84,6 +84,7 @@ private struct MainTabView: View {
                         }
                     }
             }
+            .id(AppTab.home)
             .tabItem {
                 Label("Home", systemImage: "waveform.path.ecg")
                     .accessibilityIdentifier("tab-home")
@@ -94,6 +95,7 @@ private struct MainTabView: View {
                 PracticeHomeView(state: state)
                     .accessibilityIdentifier("screen-practice")
             }
+            .id(AppTab.practice)
             .tabItem {
                 Label("Practice", systemImage: "mic.circle.fill")
                     .accessibilityIdentifier("tab-practice")
@@ -104,6 +106,7 @@ private struct MainTabView: View {
                 ReviewHomeView(state: state)
                     .accessibilityIdentifier("screen-review")
             }
+            .id(AppTab.review)
             .tabItem {
                 Label("Review", systemImage: "bolt.fill")
                     .accessibilityIdentifier("tab-review")
@@ -114,11 +117,12 @@ private struct MainTabView: View {
                 SpeakProfileHomeView(state: state)
                     .accessibilityIdentifier("screen-profile")
             }
-                .tabItem {
-                    Label("Profile", systemImage: "person.fill")
-                        .accessibilityIdentifier("tab-profile")
-                }
-                .tag(AppTab.profile)
+            .id(AppTab.profile)
+            .tabItem {
+                Label("Profile", systemImage: "person.fill")
+                    .accessibilityIdentifier("tab-profile")
+            }
+            .tag(AppTab.profile)
         }
         .tint(Color.primaryBlue)
     }

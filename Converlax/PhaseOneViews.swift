@@ -9,19 +9,13 @@ struct PracticeHomeView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    SectionHeader(
-                        title: "Start speaking",
-                        subtitle: "Pick the shortest route into a spoken turn."
-                    )
-
                     NavigationLink(value: PracticeRoute.session) {
-                        HeroActionCard(title: "Start speaking", subtitle: "Speak once, get feedback, save what matters", symbol: "mic.circle.fill", color: .primaryBlue, asset: .freeTalk)
+                        HeroActionCard(title: "Start speaking", subtitle: "One open speaking turn", symbol: "mic.circle.fill", color: .primaryBlue, asset: .freeTalk)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(CalmPressButtonStyle(cornerRadius: 14, highlightColor: .primaryBlue))
                     .accessibilityIdentifier("practice-start-speaking")
 
                     chooseSituationAction
-                    practiceTools
                 }
                 .padding(20)
             }
@@ -58,25 +52,10 @@ struct PracticeHomeView: View {
         NavigationLink(value: PracticeRoute.topics) {
             PracticeSecondaryRow(symbol: "person.2.wave.2.fill", title: "Choose a situation", subtitle: "Roleplay a real-world moment")
         }
-        .buttonStyle(.plain)
+        .buttonStyle(CalmPressButtonStyle(cornerRadius: 12, highlightColor: .primaryBlue))
         .accessibilityIdentifier("practice-choose-situation")
     }
 
-    private var practiceTools: some View {
-        HStack(spacing: 12) {
-            NavigationLink(value: PracticeRoute.createRoleplay) {
-                PracticeToolButton(title: "Custom practice", symbol: "plus.bubble.fill", color: .warmAmber)
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("practice-create-custom")
-
-            NavigationLink(value: PracticeRoute.tutor) {
-                PracticeToolButton(title: "Get a line to say", symbol: "bubble.left.and.bubble.right.fill", color: .primaryBlue)
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("practice-tutor")
-        }
-    }
 }
 
 struct ReviewHomeView: View {
@@ -111,11 +90,7 @@ struct ReviewHomeView: View {
             return "\(reviewCount) answer \(reviewCount == 1 ? "line" : "lines") out loud"
         }
 
-        return personalSavedLineCount > 0 ? "No due items. Keep your lines warm." : "Create something to review later"
-    }
-
-    private var savedLinesSubtitle: String {
-        "\(personalSavedLineCount) saved \(personalSavedLineCount == 1 ? "line" : "lines")"
+        return personalSavedLineCount > 0 ? "No due items. Keep your lines warm." : "Start a lesson to create review lines."
     }
 
     var body: some View {
@@ -137,19 +112,9 @@ struct ReviewHomeView: View {
                             asset: .review
                         )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(CalmPressButtonStyle(cornerRadius: 14, highlightColor: .primaryBlue))
+                    .accessibilityIdentifier("review-primary-action")
 
-                    if reviewCount > 0 && personalSavedLineCount > 0 {
-                        NavigationLink(value: ReviewRoute.savedLinesReview) {
-                            SettingsLikeRow(symbol: "bookmark.fill", title: "Speak saved lines", subtitle: savedLinesSubtitle)
-                        }
-                        .buttonStyle(.plain)
-                        .background(Color.claySurface.opacity(0.68), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(Color.clayStroke.opacity(0.66), lineWidth: 1)
-                        )
-                    }
                 }
                 .padding(20)
             }
@@ -177,6 +142,8 @@ struct ReviewHomeView: View {
 
 struct SpeakProfileHomeView: View {
     @ObservedObject var state: LearningState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var hasRevealedJourneyItems = false
 
     var body: some View {
         ZStack {
@@ -193,6 +160,12 @@ struct SpeakProfileHomeView: View {
             }
         }
         .navigationTitle("Profile")
+        .onAppear {
+            hasRevealedJourneyItems = false
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.34).delay(0.12)) {
+                hasRevealedJourneyItems = true
+            }
+        }
         .navigationDestination(for: ProfileRoute.self) { route in
             switch route {
             case .savedLines:
@@ -201,6 +174,8 @@ struct SpeakProfileHomeView: View {
                 ActivitiesView(state: state)
             case .practiceHistory:
                 HistoryUsageView(state: state)
+            case .startLesson:
+                LessonPlayerView(lesson: state.currentLesson, state: state)
             case .settings:
                 SettingsView(state: state)
             case .membership:
@@ -237,41 +212,16 @@ struct SpeakProfileHomeView: View {
             journeyNavigation
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityIdentifier("profile-journey-dashboard")
     }
 
     private var journeyProgressPanel: some View {
         let progress = state.journeyProgress
 
-        return VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .center, spacing: 14) {
-                ConverlaxMascotView(state: state.profile.learnerProfile.avatarChoice.mascotState, size: 66, isAnimated: false)
-
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("Level \(progress.levelNumber) · \(progress.currentTitle)")
-                        .font(.title3.weight(.bold))
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.82)
-                    Text(journeyLearnerSubtitle)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer(minLength: 0)
-            }
-
-            VStack(alignment: .leading, spacing: 9) {
-                LessonProgressBar(progress: progress.levelProgress)
-
-                Text("\(progress.xpInCurrentLevel) XP earned in this level")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.primaryBlue)
-            }
-        }
-        .padding(16)
-        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.clayStroke.opacity(0.75), lineWidth: 1)
+        return JourneyProgressPanel(
+            progress: progress,
+            subtitle: journeyLearnerSubtitle,
+            avatarState: state.profile.learnerProfile.avatarChoice.mascotState
         )
     }
 
@@ -281,29 +231,33 @@ struct SpeakProfileHomeView: View {
                 .font(.headline.weight(.semibold))
 
             if recentJourneyItems.isEmpty {
-                Text("No accomplishments yet.")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, minHeight: 54, alignment: .leading)
-                    .padding(.horizontal, 14)
-                    .background(Color.claySurface.opacity(0.74), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(Color.clayStroke.opacity(0.66), lineWidth: 1)
-                    )
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Start with one lesson.")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Your first completed lesson will appear here.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    NavigationLink(value: ProfileRoute.startLesson) {
+                        Label("Start speaking", systemImage: "play.fill")
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .padding(.top, 2)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(recentJourneyItems) { item in
+                    ForEach(Array(recentJourneyItems.enumerated()), id: \.element.id) { index, item in
                         JourneyRecentRow(item: item)
+                            .opacity(hasRevealedJourneyItems ? 1 : 0)
+                            .offset(y: hasRevealedJourneyItems || reduceMotion ? 0 : 8)
+                            .animation(
+                                reduceMotion ? nil : .easeOut(duration: 0.32).delay(Double(index) * 0.07),
+                                value: hasRevealedJourneyItems
+                            )
                     }
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 4)
-                .background(Color.claySurface.opacity(0.74), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Color.clayStroke.opacity(0.66), lineWidth: 1)
-                )
             }
         }
         .padding(.top, 0)
@@ -312,13 +266,13 @@ struct SpeakProfileHomeView: View {
     private var journeyNavigation: some View {
         VStack(spacing: 0) {
             NavigationLink(value: ProfileRoute.savedLines) {
-                JourneyNavigationRow(asset: .savedLines, title: "Saved content", detail: "\(personalSavedContentCount) personal items")
+                JourneyNavigationRow(asset: .savedLines, title: "Saved content", detail: personalSavedContentCount == 0 ? "Lines and phrases" : "\(personalSavedContentCount) saved")
             }
 
             Divider().padding(.leading, 58)
 
             NavigationLink(value: ProfileRoute.practiceHistory) {
-                JourneyNavigationRow(asset: .historyUsage, title: "Practice history", detail: "\(state.profile.usageSessions.count) sessions")
+                JourneyNavigationRow(asset: .historyUsage, title: "Practice history", detail: state.profile.usageSessions.isEmpty ? "Recent sessions" : "\(state.profile.usageSessions.count) sessions")
             }
 
             Divider().padding(.leading, 58)
@@ -327,13 +281,7 @@ struct SpeakProfileHomeView: View {
                 JourneyNavigationRow(asset: .settings, title: "Settings", detail: "Goal, voice, course")
             }
         }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 14)
-        .background(Color.claySurface.opacity(0.72), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.clayStroke.opacity(0.62), lineWidth: 1)
-        )
+        .buttonStyle(CalmPressButtonStyle(cornerRadius: 12, highlightColor: .primaryBlue))
     }
 
     private var personalSavedContentCount: Int {
@@ -350,7 +298,7 @@ struct SpeakProfileHomeView: View {
         let completedLessonActivity = state.profile.activities.first { activity in
             activity.id.hasPrefix("lesson-") || activity.symbol == "checkmark.seal.fill"
         }
-        let savedPhrase = state.profile.savedLearningObjects.first { object in
+        let savedPhrase = state.savedLearningObjects.first { object in
             object.kind == .line || object.kind == .phrase || object.kind == .roleplayPhrase || object.kind == .tutorMessage
         }
         let savedLine = state.profile.savedLines.first
@@ -440,6 +388,61 @@ struct SpeakProfileHomeView: View {
     }
 }
 
+private struct JourneyProgressPanel: View {
+    let progress: JourneyProgress
+    let subtitle: String
+    let avatarState: ConverlaxMascotState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var displayedProgress = 0.0
+    @State private var isVisible = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 14) {
+                ConverlaxMascotView(state: avatarState, size: 66, isAnimated: false)
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Level \(progress.levelNumber) · \(progress.currentTitle)")
+                        .font(.title3.weight(.bold))
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.82)
+                        .contentTransition(.numericText())
+                    Text(subtitle)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            LessonProgressBar(progress: displayedProgress)
+        }
+        .padding(16)
+        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.clayStroke.opacity(0.75), lineWidth: 1)
+        )
+        .opacity(isVisible ? 1 : 0)
+        .offset(y: isVisible || reduceMotion ? 0 : 8)
+        .onAppear {
+            displayedProgress = 0
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.3)) {
+                isVisible = true
+            }
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.85).delay(0.1)) {
+                displayedProgress = progress.levelProgress
+            }
+        }
+        .onChange(of: progress.levelProgress) { _, newValue in
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.44)) {
+                displayedProgress = newValue
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
 private struct AchievementTimelineItem: Identifiable {
     let id: String
     let title: String
@@ -505,6 +508,7 @@ private struct JourneyNavigationRow: View {
                 Text(detail)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .contentTransition(.numericText())
             }
 
             Spacer()
@@ -561,8 +565,6 @@ struct LessonDetailView: View {
                 .accessibilityIdentifier("lesson-detail-start-button")
 
                 LessonPracticePreview(lesson: lesson)
-
-                LessonToolsMenu(lesson: lesson)
             }
             .padding(20)
         }
@@ -784,8 +786,6 @@ private struct FreeTalkSessionView: View {
     @State private var feedback: LearningFeedback?
     @State private var speechPhase: SpeechPracticePhase = .ready
     @State private var transcript = ""
-    @State private var fallbackText = ""
-    @State private var showsTextFallback = false
     @State private var speechErrorMessage: String?
     @StateObject private var speechRecognizer = SpeechRecognitionService()
     @State private var completionResult: CompletionCelebrationResult?
@@ -799,8 +799,7 @@ private struct FreeTalkSessionView: View {
                     if finished, let completionResult {
                         CompletionCelebrationView(result: completionResult)
                     } else {
-                        LessonProgressBar(progress: 0.45)
-                        SectionHeader(title: "Answer one prompt", subtitle: "Speak naturally, then save the session.")
+                        SectionHeader(title: "Answer one prompt")
                         Text(prompt)
                             .font(.title3.weight(.semibold))
                             .padding(16)
@@ -812,20 +811,12 @@ private struct FreeTalkSessionView: View {
                             transcript: transcript,
                             feedback: nil,
                             accent: .primaryBlue,
+                            voiceLevel: speechRecognizer.voiceLevel,
                             errorMessage: speechErrorMessage,
                             onPrimary: handlePrimaryAction,
                             onCancel: cancelSpeech
                         )
 
-                        if offersTextFallback {
-                            VoiceFallbackTextEntry(
-                                text: $fallbackText,
-                                isExpanded: showsTextFallback || speechPhase == .permissionDenied,
-                                placeholder: "Type what you wanted to say",
-                                onReveal: { showsTextFallback = true },
-                                onSubmit: submitFallbackText
-                            )
-                        }
                     }
 
                     if let feedback {
@@ -885,8 +876,6 @@ private struct FreeTalkSessionView: View {
     private func startSpeechRecording() {
         speechPhase = .requestingPermission
         transcript = ""
-        fallbackText = ""
-        showsTextFallback = false
         feedback = nil
         summary = nil
         speechErrorMessage = nil
@@ -915,17 +904,6 @@ private struct FreeTalkSessionView: View {
 
         speechPhase = .transcript
     }
-
-    private func submitFallbackText() {
-        let cleanText = fallbackText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanText.isEmpty else { return }
-
-        transcript = cleanText
-        fallbackText = ""
-        showsTextFallback = false
-        Task { await saveSession(with: cleanText) }
-    }
-
     @MainActor
     private func saveSession(with spokenText: String) async {
         let cleanText = spokenText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -977,18 +955,18 @@ private struct FreeTalkSessionView: View {
             title: "Free Talk complete",
             subtitle: "You finished an open speaking session.",
             nextActionTitle: result.summary.nextRecommendation,
-            nextActionDetail: "Saved under Practice history."
+            nextActionDetail: ""
         )
         speechPhase = .accepted
-        finished = true
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {
+            finished = true
+        }
     }
 
     private func cancelSpeech() {
         speechRecognizer.cancelRecording()
         speechPhase = .ready
         transcript = ""
-        fallbackText = ""
-        showsTextFallback = false
         speechErrorMessage = nil
     }
 
@@ -1000,20 +978,8 @@ private struct FreeTalkSessionView: View {
         completionResult = nil
         speechPhase = .ready
         transcript = ""
-        fallbackText = ""
-        showsTextFallback = false
         speechErrorMessage = nil
     }
-
-    private var offersTextFallback: Bool {
-        switch speechPhase {
-        case .permissionNeeded, .permissionDenied, .noSpeech, .error:
-            true
-        default:
-            false
-        }
-    }
-
     private func strongPhrases(from transcript: String) -> [String] {
         let sentences = transcript.split(whereSeparator: { ".?!".contains($0) }).map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
         return Array(sentences.filter { !$0.isEmpty }.prefix(2))
@@ -1032,7 +998,7 @@ private struct PracticeSavedHint: View {
                 .foregroundStyle(Color.primaryBlue)
                 .frame(width: 24, height: 24)
 
-            Text("Find this later in Profile under Practice history. Saved lines and situations live in Saved content.")
+            Text("Nice work. Keep going when you are ready.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1302,8 +1268,6 @@ private struct RoleplayDetailView: View {
     @State private var feedback: LearningFeedback?
     @State private var speechPhase: SpeechPracticePhase = .ready
     @State private var transcript = ""
-    @State private var fallbackText = ""
-    @State private var showsTextFallback = false
     @State private var speechErrorMessage: String?
     @StateObject private var speechRecognizer = SpeechRecognitionService()
     @State private var completionResult: CompletionCelebrationResult?
@@ -1327,26 +1291,13 @@ private struct RoleplayDetailView: View {
                         transcript: transcript,
                         feedback: nil,
                         accent: .primaryBlue,
+                        voiceLevel: speechRecognizer.voiceLevel,
                         errorMessage: speechErrorMessage,
                         onPrimary: handlePrimaryAction,
                         onCancel: cancelSpeech
                     )
                     .accessibilityIdentifier("roleplay-primary-action")
 
-                    if offersTextFallback {
-                        VoiceFallbackTextEntry(
-                            text: $fallbackText,
-                            isExpanded: showsTextFallback || speechPhase == .permissionDenied,
-                            placeholder: "Type what you wanted to say",
-                            onReveal: { showsTextFallback = true },
-                            onSubmit: submitFallbackText
-                        )
-                    }
-                }
-
-                HStack(spacing: 12) {
-                    StatCard(value: "\(roleplay.minutes)", label: "Minutes", color: .primaryBlue)
-                    StatCard(value: roleplay.difficulty.code, label: "Level", color: .warmAmber)
                 }
 
                 if let feedback {
@@ -1367,7 +1318,7 @@ private struct RoleplayDetailView: View {
                         .font(.headline.weight(.semibold))
 
                     ForEach(roleplay.lines) { line in
-                        SavedLineRow(line: line) {
+                        SavedLineRow(line: line, showsSource: false) {
                             state.saveLine(line)
                         }
                     }
@@ -1410,8 +1361,6 @@ private struct RoleplayDetailView: View {
     private func startSpeechRecording() {
         speechPhase = .requestingPermission
         transcript = ""
-        fallbackText = ""
-        showsTextFallback = false
         feedback = nil
         summary = nil
         speechErrorMessage = nil
@@ -1440,17 +1389,6 @@ private struct RoleplayDetailView: View {
 
         speechPhase = .transcript
     }
-
-    private func submitFallbackText() {
-        let cleanText = fallbackText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanText.isEmpty else { return }
-
-        transcript = cleanText
-        fallbackText = ""
-        showsTextFallback = false
-        Task { await saveSession(with: cleanText) }
-    }
-
     @MainActor
     private func saveSession(with spokenText: String) async {
         let cleanText = spokenText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1503,18 +1441,18 @@ private struct RoleplayDetailView: View {
             title: "Situation complete",
             subtitle: "You finished \(roleplay.title.lowercased()).",
             nextActionTitle: result.summary.nextRecommendation,
-            nextActionDetail: "Saved under Practice history."
+            nextActionDetail: ""
         )
         speechPhase = .accepted
-        completed = true
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {
+            completed = true
+        }
     }
 
     private func cancelSpeech() {
         speechRecognizer.cancelRecording()
         speechPhase = .ready
         transcript = ""
-        fallbackText = ""
-        showsTextFallback = false
         speechErrorMessage = nil
     }
 
@@ -1526,20 +1464,8 @@ private struct RoleplayDetailView: View {
         completionResult = nil
         speechPhase = .ready
         transcript = ""
-        fallbackText = ""
-        showsTextFallback = false
         speechErrorMessage = nil
     }
-
-    private var offersTextFallback: Bool {
-        switch speechPhase {
-        case .permissionNeeded, .permissionDenied, .noSpeech, .error:
-            true
-        default:
-            false
-        }
-    }
-
     private func matchingRoleplayLines(in transcript: String) -> [String] {
         let lowercasedTranscript = transcript.lowercased()
         let matches = roleplay.lines.map(\.text).filter { line in
@@ -1572,14 +1498,8 @@ private struct RoleplayConversationPrompt: View {
                 }
             }
 
-            RoleplayBubble(
-                title: "Prompt",
-                text: "You are at \(roleplay.setting.lowercased()). \(roleplay.subtitle).",
-                color: .claySurface
-            )
-
             if let starterLine {
-                RoleplayBubble(title: "Your turn", text: starterLine.text, color: Color.primaryBlue.opacity(0.1))
+                RoleplayBubble(title: "First line", text: starterLine.text, color: Color.primaryBlue.opacity(0.1))
             }
         }
         .padding(16)
@@ -1650,12 +1570,6 @@ private struct FavoritesView: View {
 
     var body: some View {
         List {
-            Section {
-                Text("Saved situations are also available from Saved content in Profile.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-
             Section("Saved situations") {
                 if state.favoriteRoleplays.isEmpty {
                     Text("Saved situations will appear here.")
@@ -1703,8 +1617,6 @@ private struct SmartReviewView: View {
     @State private var didCompleteReview = false
     @State private var speechPhase: SpeechPracticePhase = .ready
     @State private var transcript = ""
-    @State private var fallbackText = ""
-    @State private var showsTextFallback = false
     @State private var speechErrorMessage: String?
     @StateObject private var speechRecognizer = SpeechRecognitionService()
 
@@ -1716,6 +1628,11 @@ private struct SmartReviewView: View {
         items[index % max(items.count, 1)]
     }
 
+    private var currentItemAnimationID: String {
+        guard !items.isEmpty else { return "empty" }
+        return items[min(index, items.count - 1)].id
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             if didCompleteReview {
@@ -1723,82 +1640,87 @@ private struct SmartReviewView: View {
                     dismiss()
                 }
             } else if items.isEmpty {
-                ContentUnavailableView("No review due", systemImage: "checkmark.seal.fill", description: Text("Start a speaking lesson to create lines for review."))
-            } else {
-                LessonProgressBar(progress: Double(index + 1) / Double(max(items.count, 1)))
-                HStack {
-                    Text(item.kind.rawValue)
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Color.primaryBlue)
-                    Spacer()
-                    Text("Item \(index + 1) of \(items.count)")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                ContentUnavailableView {
+                    Label("No review due", systemImage: "checkmark.seal.fill")
+                } description: {
+                    Text("Nothing due today.")
+                } actions: {
+                    NavigationLink(value: ReviewRoute.startLesson) {
+                        Label("Start speaking", systemImage: "play.fill")
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
                 }
-
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Say the answer")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.secondary)
-                    Text(item.prompt)
-                        .font(.title3.weight(.semibold))
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    if showAnswer {
-                        Divider()
-                        Text("Useful answer")
+            } else {
+                VStack(alignment: .leading, spacing: 18) {
+                    LessonProgressBar(progress: Double(index + 1) / Double(max(items.count, 1)))
+                    HStack {
+                        Text(item.kind.rawValue)
                             .font(.caption.weight(.bold))
                             .foregroundStyle(Color.primaryBlue)
-                        Text(item.answer)
-                            .font(.headline)
-                            .foregroundStyle(Color.mintSuccess)
+                        Spacer()
+                    }
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(item.prompt)
+                            .font(.title3.weight(.semibold))
                             .fixedSize(horizontal: false, vertical: true)
+
+                        if showAnswer {
+                            Divider()
+                            Text("Meaning")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(Color.primaryBlue)
+                            Text(item.answer)
+                                .font(.headline)
+                                .foregroundStyle(Color.mintSuccess)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
                     }
-                }
-                .padding(16)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
 
-                SpeechPracticePanel(
-                    phase: speechPhase,
-                    transcript: transcript,
-                    feedback: nil,
-                    accent: .primaryBlue,
-                    errorMessage: speechErrorMessage,
-                    primaryActionTitle: reviewVoiceActionTitle,
-                    onPrimary: handleReviewVoicePrimaryAction,
-                    onCancel: resetSpeech
-                )
-
-                if offersTextFallback {
-                    VoiceFallbackTextEntry(
-                        text: $fallbackText,
-                        isExpanded: showsTextFallback || speechPhase == .permissionDenied,
-                        placeholder: "Type your review answer",
-                        onReveal: { showsTextFallback = true },
-                        onSubmit: submitFallbackText
+                    SpeechPracticePanel(
+                        phase: speechPhase,
+                        transcript: transcript,
+                        feedback: nil,
+                        accent: .primaryBlue,
+                        voiceLevel: speechRecognizer.voiceLevel,
+                        errorMessage: speechErrorMessage,
+                        primaryActionTitle: reviewVoiceActionTitle,
+                        onPrimary: handleReviewVoicePrimaryAction,
+                        onCancel: resetSpeech
                     )
-                }
 
-                Spacer()
-                if showAnswer {
-                    HStack(spacing: 12) {
-                        Button("Need practice") {
-                            recordCurrentReview(remembered: false)
+                    Spacer()
+                    if showAnswer {
+                        HStack(spacing: 12) {
+                            Button("Need practice") {
+                                recordCurrentReview(remembered: false)
+                            }
+                            .buttonStyle(SecondaryButtonStyle())
+                            Button("Remembered") {
+                                recordCurrentReview(remembered: true)
+                            }
+                            .buttonStyle(PrimaryButtonStyle())
                         }
-                        .buttonStyle(SecondaryButtonStyle())
-                        Button("Remembered") {
-                            recordCurrentReview(remembered: true)
-                        }
-                        .buttonStyle(PrimaryButtonStyle())
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
                 }
+                .id(item.id)
+                .transition(.asymmetric(
+                    insertion: .opacity.combined(with: .move(edge: .trailing)),
+                    removal: .opacity.combined(with: .move(edge: .leading))
+                ))
             }
         }
         .padding(20)
         .background(Color.appBackground.ignoresSafeArea())
         .navigationTitle("Review due items")
         .toolbar(.hidden, for: .tabBar)
+        .animation(.spring(response: 0.34, dampingFraction: 0.86), value: currentItemAnimationID)
+        .animation(.easeOut(duration: 0.24), value: showAnswer)
         .onChange(of: speechRecognizer.transcript) { _, newValue in
             transcript = newValue
         }
@@ -1837,8 +1759,6 @@ private struct SmartReviewView: View {
     private func startSpeechRecording() {
         speechPhase = .requestingPermission
         transcript = ""
-        fallbackText = ""
-        showsTextFallback = false
         speechErrorMessage = nil
         showAnswer = false
 
@@ -1866,45 +1786,28 @@ private struct SmartReviewView: View {
 
         speechPhase = .transcript
     }
-
-    private func submitFallbackText() {
-        let cleanText = fallbackText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanText.isEmpty else { return }
-
-        transcript = cleanText
-        fallbackText = ""
-        showsTextFallback = false
-        showAnswer = true
-        speechPhase = .accepted
-    }
-
     private func resetSpeech() {
         speechRecognizer.cancelRecording()
         speechPhase = .ready
         transcript = ""
-        fallbackText = ""
-        showsTextFallback = false
         speechErrorMessage = nil
         showAnswer = false
     }
-
-    private var offersTextFallback: Bool {
-        switch speechPhase {
-        case .permissionNeeded, .permissionDenied, .noSpeech, .error:
-            true
-        default:
-            false
-        }
-    }
-
     private func recordCurrentReview(remembered: Bool) {
-        state.recordReview(item, remembered: remembered)
+        let reviewedItem = item
+        withAnimation(.easeInOut(duration: 0.28)) {
+            state.recordReview(reviewedItem, remembered: remembered)
+        }
 
         if state.dueReviewItems.isEmpty {
-            didCompleteReview = true
+            withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
+                didCompleteReview = true
+            }
             resetSpeech()
         } else {
-            advanceReview()
+            withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
+                advanceReview()
+            }
         }
     }
 
@@ -1931,17 +1834,10 @@ private struct ReviewCompletionResultView: View {
                         .font(.title2.weight(.bold))
                 }
 
-                HStack(spacing: 10) {
-                    Label("+XP", systemImage: "sparkles")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.warmAmber)
-
-                    Label("Review accuracy improved", systemImage: "chart.line.uptrend.xyaxis")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.primaryBlue)
-                }
-                .labelStyle(.titleAndIcon)
-                .fixedSize(horizontal: false, vertical: true)
+                Text("Nothing else is due today.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(18)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1951,10 +1847,15 @@ private struct ReviewCompletionResultView: View {
                     .stroke(Color.clayStroke.opacity(0.72), lineWidth: 1)
             )
 
+            NavigationLink(value: ReviewRoute.startLesson) {
+                Label("Start speaking", systemImage: "play.fill")
+            }
+            .buttonStyle(PrimaryButtonStyle())
+
             Button("Back to Review") {
                 onDone()
             }
-            .buttonStyle(PrimaryButtonStyle())
+            .buttonStyle(SecondaryButtonStyle())
 
             Spacer(minLength: 0)
         }
@@ -1966,8 +1867,6 @@ private struct SavedLinesReviewView: View {
     @State private var index = 0
     @State private var speechPhase: SpeechPracticePhase = .ready
     @State private var transcript = ""
-    @State private var fallbackText = ""
-    @State private var showsTextFallback = false
     @State private var speechErrorMessage: String?
     @State private var feedback: LearningFeedback?
     @StateObject private var speechRecognizer = SpeechRecognitionService()
@@ -2017,34 +1916,37 @@ private struct SavedLinesReviewView: View {
                     transcript: transcript,
                     feedback: feedback,
                     accent: .primaryBlue,
+                    voiceLevel: speechRecognizer.voiceLevel,
                     errorMessage: speechErrorMessage,
                     primaryActionTitle: savedLineActionTitle,
                     onPrimary: handlePrimaryAction,
                     onCancel: resetSpeech
                 )
 
-                if offersTextFallback {
-                    VoiceFallbackTextEntry(
-                        text: $fallbackText,
-                        isExpanded: showsTextFallback || speechPhase == .permissionDenied,
-                        placeholder: "Type the saved line",
-                        onReveal: { showsTextFallback = true },
-                        onSubmit: submitFallbackText
-                    )
-                }
                 if let feedback, feedback.feedbackProvider == "local", let speechErrorMessage {
                     FeedbackFallbackNotice(text: speechErrorMessage)
                 }
 
                 Spacer()
             } else {
-                ContentUnavailableView("No saved lines", systemImage: "bookmark", description: Text("Save useful lines from speaking practice, then review them here."))
+                ContentUnavailableView {
+                    Label("No saved lines", systemImage: "bookmark")
+                } description: {
+                    Text("Save a useful line during practice.")
+                } actions: {
+                    NavigationLink(value: ReviewRoute.startLesson) {
+                        Label("Start speaking", systemImage: "play.fill")
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                }
             }
 
-            NavigationLink(value: ReviewRoute.savedLineSearch) {
-                Label("Search a line", systemImage: "magnifyingglass")
+            if !lines.isEmpty {
+                NavigationLink(value: ReviewRoute.savedLineSearch) {
+                    Label("Search a line", systemImage: "magnifyingglass")
+                }
+                .buttonStyle(SecondaryButtonStyle())
             }
-            .buttonStyle(SecondaryButtonStyle())
         }
         .padding(20)
         .background(Color.appBackground.ignoresSafeArea())
@@ -2087,8 +1989,6 @@ private struct SavedLinesReviewView: View {
     private func startSpeechRecording() {
         speechPhase = .requestingPermission
         transcript = ""
-        fallbackText = ""
-        showsTextFallback = false
         speechErrorMessage = nil
         feedback = nil
 
@@ -2116,17 +2016,6 @@ private struct SavedLinesReviewView: View {
 
         speechPhase = .transcript
     }
-
-    private func submitFallbackText() {
-        let cleanText = fallbackText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanText.isEmpty else { return }
-
-        transcript = cleanText
-        fallbackText = ""
-        showsTextFallback = false
-        Task { await saveSpokenLine(with: cleanText) }
-    }
-
     @MainActor
     private func saveSpokenLine(with spokenText: String) async {
         guard let line else { return }
@@ -2188,21 +2077,9 @@ private struct SavedLinesReviewView: View {
         speechRecognizer.cancelRecording()
         speechPhase = .ready
         transcript = ""
-        fallbackText = ""
-        showsTextFallback = false
         speechErrorMessage = nil
         feedback = nil
-    }
-
-    private var offersTextFallback: Bool {
-        switch speechPhase {
-        case .permissionNeeded, .permissionDenied, .noSpeech, .error:
-            true
-        default:
-            false
-        }
-    }
-}
+    }}
 
 private enum SavedContentFilter: String, CaseIterable, Identifiable {
     case all = "All"
@@ -2259,6 +2136,8 @@ private struct SavedLinesView: View {
                 }
                 .pickerStyle(.segmented)
             }
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0))
+            .listRowBackground(Color.clear)
 
             if hasNoSearchResults {
                 ContentUnavailableView("No saved content", systemImage: "magnifyingglass", description: Text("Try a different search."))
@@ -2406,8 +2285,6 @@ private struct SettingsView: View {
                 )
             }
             Section("Preferences") {
-                Toggle("Sound effects", isOn: Binding(get: { state.profile.soundEnabled }, set: state.setSoundEnabled))
-                Toggle("Haptics", isOn: Binding(get: { state.profile.hapticsEnabled }, set: state.setHapticsEnabled))
                 SettingsToggleNoteRow(
                     symbol: "bell.fill",
                     title: "Set reminders",
@@ -2440,22 +2317,6 @@ private struct SettingsView: View {
                     title: "Sign in",
                     detail: "Sync lessons, saved lines, and practice history.",
                     status: "Sync"
-                )
-            }
-            Section("Sharing") {
-                SettingsStatusRow(
-                    symbol: "gift.fill",
-                    title: "Invite a friend",
-                    detail: "Share Converlax with another learner.",
-                    status: "Share"
-                )
-            }
-            Section("Support") {
-                SettingsStatusRow(
-                    symbol: "questionmark.circle.fill",
-                    title: "Get support",
-                    detail: "Find help, report an issue, or send lesson feedback.",
-                    status: "Help"
                 )
             }
         }
@@ -2766,6 +2627,7 @@ struct HeroActionCard: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                    .contentTransition(.numericText())
             }
             Spacer()
             Image(systemName: "chevron.right")
@@ -2798,7 +2660,7 @@ private struct MiniFlowCard: View {
                 .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
             if asset != nil {
-                Image(systemName: "sparkle")
+                Image(systemName: "checkmark.circle.fill")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(color.opacity(0.8))
                     .accessibilityHidden(true)
@@ -2836,6 +2698,7 @@ private struct RoleplayRow: View {
                         Image(systemName: "star.fill")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(Color.warmAmber)
+                            .symbolEffect(.bounce, value: favorite)
                     }
                 }
                 Text(roleplay.subtitle)
@@ -2889,6 +2752,7 @@ private struct UsageRow: View {
 
 private struct SavedLineRow: View {
     let line: SavedLine
+    var showsSource = true
     let action: () -> Void
 
     var body: some View {
@@ -2899,14 +2763,17 @@ private struct SavedLineRow: View {
                 Text(line.translation)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text(line.source)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(Color.primaryBlue)
+                if showsSource {
+                    Text(line.source)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(Color.primaryBlue)
+                }
             }
             Spacer()
             Button(action: action) {
                 Image(systemName: "bookmark.fill")
                     .foregroundStyle(Color.primaryBlue)
+                    .symbolEffect(.bounce, value: line.id)
             }
             .buttonStyle(.plain)
         }
@@ -2934,6 +2801,7 @@ private struct SettingsLikeRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
+                    .contentTransition(.numericText())
             }
             Spacer()
             Image(systemName: "chevron.right")
@@ -3007,11 +2875,6 @@ private struct PracticeToolButton: View {
         .frame(maxWidth: .infinity, minHeight: 54, alignment: .leading)
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(Color.claySurface.opacity(0.58), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.clayStroke.opacity(0.58), lineWidth: 1)
-        )
         .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }

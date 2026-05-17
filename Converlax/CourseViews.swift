@@ -74,15 +74,24 @@ private struct CurrentLessonLink: View {
     @ObservedObject var state: LearningState
 
     var body: some View {
-        NavigationLink(value: HomeRoute.lesson(state.currentLesson)) {
+        NavigationLink(value: HomeRoute.lesson(primaryLesson)) {
             FeaturedLessonCard(
-                lesson: state.currentLesson,
-                completed: state.isCompleted(state.currentLesson),
-                isFirstSession: !state.hasStartedLearning
+                lesson: primaryLesson,
+                completed: state.isCompleted(primaryLesson),
+                isFirstSession: !state.hasStartedLearning,
+                isNextLesson: isNextLesson
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(CalmPressButtonStyle(cornerRadius: 16, highlightColor: .primaryBlue))
         .accessibilityIdentifier("home-primary-lesson-action")
+    }
+
+    private var primaryLesson: BeginnerLesson {
+        state.nextPlayableLesson
+    }
+
+    private var isNextLesson: Bool {
+        state.currentLesson.id != primaryLesson.id && !state.isCompleted(primaryLesson)
     }
 }
 
@@ -91,24 +100,12 @@ private struct HomeSecondaryActionRow: View {
 
     var body: some View {
         NavigationLink(value: HomeRoute.courseDetail) {
-            SecondaryLearningAction(title: "See course path", subtitle: remainingLessonSummary, symbol: "map.fill", color: .primaryBlue)
+            SecondaryLearningAction(title: "See course path", subtitle: "All lessons", symbol: "map.fill", color: .primaryBlue)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(CalmPressButtonStyle(cornerRadius: 12, highlightColor: .primaryBlue))
         .accessibilityIdentifier("home-course-path-action")
-        .background(Color.claySurface.opacity(0.68), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.clayStroke.opacity(0.66), lineWidth: 1)
-        )
     }
 
-    private var remainingLessonCount: Int {
-        max(0, state.courseLessons.count - state.completedLessonCount)
-    }
-
-    private var remainingLessonSummary: String {
-        remainingLessonCount == 1 ? "1 lesson left" : "\(remainingLessonCount) lessons left"
-    }
 }
 
 private struct SecondaryLearningAction: View {
@@ -132,6 +129,7 @@ private struct SecondaryLearningAction: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                    .contentTransition(.numericText())
             }
 
             Spacer(minLength: 0)
@@ -150,6 +148,9 @@ private struct FeaturedLessonCard: View {
     let lesson: BeginnerLesson
     let completed: Bool
     var isFirstSession = false
+    var isNextLesson = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var hasAppeared = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -175,6 +176,7 @@ private struct FeaturedLessonCard: View {
                     .padding(.horizontal, 9)
                     .padding(.vertical, 6)
                     .background(.white.opacity(0.14), in: Capsule())
+                    .contentTransition(.numericText())
             }
 
             Text(supportingLine)
@@ -203,10 +205,18 @@ private struct FeaturedLessonCard: View {
         .foregroundStyle(.white)
         .background(Color.primaryBlue, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .shadow(color: Color.primaryBlue.opacity(0.12), radius: 10, y: 5)
+        .opacity(hasAppeared ? 1 : 0)
+        .offset(y: hasAppeared || reduceMotion ? 0 : 10)
+        .onAppear {
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.34)) {
+                hasAppeared = true
+            }
+        }
     }
 
     private var eyebrow: String {
         if completed { return "Review lesson" }
+        if isNextLesson { return "Next lesson" }
         return isFirstSession ? "First speaking lesson" : "Continue lesson"
     }
 
@@ -214,11 +224,15 @@ private struct FeaturedLessonCard: View {
         if isFirstSession {
             return "Learn one useful line, say it out loud, and check your meaning."
         }
+        if isNextLesson {
+            return "Start the next conversation."
+        }
         return lesson.steps.first?.prompt ?? "Start your next lesson"
     }
 
     private var primaryActionTitle: String {
         if completed { return "Practice again" }
+        if isNextLesson { return "Start next lesson" }
         return isFirstSession ? "Start speaking" : "Continue speaking"
     }
 }
@@ -277,7 +291,6 @@ struct CourseDetailView: View {
                         }
                     }
 
-                    LessonToolsMenu(lesson: state.currentLesson, title: "Practice another way", includesCourseModes: true)
                 }
                 .padding(20)
             }
@@ -344,7 +357,7 @@ private struct CurrentCourseLessonStart: View {
     @ObservedObject var state: LearningState
 
     private var lesson: BeginnerLesson {
-        state.currentLesson
+        state.nextPlayableLesson
     }
 
     var body: some View {

@@ -183,6 +183,7 @@ enum ProfileRoute: Hashable {
     case savedLines
     case activities
     case practiceHistory
+    case startLesson
     case settings
     case membership
     case editProfile
@@ -211,6 +212,8 @@ enum ProfileRoute: Hashable {
             return [.activities]
         case "practiceHistory", "history":
             return [.practiceHistory]
+        case "startLesson":
+            return [.startLesson]
         case "settings":
             return [.settings]
         case "membership":
@@ -563,13 +566,13 @@ enum SpeechPracticePhase: String, Codable, Hashable {
         switch self {
         case .requestingPermission: "Requesting access"
         case .permissionNeeded, .permissionDenied: "Voice needs access"
-        case .ready: "Ready to speak"
+        case .ready: "Your turn"
         case .recording: "Recording"
         case .paused: "Paused"
         case .processing, .transcribing: "Transcribing"
         case .transcript: "Transcript ready"
         case .feedback: "Feedback ready"
-        case .accepted: "Speaking saved"
+        case .accepted: "Saved"
         case .noSpeech: "No speech recognized"
         case .error: "Try again"
         }
@@ -863,6 +866,7 @@ struct CompletionCelebrationResult: Equatable {
     let xpEarned: Int
     let levelBefore: Int
     let levelAfter: Int
+    let levelTitle: String
     let levelProgressBefore: Double
     let levelProgressAfter: Double
     let savedItemsCreated: Int

@@ -60,11 +60,11 @@ final class LearningState: ObservableObject {
     }
 
     var savedLearningObjects: [SavedLearningObject] {
-        seededLearningObjects(profile.savedLearningObjects)
+        seededLearningObjects(profile.savedLearningObjects.map(speakableLearningObject))
     }
 
     var scheduledReviewItems: [ScheduledReviewItem] {
-        scheduledReviews(profile.scheduledReviews)
+        scheduledReviews(profile.scheduledReviews.map(speakableReviewItem))
     }
 
     var dueReviewItems: [ScheduledReviewItem] {
@@ -105,7 +105,7 @@ final class LearningState: ObservableObject {
                 title: "Start \(currentLesson.title.lowercased())",
                 detail: "Begin with one useful speaking lesson.",
                 reason: "New learners should start with the first course lesson.",
-                symbol: "sparkles"
+                symbol: "play.circle.fill"
             )
         }
 
@@ -159,7 +159,7 @@ final class LearningState: ObservableObject {
             title: "Start \(currentLesson.title.lowercased())",
             detail: "Begin with one useful speaking lesson.",
             reason: "No personal review items are due yet.",
-            symbol: "sparkles"
+            symbol: "play.circle.fill"
         )
     }
 
@@ -193,19 +193,28 @@ final class LearningState: ObservableObject {
 
     var reviewItems: [ReviewItem] {
         dueReviewItems.map {
-            ReviewItem(
-                id: $0.id,
-                prompt: $0.prompt,
-                answer: $0.answer,
-                source: $0.source,
-                dueLabel: $0.nextDueDay,
-                confidence: Int($0.ease * 100)
+            let review = speakableReviewItem($0)
+            return ReviewItem(
+                id: review.id,
+                prompt: review.prompt,
+                answer: review.answer,
+                source: review.source,
+                dueLabel: review.nextDueDay,
+                confidence: Int(review.ease * 100)
             )
         }
     }
 
     var currentLesson: BeginnerLesson {
         BeginnerContent.lesson(id: profile.currentLessonID) ?? courseLessons.first ?? BeginnerContent.lessons[0]
+    }
+
+    var nextPlayableLesson: BeginnerLesson {
+        if !isCompleted(currentLesson) {
+            return currentLesson
+        }
+
+        return courseLessons.first { !isCompleted($0) } ?? currentLesson
     }
 
     func resumeStepIndex(for lesson: BeginnerLesson) -> Int {
@@ -255,6 +264,7 @@ final class LearningState: ObservableObject {
             xpEarned: max(0, currentProgress.totalXP - previousProgress.totalXP),
             levelBefore: previousProgress.levelNumber,
             levelAfter: currentProgress.levelNumber,
+            levelTitle: currentProgress.currentTitle,
             levelProgressBefore: previousProgress.levelProgress,
             levelProgressAfter: currentProgress.levelProgress,
             savedItemsCreated: savedItemsCreated ?? max(savedObjectDelta, savedContentDelta),
@@ -370,7 +380,7 @@ final class LearningState: ObservableObject {
         let summary = LearningSessionSummary(
             id: "summary-\(usage.id)",
             title: lesson.title,
-            transcript: lesson.steps.prefix(3).map(\.prompt).joined(separator: " "),
+            transcript: lesson.steps.prefix(3).map { naturalPhrase(for: $0, fallback: correctedLine(for: $0)) }.joined(separator: " "),
             corrections: [],
             strongPhrases: lesson.savedWords.prefix(2).map(\.term),
             weakPhrases: [],
@@ -387,9 +397,9 @@ final class LearningState: ObservableObject {
                     source: lesson.title,
                     prompt: lesson.title,
                     attempt: "Completed lesson",
-                    correction: "Lesson completed with a complete pass through the core prompts.",
-                    naturalPhrase: lesson.steps.last?.prompt ?? lesson.title,
-                    savedTakeaway: lesson.steps.last?.prompt ?? lesson.title,
+                    correction: "Lesson completed with a complete pass through the speaking turns.",
+                    naturalPhrase: lesson.steps.last.map { naturalPhrase(for: $0, fallback: correctedLine(for: $0)) } ?? lesson.title,
+                    savedTakeaway: lesson.steps.last.map { naturalPhrase(for: $0, fallback: correctedLine(for: $0)) } ?? lesson.title,
                     nextAction: summary.nextRecommendation
                 ),
                 in: &next
@@ -420,10 +430,12 @@ final class LearningState: ObservableObject {
     }
 
     func saveLessonResume(lesson: BeginnerLesson, stepIndex: Int) {
-        guard !lesson.steps.isEmpty else { return }
+        guard !lesson.steps.isEmpty, !isCompleted(lesson) else { return }
         var next = profile
         next.currentLessonID = lesson.id
-        next.lessonResumeStepIndices[lesson.id] = min(max(stepIndex, 0), lesson.steps.count - 1)
+        let boundedStepIndex = min(max(stepIndex, 0), lesson.steps.count - 1)
+        let currentResumeIndex = next.lessonResumeStepIndices[lesson.id] ?? inferredResumeStepIndex(for: lesson)
+        next.lessonResumeStepIndices[lesson.id] = max(currentResumeIndex, boundedStepIndex)
         profile = next
     }
 
@@ -513,12 +525,13 @@ final class LearningState: ObservableObject {
         updateSkill(mode, title: mode, delta: 1, confidenceDelta: correct ? 4 : -3, in: &next)
 
         if !correct {
+            let retryLine = naturalPhrase(for: step, fallback: self.correctedLine(for: step))
             addLearningObject(
                 SavedLearningObject(
                     id: "mistake-\(step.id)",
                     kind: .mistake,
-                    text: step.prompt,
-                    translation: step.correctAnswer ?? step.helper,
+                    text: retryLine,
+                    translation: step.helper,
                     source: mode,
                     note: "Mistake saved for retry.",
                     createdDay: dayString(for: now)
@@ -860,6 +873,32 @@ final class LearningState: ObservableObject {
 
     private func scheduledReviews(_ customReviews: [ScheduledReviewItem]) -> [ScheduledReviewItem] {
         var reviews = customReviews
+        let objectsByID = profile.savedLearningObjects
+            .map(speakableLearningObject)
+            .reduce(into: [String: SavedLearningObject]()) { result, object in
+                result[object.id] = object
+            }
+
+        reviews = reviews.map { review in
+            guard let object = objectsByID[review.objectID] else {
+                return speakableReviewItem(review)
+            }
+
+            return ScheduledReviewItem(
+                id: review.id,
+                objectID: review.objectID,
+                kind: object.kind,
+                prompt: reviewPrompt(for: object),
+                answer: reviewAnswer(for: object),
+                source: review.source,
+                lastReviewedDay: review.lastReviewedDay,
+                nextDueDay: review.nextDueDay,
+                ease: review.ease,
+                mistakeCount: review.mistakeCount,
+                listeningFirst: review.listeningFirst,
+                speakingRetry: review.speakingRetry
+            )
+        }
 
         for object in profile.savedLearningObjects {
             let review = reviewItem(for: object, now: Date())
@@ -959,12 +998,13 @@ final class LearningState: ObservableObject {
     }
 
     private func addLearningObject(_ object: SavedLearningObject, in profile: inout LearningProfile, now: Date) {
-        if !profile.savedLearningObjects.contains(where: { $0.id == object.id }) {
-            profile.savedLearningObjects.insert(object, at: 0)
+        let speakableObject = speakableLearningObject(object)
+        if !profile.savedLearningObjects.contains(where: { $0.id == speakableObject.id }) {
+            profile.savedLearningObjects.insert(speakableObject, at: 0)
             profile.savedLearningObjects = Array(profile.savedLearningObjects.prefix(80))
         }
 
-        let review = reviewItem(for: object, now: now)
+        let review = reviewItem(for: speakableObject, now: now)
         if !profile.scheduledReviews.contains(where: { $0.id == review.id }) {
             profile.scheduledReviews.insert(review, at: 0)
             profile.scheduledReviews = Array(profile.scheduledReviews.prefix(100))
@@ -972,32 +1012,164 @@ final class LearningState: ObservableObject {
     }
 
     private func reviewItem(for object: SavedLearningObject, now: Date) -> ScheduledReviewItem {
-        ScheduledReviewItem(
-            id: "review-\(object.id)",
-            objectID: object.id,
-            kind: object.kind,
-            prompt: reviewPrompt(for: object),
-            answer: object.translation,
-            source: object.source,
+        let speakableObject = speakableLearningObject(object)
+        return ScheduledReviewItem(
+            id: "review-\(speakableObject.id)",
+            objectID: speakableObject.id,
+            kind: speakableObject.kind,
+            prompt: reviewPrompt(for: speakableObject),
+            answer: reviewAnswer(for: speakableObject),
+            source: speakableObject.source,
             lastReviewedDay: nil,
             nextDueDay: dayString(for: now),
-            ease: object.kind == .mistake ? 0.42 : 0.68,
-            mistakeCount: object.kind == .mistake ? 1 : 0,
-            listeningFirst: object.kind != .word,
-            speakingRetry: object.kind != .word
+            ease: speakableObject.kind == .mistake ? 0.42 : 0.68,
+            mistakeCount: speakableObject.kind == .mistake ? 1 : 0,
+            listeningFirst: speakableObject.kind != .word,
+            speakingRetry: speakableObject.kind != .word
         )
     }
 
+    private func speakableLearningObject(_ object: SavedLearningObject) -> SavedLearningObject {
+        guard object.kind != .word else { return object }
+
+        let phrase = Self.speakablePhrase(prompt: object.text, answer: object.translation)
+        guard phrase != object.text else { return object }
+
+        let note = object.note.trimmingCharacters(in: .whitespacesAndNewlines)
+        let originalPrompt = object.text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return SavedLearningObject(
+            id: object.id,
+            kind: object.kind,
+            text: phrase,
+            translation: object.translation,
+            source: object.source,
+            note: note.isEmpty ? originalPrompt : note,
+            createdDay: object.createdDay
+        )
+    }
+
+    private func speakableReviewItem(_ item: ScheduledReviewItem) -> ScheduledReviewItem {
+        if item.kind == .word {
+            return ScheduledReviewItem(
+                id: item.id,
+                objectID: item.objectID,
+                kind: item.kind,
+                prompt: Self.wordTerm(from: item.prompt),
+                answer: item.answer,
+                source: item.source,
+                lastReviewedDay: item.lastReviewedDay,
+                nextDueDay: item.nextDueDay,
+                ease: item.ease,
+                mistakeCount: item.mistakeCount,
+                listeningFirst: item.listeningFirst,
+                speakingRetry: item.speakingRetry
+            )
+        }
+
+        let prompt = Self.speakablePhrase(prompt: item.prompt, answer: item.answer)
+        let answer = prompt == item.prompt ? item.answer : item.prompt
+
+        return ScheduledReviewItem(
+            id: item.id,
+            objectID: item.objectID,
+            kind: item.kind,
+            prompt: prompt,
+            answer: answer,
+            source: item.source,
+            lastReviewedDay: item.lastReviewedDay,
+            nextDueDay: item.nextDueDay,
+            ease: item.ease,
+            mistakeCount: item.mistakeCount,
+            listeningFirst: item.listeningFirst,
+            speakingRetry: item.speakingRetry
+        )
+    }
+
+    private static func speakablePhrase(prompt: String, answer: String) -> String {
+        let cleanPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanAnswer = answer.trimmingCharacters(in: .whitespacesAndNewlines)
+        if cleanPrompt.contains("___"), !cleanAnswer.isEmpty {
+            return cleanPrompt.replacingOccurrences(of: "___", with: cleanAnswer)
+        }
+        if let phrase = phraseWithoutFeedbackPrefix(cleanAnswer) {
+            return phrase
+        }
+        if let phrase = phraseWithoutFeedbackPrefix(cleanPrompt) {
+            return phrase
+        }
+
+        for prefix in ["Review: ", "Retry: ", "Use this Tutor phrase: "] {
+            if cleanPrompt.hasPrefix(prefix) {
+                return String(cleanPrompt.dropFirst(prefix.count))
+            }
+        }
+        if !cleanAnswer.isEmpty && !looksLikePrompt(cleanAnswer) {
+            return cleanAnswer
+        }
+
+        return cleanPrompt
+    }
+
+    private static func wordTerm(from prompt: String) -> String {
+        let cleanPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        let prefix = "What does "
+        let suffix = " mean?"
+        guard cleanPrompt.hasPrefix(prefix), cleanPrompt.hasSuffix(suffix) else {
+            return cleanPrompt
+        }
+
+        return String(cleanPrompt.dropFirst(prefix.count).dropLast(suffix.count))
+    }
+
+    private static func phraseWithoutFeedbackPrefix(_ text: String) -> String? {
+        let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        for prefix in ["The phrase should be:", "Phrase should be:", "Try:", "Use: "] {
+            guard let range = cleanText.range(of: prefix, options: [.caseInsensitive]) else {
+                continue
+            }
+
+            let phrase = cleanText[range.upperBound...]
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
+            if !phrase.isEmpty {
+                return phrase
+            }
+        }
+
+        return nil
+    }
+
+    private static func looksLikePrompt(_ text: String) -> Bool {
+        let lowercased = text.lowercased()
+        return lowercased.contains("___")
+            || lowercased.hasPrefix("complete:")
+            || lowercased.hasPrefix("review:")
+            || lowercased.hasPrefix("retry:")
+            || lowercased.hasPrefix("use this tutor phrase:")
+            || lowercased.hasPrefix("say ")
+            || lowercased.hasPrefix("ask ")
+            || lowercased.hasPrefix("describe ")
+            || lowercased.hasPrefix("invite ")
+            || lowercased.hasPrefix("confirm ")
+            || lowercased.hasPrefix("order ")
+            || lowercased.hasPrefix("check ")
+            || lowercased.hasPrefix("give ")
+            || lowercased.hasPrefix("disagree ")
+            || lowercased.hasPrefix("start ")
+            || lowercased.hasPrefix("close ")
+    }
+
     private func reviewPrompt(for object: SavedLearningObject) -> String {
+        object.text
+    }
+
+    private func reviewAnswer(for object: SavedLearningObject) -> String {
         switch object.kind {
         case .word:
-            return "What does \(object.text) mean?"
-        case .mistake:
-            return "Retry: \(object.text)"
-        case .tutorMessage:
-            return "Use this Tutor phrase: \(object.text)"
+            return object.translation
         default:
-            return "Review: \(object.text)"
+            return object.note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? object.translation : object.note
         }
     }
 
@@ -1009,17 +1181,19 @@ final class LearningState: ObservableObject {
 
     @discardableResult
     private func addFeedbackReviewItemIfNeeded(_ feedback: LearningFeedback, source: String, in profile: inout LearningProfile, now: Date) -> String? {
-        let prompt = feedback.reviewItemPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        let answer = feedback.reviewItemAnswer.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !prompt.isEmpty, !answer.isEmpty else { return nil }
+        let rawPrompt = feedback.reviewItemPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        let rawAnswer = feedback.reviewItemAnswer.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !rawPrompt.isEmpty, !rawAnswer.isEmpty else { return nil }
+        let phrase = Self.speakablePhrase(prompt: rawPrompt, answer: rawAnswer)
+        let note = phrase == rawPrompt ? "Suggested by speaking feedback." : rawPrompt
 
         let object = SavedLearningObject(
-            id: "ai-review-\(stableID(source))-\(stableID(prompt + answer))",
+            id: "ai-review-\(stableID(source))-\(stableID(rawPrompt + rawAnswer))",
             kind: .mistake,
-            text: prompt,
-            translation: answer,
+            text: phrase,
+            translation: rawAnswer,
             source: source,
-            note: "Suggested by speaking feedback.",
+            note: note,
             createdDay: dayString(for: now)
         )
         addLearningObject(object, in: &profile, now: now)
@@ -1337,6 +1511,10 @@ final class LearningState: ObservableObject {
         let currentLanguageIDs = Set(BeginnerContent.lessons(for: next.targetLanguage).map(\.id))
         if !currentLanguageIDs.contains(next.currentLessonID) {
             next.currentLessonID = BeginnerContent.lessons(for: next.targetLanguage).first { !next.completedLessonIDs.contains($0.id) }?.id ?? BeginnerContent.firstLessonID(for: next.targetLanguage)
+        }
+        if next.completedLessonIDs.contains(next.currentLessonID),
+           let nextIncompleteLessonID = BeginnerContent.lessons(for: next.targetLanguage).first(where: { !next.completedLessonIDs.contains($0.id) })?.id {
+            next.currentLessonID = nextIncompleteLessonID
         }
         return next
     }

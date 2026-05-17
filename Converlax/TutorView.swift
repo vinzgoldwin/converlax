@@ -10,8 +10,6 @@ struct TutorView: View {
     @State private var noInputNotice: String?
     @State private var feedbackNotice: String?
     @State private var voiceTranscript = ""
-    @State private var fallbackText = ""
-    @State private var showsTextFallback = false
     @State private var voiceErrorMessage: String?
     @State private var savedMessageIDs: Set<UUID> = []
     @StateObject private var speechRecognizer = SpeechRecognitionService()
@@ -121,6 +119,7 @@ struct TutorView: View {
                     transcript: voiceTranscript,
                     feedback: nil,
                     accent: .primaryBlue,
+                    voiceLevel: speechRecognizer.voiceLevel,
                     errorMessage: voiceErrorMessage,
                     primaryActionTitle: tutorVoiceActionTitle,
                     onPrimary: handleVoicePrimaryAction,
@@ -129,20 +128,6 @@ struct TutorView: View {
                 .padding(20)
                 .background(.regularMaterial)
 
-                if offersTextFallback {
-                    VoiceFallbackTextEntry(
-                        text: $fallbackText,
-                        isExpanded: showsTextFallback || voicePhase == .permissionDenied,
-                        placeholder: "Type your Tutor message",
-                        revealTitle: "Type instead",
-                        submitTitle: "Send text",
-                        onReveal: { showsTextFallback = true },
-                        onSubmit: submitTextFallback
-                    )
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 14)
-                    .background(.regularMaterial)
-                }
             } else {
                 TextComposer(
                     input: $input,
@@ -195,8 +180,6 @@ struct TutorView: View {
     private func startVoiceRecording() {
         voicePhase = .requestingPermission
         voiceTranscript = ""
-        fallbackText = ""
-        showsTextFallback = false
         voiceErrorMessage = nil
         feedbackNotice = nil
 
@@ -214,7 +197,7 @@ struct TutorView: View {
     private func sendMessage() {
         let clean = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !clean.isEmpty else {
-            noInputNotice = "Start speaking, or type a fallback message if voice is not available."
+            noInputNotice = "Start speaking when you are ready."
             return
         }
         let word = state.courseSavedWords.last ?? state.courseLessons.first?.savedWords.first ?? BeginnerContent.lessons[0].savedWords[0]
@@ -282,22 +265,6 @@ struct TutorView: View {
             resetVoiceInput(keepVoiceReady: true)
         }
     }
-
-    private func submitTextFallback() {
-        let cleanText = fallbackText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanText.isEmpty else { return }
-
-        noInputNotice = nil
-        feedbackNotice = nil
-        voiceTranscript = cleanText
-        fallbackText = ""
-        showsTextFallback = false
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.86)) {
-            addTutorResponse(for: cleanText)
-            resetVoiceInput(keepVoiceReady: true)
-        }
-    }
-
     private func addTutorResponse(for userMessage: String, aiFeedback: AIFeedback? = nil) {
         let lesson = state.currentLesson
         withAnimation {
@@ -316,20 +283,8 @@ struct TutorView: View {
         voicePhase = .ready
         isVoiceInputActive = keepVoiceReady
         voiceTranscript = ""
-        fallbackText = ""
-        showsTextFallback = false
         voiceErrorMessage = nil
     }
-
-    private var offersTextFallback: Bool {
-        switch voicePhase {
-        case .permissionNeeded, .permissionDenied, .noSpeech, .error:
-            true
-        default:
-            false
-        }
-    }
-
     private func saveMessage(_ message: ChatMessage) {
         let line = SavedLine(
             id: "tutor-\(stableMessageID(message.text))",
@@ -371,7 +326,7 @@ struct TutorView: View {
             voiceTranscript = "How do I ask for directions politely?"
             voicePhase = .transcript
         case "permissionDenied", "permission":
-            voiceErrorMessage = "Voice practice needs Microphone and Speech Recognition. Use text now or enable access later."
+            voiceErrorMessage = "Voice practice needs Microphone and Speech Recognition. Enable access in Settings, then try again."
             voicePhase = .permissionDenied
         default:
             isVoiceInputActive = false
@@ -416,27 +371,15 @@ private struct TextComposer: View {
 
             HStack(spacing: 10) {
                 Button(action: onStartVoice) {
-                    Image(systemName: "mic.fill")
-                        .frame(width: 42, height: 42)
-                        .background(Color.primaryBlue.opacity(0.12), in: Circle())
-                }
-                .accessibilityLabel("Start voice input")
-
-                TextField("Text fallback", text: $input)
-                    .textFieldStyle(.plain)
-                    .padding(.horizontal, 14)
-                    .frame(height: 42)
-                    .background(Color.claySurface, in: Capsule())
-
-                Button(action: onSend) {
-                    Image(systemName: "arrow.up")
-                        .font(.headline.weight(.bold))
+                    Label("Start speaking", systemImage: "mic.fill")
+                        .font(.headline.weight(.semibold))
                         .foregroundStyle(.white)
-                        .frame(width: 42, height: 42)
-                        .background(Color.primaryBlue, in: Circle())
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                        .background(Color.primaryBlue, in: Capsule())
                 }
-                .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .accessibilityLabel("Send message")
+                .buttonStyle(.plain)
+                .accessibilityLabel("Start voice input")
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 12)

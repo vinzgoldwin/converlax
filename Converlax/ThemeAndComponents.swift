@@ -63,6 +63,21 @@ struct SecondaryButtonStyle: ButtonStyle {
     }
 }
 
+struct CalmPressButtonStyle: ButtonStyle {
+    var cornerRadius: CGFloat = 14
+    var highlightColor: Color = .primaryBlue
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(highlightColor.opacity(configuration.isPressed ? 0.08 : 0))
+            )
+            .scaleEffect(configuration.isPressed ? 0.985 : 1)
+            .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
+    }
+}
+
 struct LessonProgressBar: View {
     let progress: Double
 
@@ -76,6 +91,7 @@ struct LessonProgressBar: View {
             }
         }
         .frame(height: 6)
+        .animation(.easeOut(duration: 0.36), value: progress)
         .accessibilityLabel("Progress")
         .accessibilityValue("\(Int(min(max(progress, 0), 1) * 100)) percent")
     }
@@ -344,30 +360,42 @@ extension LessonStepKind {
 
 struct ConverlaxWaveform: View {
     var color: Color = .primaryBlue
+    var level: Double = 0
     var isActive = true
-    @State private var animate = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private let barCount = 13
 
     var body: some View {
-        HStack(spacing: 4) {
-            ForEach(0..<14, id: \.self) { index in
-                Capsule()
-                    .fill(color.opacity(index.isMultiple(of: 3) ? 0.84 : 0.42))
-                    .frame(width: 4, height: height(for: index))
+        TimelineView(.animation(minimumInterval: 0.16, paused: reduceMotion || !isActive)) { timeline in
+            HStack(alignment: .center, spacing: 4) {
+                ForEach(0..<barCount, id: \.self) { index in
+                    Capsule()
+                        .fill(color.opacity(index.isMultiple(of: 3) ? 0.72 : 0.42))
+                        .frame(width: 4, height: height(for: index, at: timeline.date))
+                }
             }
+            .frame(height: 40)
         }
-        .frame(height: 42)
-        .onAppear { animate = isActive }
-        .onChange(of: isActive) { _, newValue in
-            animate = newValue
-        }
-        .animation(.easeInOut(duration: 0.58).repeatForever(autoreverses: true), value: animate)
+        .frame(height: 40)
+        .animation(.easeOut(duration: 0.18), value: normalizedLevel)
         .accessibilityHidden(true)
     }
 
-    private func height(for index: Int) -> CGFloat {
-        let base = CGFloat(10 + (index % 5) * 5)
-        guard animate else { return base }
-        return index.isMultiple(of: 2) ? base + 12 : max(8, base - 4)
+    private var normalizedLevel: Double {
+        min(max(level, 0), 1)
+    }
+
+    private func height(for index: Int, at date: Date) -> CGFloat {
+        let basePattern = [0.16, 0.42, 0.72, 0.48, 0.88, 0.58, 0.34, 0.78, 0.44, 0.64, 0.30, 0.54, 0.22]
+        let base = basePattern[index % basePattern.count]
+        let speakingLift = isActive ? max(0.18, normalizedLevel) : 0.08
+        let time = date.timeIntervalSinceReferenceDate
+        let ripple = reduceMotion ? 0 : (sin(time * 5.8 + Double(index) * 0.72) + 1) * 0.5
+        let motion = isActive ? ripple * 0.22 : 0
+        let height = 8 + CGFloat(base + speakingLift + motion) * 19
+
+        return min(38, max(8, height))
     }
 }
 
@@ -445,7 +473,7 @@ struct LearningFeedbackCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 10) {
-                Label(feedbackTitle, systemImage: isSpeechFeedback ? "bubble.left.and.text.bubble.right.fill" : "sparkles")
+                Label(feedbackTitle, systemImage: isSpeechFeedback ? "bubble.left.and.text.bubble.right.fill" : "checkmark.seal.fill")
                     .font(.headline.weight(.semibold))
                     .foregroundStyle(Color.primaryBlue)
 
@@ -840,6 +868,7 @@ struct SpeechPracticePanel: View {
     let transcript: String
     let feedback: LearningFeedback?
     let accent: Color
+    var voiceLevel: Double = 0
     var errorMessage: String?
     var primaryActionTitle: String? = nil
     let onPrimary: () -> Void
@@ -883,6 +912,12 @@ struct SpeechPracticePanel: View {
                     isActive: isListeningOrWorking
                 )
                 .frame(maxWidth: .infinity)
+
+                if phase == .recording {
+                    ConverlaxWaveform(color: actionColor, level: voiceLevel, isActive: true)
+                        .frame(maxWidth: .infinity)
+                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                }
 
                 transcriptSection
             }
@@ -932,7 +967,7 @@ struct SpeechPracticePanel: View {
                 isLive: phase == .recording,
                 accent: accent
             )
-        } else if showsMessage {
+        } else if showsMessage || phase == .ready {
             EmptyView()
         } else {
             Text(transcriptPlaceholder)
@@ -945,23 +980,14 @@ struct SpeechPracticePanel: View {
     }
 
     private var primaryActionButton: some View {
-        Button(action: onPrimary) {
-            HStack(spacing: 10) {
-                Image(systemName: primarySymbol)
-                    .font(.headline.weight(.bold))
-                Text(primaryActionTitle ?? phase.actionTitle)
-                    .font(.headline.weight(.bold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.82)
-            }
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .frame(minHeight: 56)
-            .padding(.horizontal, 18)
-            .background(actionColor, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .shadow(color: actionColor.opacity(isPrimaryEnabled ? 0.14 : 0), radius: 10, y: 6)
-        }
-        .buttonStyle(.plain)
+        BreathingSpeechPrimaryButton(
+            title: primaryActionTitle ?? phase.actionTitle,
+            symbol: primarySymbol,
+            color: actionColor,
+            phase: phase,
+            isEnabled: isPrimaryEnabled,
+            action: onPrimary
+        )
         .disabled(!isPrimaryEnabled)
         .opacity(isPrimaryEnabled ? 1 : 0.58)
         .accessibilityIdentifier("speech-primary-action")
@@ -1001,7 +1027,7 @@ struct SpeechPracticePanel: View {
     }
 
     private var transcriptTitle: String {
-        phase == .recording ? "Live transcript" : "Final transcript"
+        phase == .recording ? "Live transcript" : "Heard"
     }
 
     private var transcriptText: String {
@@ -1017,9 +1043,9 @@ struct SpeechPracticePanel: View {
         case .processing, .transcribing:
             "Turning your speech into text..."
         case .transcript:
-            "Your transcript will appear here before feedback."
+            "Your words will appear here."
         case .permissionNeeded, .permissionDenied:
-            "Voice input is unavailable for now. You can still type this turn."
+            "Voice input is unavailable."
         case .noSpeech:
             "Nothing clear was captured."
         case .error:
@@ -1124,7 +1150,7 @@ struct SpeechPracticePanel: View {
     private var messageText: String {
         switch phase {
         case .permissionNeeded, .permissionDenied:
-            return errorMessage ?? "Voice practice needs Microphone and Speech Recognition. Allow access in Settings when you are ready, or use text for this turn."
+            return errorMessage ?? "Voice practice needs Microphone and Speech Recognition. Allow access in Settings when you are ready."
         case .noSpeech:
             return errorMessage ?? "No speech was recognized. Hold the phone close, speak one clear sentence, and try again."
         case .feedback:
@@ -1139,7 +1165,7 @@ struct SpeechPracticePanel: View {
         case .requestingPermission:
             "Waiting for iOS permission."
         case .permissionNeeded, .permissionDenied:
-            "Use text now or enable access later."
+            "Enable access in Settings, then try again."
         case .ready:
             "Record one clear answer."
         case .recording:
@@ -1151,9 +1177,9 @@ struct SpeechPracticePanel: View {
         case .transcript:
             "Review before feedback."
         case .feedback:
-            "Copy the sentence, then continue."
+            "Continue when you are ready."
         case .accepted:
-            "Saved for practice."
+            "Saved."
         case .noSpeech:
             "Try again with one clear sentence."
         case .error:
@@ -1162,47 +1188,149 @@ struct SpeechPracticePanel: View {
     }
 }
 
-struct VoiceFallbackTextEntry: View {
-    @Binding var text: String
-    let isExpanded: Bool
-    let placeholder: String
-    var revealTitle = "Use text instead"
-    var submitTitle = "Use text answer"
-    let onReveal: () -> Void
-    let onSubmit: () -> Void
+private struct BreathingSpeechPrimaryButton: View {
+    let title: String
+    let symbol: String
+    let color: Color
+    let phase: SpeechPracticePhase
+    let isEnabled: Bool
+    let action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var breathes = false
+    @State private var pulses = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if isExpanded {
-                TextField(placeholder, text: $text, axis: .vertical)
-                    .textFieldStyle(.plain)
-                    .lineLimit(2...4)
-                    .padding(12)
-                    .background(Color.appBackground.opacity(0.72), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(Color.clayStroke.opacity(0.8), lineWidth: 1)
-                    )
-
-                Button(submitTitle, action: onSubmit)
-                    .buttonStyle(SecondaryButtonStyle())
-                    .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            } else {
-                Button(action: onReveal) {
-                    Label(revealTitle, systemImage: "keyboard")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.primaryBlue)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.plain)
-                .background(Color.claySurface.opacity(0.72), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.clayStroke.opacity(0.7), lineWidth: 1)
-                )
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: symbol)
+                    .font(.headline.weight(.bold))
+                    .symbolEffect(.pulse, value: pulses)
+                Text(title)
+                    .font(.headline.weight(.bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
             }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: 56)
+            .padding(.horizontal, 18)
+            .background(buttonBackground)
+            .overlay(pulseOverlay)
+            .shadow(color: color.opacity(shadowOpacity), radius: shadowRadius, y: 6)
+            .scaleEffect(buttonScale)
+            .animation(animation, value: breathes)
+            .animation(animation, value: pulses)
         }
-        .accessibilityIdentifier("voice-text-fallback")
+        .buttonStyle(.plain)
+        .onAppear(perform: startAnimation)
+        .onChange(of: phase) { _, _ in
+            startAnimation()
+        }
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private var buttonBackground: some View {
+        RoundedRectangle(cornerRadius: 14, style: .continuous)
+            .fill(color)
+    }
+
+    @ViewBuilder
+    private var pulseOverlay: some View {
+        if showsMotion {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(color.opacity(phase == .recording ? 0.30 : 0.20), lineWidth: phase == .recording ? 2 : 1.5)
+                .scaleEffect(overlayScale)
+                .opacity(overlayOpacity)
+        }
+    }
+
+    private var showsMotion: Bool {
+        isEnabled && !reduceMotion && (phase == .ready || phase == .recording)
+    }
+
+    private var buttonScale: CGFloat {
+        guard showsMotion else { return 1 }
+        switch phase {
+        case .ready:
+            return breathes ? 1.025 : 0.992
+        case .recording:
+            return pulses ? 1.012 : 0.998
+        default:
+            return 1
+        }
+    }
+
+    private var overlayScale: CGFloat {
+        guard showsMotion else { return 1 }
+        switch phase {
+        case .ready:
+            return breathes ? 1.06 : 1.01
+        case .recording:
+            return pulses ? 1.095 : 1.015
+        default:
+            return 1
+        }
+    }
+
+    private var overlayOpacity: Double {
+        guard showsMotion else { return 0 }
+        switch phase {
+        case .ready:
+            return breathes ? 0.08 : 0.22
+        case .recording:
+            return pulses ? 0.06 : 0.24
+        default:
+            return 0
+        }
+    }
+
+    private var shadowOpacity: Double {
+        guard isEnabled else { return 0 }
+        switch phase {
+        case .ready:
+            return breathes && !reduceMotion ? 0.18 : 0.12
+        case .recording:
+            return pulses && !reduceMotion ? 0.22 : 0.14
+        default:
+            return 0.14
+        }
+    }
+
+    private var shadowRadius: CGFloat {
+        guard showsMotion else { return 10 }
+        return phase == .recording ? (pulses ? 15 : 10) : (breathes ? 14 : 9)
+    }
+
+    private var animation: Animation? {
+        guard showsMotion else { return nil }
+        switch phase {
+        case .ready:
+            return .easeInOut(duration: 1.9).repeatForever(autoreverses: true)
+        case .recording:
+            return .easeInOut(duration: 1.05).repeatForever(autoreverses: true)
+        default:
+            return nil
+        }
+    }
+
+    private func startAnimation() {
+        guard showsMotion else {
+            breathes = false
+            pulses = false
+            return
+        }
+
+        switch phase {
+        case .ready:
+            pulses = false
+            breathes = true
+        case .recording:
+            breathes = false
+            pulses = true
+        default:
+            breathes = false
+            pulses = false
+        }
     }
 }
 
@@ -1391,7 +1519,7 @@ struct LearningObjectRow: View {
         case .mistake:
             "arrow.clockwise"
         case .tutorMessage:
-            "sparkles"
+            "bubble.left.and.bubble.right.fill"
         case .roleplayPhrase:
             "person.2.wave.2.fill"
         default:
@@ -1439,6 +1567,8 @@ struct SessionSummaryPanel: View {
 struct CompletionCelebrationView: View {
     let result: CompletionCelebrationResult
     var mascotState: ConverlaxMascotState = .celebrating
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isVisible = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -1455,23 +1585,8 @@ struct CompletionCelebrationView: View {
                 }
             }
 
-            VStack(spacing: 10) {
-                CompletionResultMetricRow(
-                    symbol: "sparkles",
-                    title: "XP earned",
-                    value: result.xpEarned > 0 ? "+\(result.xpEarned) XP" : "No new XP",
-                    color: .warmAmber
-                )
-
-                CompletionLevelProgressRow(result: result)
-
-                CompletionResultMetricRow(
-                    symbol: "bookmark.fill",
-                    title: "Saved items created",
-                    value: "\(result.savedItemsCreated)",
-                    color: .primaryBlue
-                )
-            }
+            CompletionLevelProgressRow(result: result)
+            CompletionRewardRow(result: result)
 
             CompletionNextActionRow(result: result)
         }
@@ -1482,41 +1597,22 @@ struct CompletionCelebrationView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(Color.clayStroke.opacity(0.72), lineWidth: 1)
         )
-        .accessibilityIdentifier("completion-celebration")
-    }
-}
-
-private struct CompletionResultMetricRow: View {
-    let symbol: String
-    let title: String
-    let value: String
-    let color: Color
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: symbol)
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(color)
-                .frame(width: 28, height: 28)
-                .background(color.opacity(0.14), in: Circle())
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.secondary)
-                Text(value)
-                    .font(.subheadline.weight(.semibold))
+        .opacity(isVisible ? 1 : 0)
+        .offset(y: isVisible || reduceMotion ? 0 : 10)
+        .scaleEffect(isVisible || reduceMotion ? 1 : 0.985)
+        .onAppear {
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.32)) {
+                isVisible = true
             }
-
-            Spacer(minLength: 8)
         }
-        .padding(12)
-        .background(Color.appBackground.opacity(0.58), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityIdentifier("completion-celebration")
     }
 }
 
 private struct CompletionLevelProgressRow: View {
     let result: CompletionCelebrationResult
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var displayedProgress = 0.0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
@@ -1533,13 +1629,14 @@ private struct CompletionLevelProgressRow: View {
                         .foregroundStyle(.secondary)
                     Text(result.levelProgressDetail)
                         .font(.subheadline.weight(.semibold))
+                        .contentTransition(.numericText())
                 }
 
                 Spacer(minLength: 8)
             }
 
             ZStack(alignment: .leading) {
-                LessonProgressBar(progress: result.levelProgressAfter)
+                LessonProgressBar(progress: displayedProgress)
                 GeometryReader { proxy in
                     Rectangle()
                         .fill(Color.converlaxInk.opacity(0.42))
@@ -1550,9 +1647,50 @@ private struct CompletionLevelProgressRow: View {
                 .allowsHitTesting(false)
             }
             .frame(height: 12)
+            .padding(.leading, 40)
         }
-        .padding(12)
-        .background(Color.appBackground.opacity(0.58), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .onAppear {
+            displayedProgress = result.levelProgressBefore
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.82).delay(0.12)) {
+                displayedProgress = result.levelProgressAfter
+            }
+        }
+        .onChange(of: result.levelProgressAfter) { _, newValue in
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.42)) {
+                displayedProgress = newValue
+            }
+        }
+    }
+}
+
+private struct CompletionRewardRow: View {
+    let result: CompletionCelebrationResult
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: "medal.fill")
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(Color.warmAmber)
+                .frame(width: 28, height: 28)
+                .background(Color.warmAmber.opacity(0.16), in: Circle())
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Level \(result.levelAfter) · \(result.levelTitle)")
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.84)
+
+                if result.xpEarned > 0 {
+                    Text("+\(result.xpEarned) XP")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .contentTransition(.numericText())
+                }
+            }
+
+            Spacer(minLength: 8)
+        }
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -1566,21 +1704,22 @@ private struct CompletionNextActionRow: View {
                 .foregroundStyle(Color.primaryBlue)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text("Next suggested action")
+                Text("Continue from here")
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.secondary)
                 Text(result.nextActionTitle)
                     .font(.subheadline.weight(.semibold))
-                Text(result.nextActionDetail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                if !result.nextActionDetail.isEmpty {
+                    Text(result.nextActionDetail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
 
             Spacer(minLength: 8)
         }
-        .padding(12)
-        .background(Color.primaryBlue.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(.top, 4)
     }
 }
 
