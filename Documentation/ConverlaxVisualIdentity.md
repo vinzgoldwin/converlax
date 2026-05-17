@@ -28,8 +28,8 @@ Production assets live in `Converlax/Assets.xcassets` as transparent PNG image s
 - `ClxMascot*`: mascot states used by `ConverlaxMascotView`.
 - `ClxAssetAskInfo`, `ClxAssetBookAccommodation`, `ClxAssetAskDirections`: task and roleplay categories.
 - `ClxAssetVocab`, `ClxAssetVerbs`, `ClxAssetReview`, `ClxAssetSavedLines`: learning and review assets.
-- `ClxAssetFreeTalk`, `ClxAssetCustomLesson`, `ClxAssetRoleplay`, `ClxAssetCommunity`: practice entry points.
-- `ClxAssetHistoryUsage`, `ClxAssetActivities`, `ClxAssetFavorites`, `ClxAssetSettings`, `ClxAssetStreak`, `ClxAssetProfile`: profile and system surfaces.
+- `ClxAssetFreeTalk`, `ClxAssetCustomLesson`, `ClxAssetRoleplay`: practice entry points.
+- `ClxAssetHistoryUsage`, `ClxAssetSettings`, `ClxAssetStreak`: profile and system surfaces.
 
 ## Motion
 
@@ -38,11 +38,8 @@ Production assets live in `Converlax/Assets.xcassets` as transparent PNG image s
 - `idle`: slow float.
 - `waving`: onboarding greeting.
 - `encouraging`: calm float for tutor prompts.
-- `listening`: pulse with `ConverlaxWaveform`.
 - `thinking`: subtle tilt.
-- `speaking`: pulse with waveform.
-- `success` and `celebrating`: spring bounce.
-- `tryAgain`: gentle side tilt.
+- `celebrating`: spring bounce.
 - `avatar`: static profile identity.
 
 Use `ConverlaxAssetBadge` for illustrated category cards and rows. Do not fall back to generic SF Symbol-only cards when a matching Converlax asset exists.

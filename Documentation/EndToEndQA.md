@@ -16,14 +16,6 @@ Simulator: iPhone 17, iOS 26.2
 - Voice-first lesson flow requests Speech Recognition and Microphone permissions, enters recording, and shows a live transcript on iPhone 17 simulator with permissions allowed.
 - English speaking practice now forces English speech recognition locale instead of inheriting the device locale.
 
-## Screenshots
-
-- `Documentation/Screenshots/qa/onboarding-first-launch.jpg`
-- `Documentation/Screenshots/qa/home-next-lesson.jpg`
-- `Documentation/Screenshots/qa/practice-root.jpg`
-- `Documentation/Screenshots/qa/review-empty.jpg`
-- `Documentation/Screenshots/qa/profile-journey-empty.jpg`
-
 ## Remaining Risks
 
 - Full real microphone recognition should still get one physical-device QA pass before App Store release.

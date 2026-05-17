@@ -115,26 +115,18 @@ struct AvatarBadge: View {
 
 enum ConverlaxMascotState: String {
     case idle
-    case success
     case encouraging
-    case listening
     case thinking
-    case speaking
     case celebrating
-    case tryAgain
     case waving
     case avatar
 
     var assetName: String {
         switch self {
         case .idle: "ClxMascotIdle"
-        case .success: "ClxMascotSuccess"
         case .encouraging: "ClxMascotEncouraging"
-        case .listening: "ClxMascotListening"
         case .thinking: "ClxMascotThinking"
-        case .speaking: "ClxMascotSpeaking"
         case .celebrating: "ClxMascotCelebrating"
-        case .tryAgain: "ClxMascotTryAgain"
         case .waving: "ClxMascotWaving"
         case .avatar: "ClxMascotAvatar"
         }
@@ -143,13 +135,9 @@ enum ConverlaxMascotState: String {
     var accessibilityLabel: String {
         switch self {
         case .idle: "Melo, the Converlax mascot"
-        case .success: "Melo showing success"
         case .encouraging: "Melo encouraging practice"
-        case .listening: "Melo listening"
         case .thinking: "Melo thinking"
-        case .speaking: "Melo speaking"
         case .celebrating: "Melo celebrating"
-        case .tryAgain: "Melo suggesting another try"
         case .waving: "Melo waving"
         case .avatar: "Melo profile avatar"
         }
@@ -167,13 +155,9 @@ enum ConverlaxAssetKind {
     case roleplay
     case savedLines
     case review
-    case community
-    case favorites
     case historyUsage
-    case activities
     case settings
     case streak
-    case profile
 
     var assetName: String {
         switch self {
@@ -187,13 +171,9 @@ enum ConverlaxAssetKind {
         case .roleplay: "ClxAssetRoleplay"
         case .savedLines: "ClxAssetSavedLines"
         case .review: "ClxAssetReview"
-        case .community: "ClxAssetCommunity"
-        case .favorites: "ClxAssetFavorites"
         case .historyUsage: "ClxAssetHistoryUsage"
-        case .activities: "ClxAssetActivities"
         case .settings: "ClxAssetSettings"
         case .streak: "ClxAssetStreak"
-        case .profile: "ClxAssetProfile"
         }
     }
 
@@ -209,13 +189,9 @@ enum ConverlaxAssetKind {
         case .roleplay: "Situation illustration"
         case .savedLines: "Saved lines illustration"
         case .review: "Review illustration"
-        case .community: "Community illustration"
-        case .favorites: "Favorites illustration"
         case .historyUsage: "History and usage illustration"
-        case .activities: "Activities illustration"
         case .settings: "Settings illustration"
         case .streak: "Streak illustration"
-        case .profile: "Profile illustration"
         }
     }
 }
@@ -249,12 +225,8 @@ struct ConverlaxMascotView: View {
     private var scale: CGFloat {
         guard isAnimated else { return 1 }
         switch state {
-        case .success, .celebrating:
+        case .celebrating:
             return animate ? 1.08 : 0.96
-        case .listening, .speaking:
-            return animate ? 1.03 : 0.98
-        case .tryAgain:
-            return animate ? 0.98 : 1.02
         default:
             return 1
         }
@@ -267,8 +239,6 @@ struct ConverlaxMascotView: View {
             return .degrees(animate ? 4 : -4)
         case .thinking:
             return .degrees(animate ? -2 : 2)
-        case .tryAgain:
-            return .degrees(animate ? -3 : 3)
         default:
             return .zero
         }
@@ -288,11 +258,9 @@ struct ConverlaxMascotView: View {
 
     private var animation: Animation {
         switch state {
-        case .success, .celebrating:
+        case .celebrating:
             .spring(response: 0.34, dampingFraction: 0.48).repeatCount(2, autoreverses: true)
-        case .listening, .speaking:
-            .easeInOut(duration: 0.72).repeatForever(autoreverses: true)
-        case .waving, .thinking, .tryAgain:
+        case .waving, .thinking:
             .easeInOut(duration: 0.52).repeatForever(autoreverses: true)
         default:
             .easeInOut(duration: 2.6).repeatForever(autoreverses: true)
