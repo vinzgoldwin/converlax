@@ -47,11 +47,9 @@ enum HomeRoute: Hashable {
     case tutor
     case lesson(BeginnerLesson)
     case lessonDetail(BeginnerLesson)
-    case lessonLines(BeginnerLesson)
     case videoLesson(BeginnerLesson)
     case speakingDrill(BeginnerLesson)
     case qaLesson(BeginnerLesson)
-    case customLesson
     case vocab
     case verbs
 
@@ -78,16 +76,12 @@ enum HomeRoute: Hashable {
             return [.lesson(launchLesson)]
         case "lessonDetail":
             return [.lessonDetail(launchLesson)]
-        case "lessonLines":
-            return [.lessonLines(launchLesson)]
         case "videoLesson":
             return [.videoLesson(launchLesson)]
         case "speakingDrill":
             return [.speakingDrill(launchLesson)]
         case "qaLesson":
             return [.qaLesson(launchLesson)]
-        case "customLesson":
-            return [.customLesson]
         case "vocab":
             return [.vocab]
         case "verbs":
@@ -101,7 +95,6 @@ enum HomeRoute: Hashable {
 enum PracticeRoute: Hashable {
     case session
     case tutor
-    case createRoleplay
     case topics
     case topic(RoleplayTopic)
     case roleplay(RoleplayScenario)
@@ -124,8 +117,6 @@ enum PracticeRoute: Hashable {
             return [.session]
         case "tutor":
             return [.tutor]
-        case "createRoleplay":
-            return [.createRoleplay]
         case "topics":
             return [.topics]
         case "topic":
@@ -192,7 +183,6 @@ enum ProfileRoute: Hashable {
     case support
     case appLanguage
     case courseLanguage
-    case voiceRecognition
     case login
     case resetPassword
 
@@ -230,8 +220,6 @@ enum ProfileRoute: Hashable {
             return [.settings, .appLanguage]
         case "courseLanguage":
             return [.settings, .courseLanguage]
-        case "voiceRecognition":
-            return [.settings, .voiceRecognition]
         case "login":
             return [.settings, .login]
         case "resetPassword":
@@ -1068,7 +1056,6 @@ struct LearningProfile: Codable, Equatable {
     var hapticsEnabled = true
     var soundEnabled = true
     var tutorAudioEnabled = false
-    var voiceRecognitionEnabled = true
     var notificationsEnabled = true
 
     init() {}
@@ -1099,7 +1086,6 @@ struct LearningProfile: Codable, Equatable {
         hapticsEnabled = try container.decodeIfPresent(Bool.self, forKey: .hapticsEnabled) ?? true
         soundEnabled = try container.decodeIfPresent(Bool.self, forKey: .soundEnabled) ?? true
         tutorAudioEnabled = try container.decodeIfPresent(Bool.self, forKey: .tutorAudioEnabled) ?? false
-        voiceRecognitionEnabled = try container.decodeIfPresent(Bool.self, forKey: .voiceRecognitionEnabled) ?? true
         notificationsEnabled = try container.decodeIfPresent(Bool.self, forKey: .notificationsEnabled) ?? true
     }
 }

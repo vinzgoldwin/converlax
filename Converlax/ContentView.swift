@@ -67,16 +67,12 @@ private struct MainTabView: View {
                             LessonPlayerView(lesson: lesson, state: state)
                         case .lessonDetail(let lesson):
                             LessonDetailView(lesson: lesson, state: state)
-                        case .lessonLines(let lesson):
-                            LessonLinesView(lesson: lesson, state: state)
                         case .videoLesson(let lesson):
                             LessonModePlayerView(mode: .video, lesson: lesson, state: state)
                         case .speakingDrill(let lesson):
                             LessonModePlayerView(mode: .speakingDrill, lesson: lesson, state: state)
                         case .qaLesson(let lesson):
                             LessonModePlayerView(mode: .qa, lesson: lesson, state: state)
-                        case .customLesson:
-                            CreateRoleplayView(state: state)
                         case .vocab:
                             VocabLessonView(lesson: BeginnerContent.vocabPracticeLesson(for: state.profile.targetLanguage), state: state)
                         case .verbs:

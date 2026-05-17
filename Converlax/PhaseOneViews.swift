@@ -30,8 +30,6 @@ struct PracticeHomeView: View {
                 FreeTalkSessionView(state: state)
             case .tutor:
                 TutorView(state: state)
-            case .createRoleplay:
-                CreateRoleplayView(state: state)
             case .topics:
                 SituationBrowserView(state: state)
             case .topic(let topic):
@@ -192,8 +190,6 @@ struct SpeakProfileHomeView: View {
                 InfoDetailView(title: "App language", subtitle: "Choose the interface language for menus and settings.")
             case .courseLanguage:
                 LevelSelectionView(state: state)
-            case .voiceRecognition:
-                VoiceRecognitionSettingsView(state: state)
             case .login:
                 InfoDetailView(title: "Log in", subtitle: "Sign in to sync lessons, saved lines, and practice history.")
             case .resetPassword:
@@ -666,9 +662,9 @@ private struct LessonPracticePreview: View {
             preview.append(
                 LessonPracticePreviewItem(
                     id: "checks",
-                    symbol: "checkmark.circle.fill",
-                    title: "\(choiceCount) quick \(choiceCount == 1 ? "check" : "checks")",
-                    detail: "Choose the natural meaning or reply.",
+                    symbol: "mic.circle.fill",
+                    title: "\(choiceCount) spoken \(choiceCount == 1 ? "answer" : "answers")",
+                    detail: "Answer the prompt out loud.",
                     color: .primaryBlue
                 )
             )
@@ -718,9 +714,6 @@ struct LessonToolsMenu: View {
 
     var body: some View {
         Menu {
-            NavigationLink(value: HomeRoute.lessonLines(lesson)) {
-                Label("Read lesson lines", systemImage: "text.quote")
-            }
             NavigationLink(value: HomeRoute.speakingDrill(lesson)) {
                 Label("Practice speaking", systemImage: "mic.fill")
             }
@@ -731,9 +724,6 @@ struct LessonToolsMenu: View {
                 }
                 NavigationLink(value: HomeRoute.qaLesson(lesson)) {
                     Label("Speak answers", systemImage: "mic.circle.fill")
-                }
-                NavigationLink(value: HomeRoute.customLesson) {
-                    Label("Create a situation", systemImage: "plus.bubble.fill")
                 }
             }
         } label: {
@@ -757,25 +747,6 @@ struct LessonToolsMenu: View {
             )
         }
         .accessibilityIdentifier("lesson-tools-menu")
-    }
-}
-
-struct LessonLinesView: View {
-    let lesson: BeginnerLesson
-    @ObservedObject var state: LearningState
-
-    var body: some View {
-        List {
-            ForEach(lesson.savedWords) { word in
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(word.term).font(.headline)
-                    Text(word.translation).foregroundStyle(.secondary)
-                    Text(word.example).font(.caption).foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 6)
-            }
-        }
-        .navigationTitle("Practice lines")
     }
 }
 
@@ -1013,89 +984,6 @@ private struct PracticeSavedHint: View {
     }
 }
 
-struct CreateRoleplayView: View {
-    @ObservedObject var state: LearningState
-    @State private var prompt = "Ordering coffee before a meeting"
-    @State private var generatedRoleplay: RoleplayScenario?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            SectionHeader(title: "Create a situation", subtitle: "Describe what you want to practice.")
-            ConverlaxAssetBadge(kind: generatedRoleplay == nil ? .customLesson : .roleplay, size: 82)
-                .frame(maxWidth: .infinity)
-            TextField("Situation to practice", text: $prompt, axis: .vertical)
-                .padding(16)
-                .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-
-            if let generatedRoleplay {
-                NavigationLink {
-                    RoleplayDetailView(roleplay: generatedRoleplay, state: state)
-                } label: {
-                    RoleplayRow(roleplay: generatedRoleplay, favorite: state.isFavorite(generatedRoleplay))
-                }
-                .buttonStyle(.plain)
-
-                Text("Start this situation when you are ready to speak.")
-                    .font(.footnote.weight(.medium))
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-            Button(generatedRoleplay == nil ? "Create situation" : "Update situation") {
-                generatedRoleplay = makeRoleplay(from: prompt)
-            }
-            .buttonStyle(PrimaryButtonStyle())
-        }
-        .padding(20)
-        .background(Color.appBackground.ignoresSafeArea())
-        .navigationTitle("Create")
-    }
-
-    private func makeRoleplay(from prompt: String) -> RoleplayScenario {
-        let cleanPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        let title = cleanPrompt.isEmpty ? "Custom speaking practice" : cleanPrompt
-        let idSeed = title.lowercased()
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .filter { !$0.isEmpty }
-            .joined(separator: "-")
-        let id = idSeed.isEmpty ? "custom-speaking-practice" : "custom-\(idSeed)"
-
-        return RoleplayScenario(
-            id: id,
-            topicID: "custom",
-            title: title,
-            subtitle: "Say what you need, ask one follow-up, and close politely",
-            setting: title,
-            difficulty: state.profile.currentLevel,
-            minutes: 4,
-            lines: [
-                SavedLine(
-                    id: "\(id)-line-1",
-                    text: "Hi, I need help with this.",
-                    translation: "Open the conversation simply",
-                    source: "Custom situation",
-                    note: "Replace this with your real need."
-                ),
-                SavedLine(
-                    id: "\(id)-line-2",
-                    text: "Could you tell me the best next step?",
-                    translation: "Ask for guidance",
-                    source: "Custom situation",
-                    note: "A clear follow-up keeps the roleplay moving."
-                ),
-                SavedLine(
-                    id: "\(id)-line-3",
-                    text: "Thanks, that helps. I will try that.",
-                    translation: "Close the conversation",
-                    source: "Custom situation",
-                    note: "Use after someone gives advice."
-                )
-            ],
-            isCommunity: false
-        )
-    }
-}
-
 private enum SituationFilter: String, CaseIterable, Identifiable {
     case all = "Recommended"
     case topics = "Topics"
@@ -1160,14 +1048,6 @@ private struct SituationBrowserView: View {
             }
         }
         .navigationTitle("Situations")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink(value: PracticeRoute.createRoleplay) {
-                    Image(systemName: "plus.bubble.fill")
-                }
-                .accessibilityIdentifier("situation-create-custom")
-            }
-        }
     }
 
     @ViewBuilder
@@ -2291,12 +2171,6 @@ private struct SettingsView: View {
                     note: "Get a nudge to practice.",
                     isOn: Binding(get: { state.profile.notificationsEnabled }, set: state.setNotificationsEnabled)
                 )
-                SettingsToggleNoteRow(
-                    symbol: "waveform",
-                    title: "Speak by voice",
-                    note: "Use voice input during speaking practice.",
-                    isOn: Binding(get: { state.profile.voiceRecognitionEnabled }, set: state.setVoiceRecognitionEnabled)
-                )
             }
             Section("Account") {
                 SettingsStatusRow(
@@ -2549,19 +2423,6 @@ private struct NotificationPreferencesView: View {
                 .foregroundStyle(.secondary)
         }
         .navigationTitle("Notifications")
-    }
-}
-
-private struct VoiceRecognitionSettingsView: View {
-    @ObservedObject var state: LearningState
-
-    var body: some View {
-        Form {
-            Toggle("Speak by voice", isOn: Binding(get: { state.profile.voiceRecognitionEnabled }, set: state.setVoiceRecognitionEnabled))
-            Text("Speech recognition uses your microphone and Apple's speech recognition to transcribe practice audio.")
-                .foregroundStyle(.secondary)
-        }
-        .navigationTitle("Voice")
     }
 }
 

@@ -326,12 +326,6 @@ final class LearningState: ObservableObject {
         profile = next
     }
 
-    func setVoiceRecognitionEnabled(_ enabled: Bool) {
-        var next = profile
-        next.voiceRecognitionEnabled = enabled
-        profile = next
-    }
-
     func setNotificationsEnabled(_ enabled: Bool) {
         var next = profile
         next.notificationsEnabled = enabled
@@ -501,62 +495,6 @@ final class LearningState: ObservableObject {
             in: &next
         )
         profile = next
-    }
-
-    @discardableResult
-    func recordPracticeResult(lesson: BeginnerLesson, step: LessonStep, selectedAnswer: String?, correct: Bool, mode: String, now: Date = Date()) -> LearningFeedback {
-        var next = profile
-        let correctedLine = correctedLine(for: step)
-        let attempted = selectedAnswer ?? "No answer captured"
-        let correction = correct
-            ? "Good: \(correctedLine)"
-            : "Use: \(correctedLine)"
-        let feedback = makeFeedback(
-            source: mode,
-            prompt: step.prompt,
-            attempt: attempted,
-            correction: correction,
-            naturalPhrase: naturalPhrase(for: step, fallback: correctedLine),
-            pronunciationTip: rhythmTip(for: correctedLine),
-            savedTakeaway: correct ? naturalPhrase(for: step, fallback: correctedLine) : correctedLine,
-            nextAction: correct ? "Say the line aloud once, then continue." : "Repeat the corrected line once before moving on."
-        )
-        addFeedback(feedback, in: &next)
-        updateSkill(mode, title: mode, delta: 1, confidenceDelta: correct ? 4 : -3, in: &next)
-
-        if !correct {
-            let retryLine = naturalPhrase(for: step, fallback: self.correctedLine(for: step))
-            addLearningObject(
-                SavedLearningObject(
-                    id: "mistake-\(step.id)",
-                    kind: .mistake,
-                    text: retryLine,
-                    translation: step.helper,
-                    source: mode,
-                    note: "Mistake saved for retry.",
-                    createdDay: dayString(for: now)
-                ),
-                in: &next,
-                now: now
-            )
-        } else if let selectedAnswer {
-            addLearningObject(
-                SavedLearningObject(
-                    id: "phrase-\(step.id)-\(stableID(selectedAnswer))",
-                    kind: .phrase,
-                    text: selectedAnswer,
-                    translation: step.helper,
-                    source: mode,
-                    note: "Answered from \(lesson.title).",
-                    createdDay: dayString(for: now)
-                ),
-                in: &next,
-                now: now
-            )
-        }
-
-        profile = next
-        return feedback
     }
 
     @discardableResult

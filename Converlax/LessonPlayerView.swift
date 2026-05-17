@@ -428,21 +428,15 @@ struct LessonModePlayerView: View {
     @ObservedObject var state: LearningState
     @Environment(\.dismiss) private var dismiss
     @State private var stepIndex = 0
-    @State private var selectedAnswer: String?
-    @State private var checked = false
     @State private var completed = false
     @State private var audioEnabled = false
     @State private var savedStepIDs: Set<String> = []
-    @State private var feedback: LearningFeedback?
     @State private var speechPhase: SpeechPracticePhase = .ready
     @State private var transcript = ""
     @State private var speechFeedback: LearningFeedback?
     @State private var speechErrorMessage: String?
     @StateObject private var speechRecognizer = SpeechRecognitionService()
     @State private var didApplyLaunchSpeechState = false
-    @State private var answeredCount = 0
-    @State private var correctCount = 0
-    @State private var speakingAcceptedCount = 0
     @State private var completionResult: CompletionCelebrationResult?
 
     private var modeSteps: [LessonStep] {
@@ -544,11 +538,8 @@ struct LessonModePlayerView: View {
             VideoLessonStepCard(
                 lesson: lesson,
                 step: step,
-                selectedAnswer: $selectedAnswer,
-                checked: checked,
                 audioEnabled: audioEnabled,
                 savedCurrentLine: savedCurrentLine,
-                feedback: feedback,
                 speechPhase: speechPhase,
                 transcript: transcript,
                 voiceLevel: speechRecognizer.voiceLevel,
@@ -592,8 +583,6 @@ struct LessonModePlayerView: View {
 
     private var canAdvance: Bool {
         switch currentInteraction {
-        case .choice:
-            return selectedAnswer != nil
         case .speech:
             return speechPhase == .accepted
         case .read:
@@ -602,16 +591,13 @@ struct LessonModePlayerView: View {
     }
 
     private var buttonTitle: String {
-        if currentInteraction == .choice && !checked {
-            return "Check answer"
-        }
         return stepIndex == modeSteps.count - 1 ? "Finish \(mode.shortTitle.lowercased())" : "Continue"
     }
 
     private var currentInteraction: LessonModeInteraction {
         switch mode {
         case .video:
-            return step.kind == .choice ? .choice : (step.kind == .speak ? .speech : .read)
+            return step.kind == .teach ? .read : .speech
         case .speakingDrill:
             return .speech
         case .qa:
@@ -621,22 +607,6 @@ struct LessonModePlayerView: View {
 
     private func advance() {
         guard canAdvance else { return }
-
-        if currentInteraction == .choice && !checked {
-            selectedAnswer = selectedAnswer ?? step.correctAnswer
-            let isCorrect = selectedAnswer == step.correctAnswer
-            feedback = state.recordPracticeResult(
-                lesson: lesson,
-                step: step,
-                selectedAnswer: selectedAnswer,
-                correct: isCorrect,
-                mode: mode.modeName
-            )
-            answeredCount += 1
-            correctCount += isCorrect ? 1 : 0
-            checked = true
-            return
-        }
 
         if stepIndex < modeSteps.count - 1 {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
@@ -681,7 +651,6 @@ struct LessonModePlayerView: View {
         case .transcript:
             Task { await generateSpeechFeedback() }
         case .feedback:
-            speakingAcceptedCount += 1
             speechPhase = .accepted
             advanceAfterSpeechAcceptance()
         case .accepted:
@@ -719,9 +688,6 @@ struct LessonModePlayerView: View {
     }
 
     private func resetStepState() {
-        selectedAnswer = nil
-        checked = false
-        feedback = nil
         resetSpeech()
     }
 
@@ -865,9 +831,8 @@ struct LessonModePlayerView: View {
 }
 
 private enum LessonModeInteraction {
-    case read
-    case choice
     case speech
+    case read
 }
 
 private struct LessonModeHeader: View {
@@ -899,11 +864,8 @@ private struct LessonModeHeader: View {
 private struct VideoLessonStepCard: View {
     let lesson: BeginnerLesson
     let step: LessonStep
-    @Binding var selectedAnswer: String?
-    let checked: Bool
     let audioEnabled: Bool
     let savedCurrentLine: Bool
-    let feedback: LearningFeedback?
     let speechPhase: SpeechPracticePhase
     let transcript: String
     let voiceLevel: Double
@@ -950,13 +912,7 @@ private struct VideoLessonStepCard: View {
             switch step.kind {
             case .teach:
                 EmptyView()
-            case .choice:
-                ChoiceAnswers(step: step, selectedAnswer: $selectedAnswer, checked: checked, accent: lesson.accent.color)
-                ChoiceResult(step: step, selectedAnswer: selectedAnswer, checked: checked)
-                if let feedback, checked {
-                    LearningFeedbackCard(feedback: feedback)
-                }
-            case .speak:
+            case .choice, .speak:
                 SpeechPracticePanel(
                     phase: speechPhase,
                     transcript: transcript,
@@ -1005,27 +961,6 @@ private struct SpeakingDrillStepCard: View {
     }
 }
 
-private struct QALessonStepCard: View {
-    let step: LessonStep
-    @Binding var selectedAnswer: String?
-    let checked: Bool
-    let accent: Color
-    let savedCurrentLine: Bool
-    let feedback: LearningFeedback?
-    let onSaveLine: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            LessonPromptBlock(step: step, savedCurrentLine: savedCurrentLine, onSaveLine: onSaveLine)
-            ChoiceAnswers(step: step, selectedAnswer: $selectedAnswer, checked: checked, accent: accent)
-            ChoiceResult(step: step, selectedAnswer: selectedAnswer, checked: checked)
-            if let feedback, checked {
-                LearningFeedbackCard(feedback: feedback)
-            }
-        }
-    }
-}
-
 private struct LessonPromptBlock: View {
     let step: LessonStep
     let savedCurrentLine: Bool
@@ -1058,112 +993,6 @@ private struct LessonPromptBlock: View {
         }
         .padding(18)
         .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-    }
-}
-
-private struct ChoiceResult: View {
-    let step: LessonStep
-    let selectedAnswer: String?
-    let checked: Bool
-
-    var body: some View {
-        if checked, let correctAnswer = step.correctAnswer {
-            HStack {
-                Image(systemName: selectedAnswer == correctAnswer ? "checkmark.circle.fill" : "xmark.circle.fill")
-                Text(selectedAnswer == correctAnswer ? "Correct." : "Correct answer: \(correctAnswer)")
-                    .font(.headline.weight(.semibold))
-            }
-            .foregroundStyle(selectedAnswer == correctAnswer ? Color.mintSuccess : Color.red)
-            .padding(.vertical, 2)
-        }
-    }
-}
-
-private struct LessonModeCompletionPanel: View {
-    let mode: LessonModeKind
-    let lesson: BeginnerLesson
-    let answeredCount: Int
-    let correctCount: Int
-    let speakingAcceptedCount: Int
-    let savedLineCount: Int
-    let savedWords: [SavedWord]
-
-    private var accuracyText: String {
-        guard answeredCount > 0 else { return "No answers yet" }
-        return "\(correctCount) of \(answeredCount) answers correct"
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            ConverlaxMascotView(state: .celebrating, size: 104)
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(mode.completionTitle)
-                    .font(.largeTitle.weight(.bold))
-                Text("You finished \(lesson.title.lowercased()).")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-
-            VStack(spacing: 10) {
-                CompletionMetricRow(symbol: "checkmark.seal.fill", title: "Answers", value: accuracyText, color: .mintSuccess)
-                if speakingAcceptedCount > 0 {
-                    CompletionMetricRow(symbol: "mic.fill", title: "Speaking", value: "\(speakingAcceptedCount) passed", color: .primaryBlue)
-                }
-                if savedLineCount > 0 {
-                    CompletionMetricRow(symbol: "bookmark.fill", title: "Saved", value: "\(savedLineCount) lines", color: .warmAmber)
-                }
-            }
-
-            if !savedWords.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Lesson words")
-                        .font(.headline.weight(.semibold))
-                    ForEach(savedWords) { word in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(word.term)
-                                    .font(.subheadline.weight(.semibold))
-                                Text(word.translation)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            Image(systemName: "bolt.fill")
-                                .foregroundStyle(Color.primaryBlue)
-                        }
-                        .padding(.vertical, 6)
-                    }
-                }
-            }
-        }
-        .padding(20)
-    }
-}
-
-private struct CompletionMetricRow: View {
-    let symbol: String
-    let title: String
-    let value: String
-    let color: Color
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: symbol)
-                .font(.headline.weight(.semibold))
-                .foregroundStyle(color)
-                .frame(width: 30, height: 30)
-                .background(color.opacity(0.14), in: Circle())
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.secondary)
-                Text(value)
-                    .font(.subheadline.weight(.semibold))
-            }
-            Spacer()
-        }
-        .padding(.vertical, 6)
     }
 }
 
@@ -1350,71 +1179,6 @@ private struct VoicePromptBlock: View {
     }
 }
 
-private struct ChoiceAnswers: View {
-    let step: LessonStep
-    @Binding var selectedAnswer: String?
-    let checked: Bool
-    let accent: Color
-
-    var body: some View {
-        VStack(spacing: 12) {
-            ForEach(step.choices, id: \.self) { choice in
-                AnswerButton(
-                    choice: choice,
-                    selected: selectedAnswer == choice,
-                    correct: checked && step.correctAnswer == choice,
-                    incorrect: checked && selectedAnswer == choice && step.correctAnswer != choice,
-                    accent: accent
-                ) {
-                    guard !checked else { return }
-                    selectedAnswer = choice
-                }
-            }
-        }
-    }
-}
-
-private struct AnswerButton: View {
-    let choice: String
-    let selected: Bool
-    let correct: Bool
-    let incorrect: Bool
-    let accent: Color
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                Text(choice)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                Spacer()
-                if correct {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(Color.mintSuccess)
-                } else if incorrect {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(Color.red)
-                }
-            }
-            .padding(.horizontal, 15)
-            .padding(.vertical, 15)
-            .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(borderColor, lineWidth: selected || correct || incorrect ? 2 : 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var borderColor: Color {
-        if correct { return .mintSuccess }
-        if incorrect { return .red }
-        if selected { return accent }
-        return Color.clayStroke
-    }
-}
 
 private struct CompletionPanel: View {
     let lesson: BeginnerLesson

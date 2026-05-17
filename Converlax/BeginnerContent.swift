@@ -66,8 +66,6 @@ enum BeginnerContent {
         savedWords: [SavedWord],
         extraMistake: String = ""
     ) -> BeginnerLesson {
-        let answerChoices = [correctAnswer, commonMistake, extraMistake].filter { !$0.isEmpty }
-
         return BeginnerLesson(
             id: id,
             unit: unit,
@@ -81,7 +79,7 @@ enum BeginnerContent {
                 LessonStep(id: "\(id)-model", kind: .teach, title: "Listen and repeat", prompt: model, helper: modelHelper, choices: [], correctAnswer: nil),
                 LessonStep(id: "\(id)-speak", kind: .speak, title: "Say it your way", prompt: speak, helper: speakHelper, choices: [], correctAnswer: nil),
                 LessonStep(id: "\(id)-alternative", kind: .speak, title: "Natural alternative", prompt: alternative, helper: alternativeHelper, choices: [], correctAnswer: nil),
-                LessonStep(id: "\(id)-mistake", kind: .choice, title: "Common mistake", prompt: mistakePrompt, helper: "Choose the clear line, then say it out loud.", choices: answerChoices, correctAnswer: correctAnswer),
+                LessonStep(id: "\(id)-mistake", kind: .choice, title: "Common mistake", prompt: mistakePrompt, helper: "Say the clear line out loud.", choices: [], correctAnswer: correctAnswer),
                 LessonStep(id: "\(id)-roleplay", kind: .speak, title: "Roleplay", prompt: roleplay, helper: roleplayHelper, choices: [], correctAnswer: nil),
                 LessonStep(id: "\(id)-follow-up", kind: .speak, title: "Follow-up practice", prompt: followUp, helper: followUpHelper, choices: [], correctAnswer: nil)
             ],
@@ -114,8 +112,6 @@ enum BeginnerContent {
         followUpHelper: String,
         savedWords: [SavedWord]
     ) -> BeginnerLesson {
-        let answerChoices = [correctAnswer, commonMistake, extraMistake].filter { !$0.isEmpty }
-
         return BeginnerLesson(
             id: id,
             unit: unit,
@@ -129,7 +125,7 @@ enum BeginnerContent {
                 LessonStep(id: "\(id)-model", kind: .teach, title: "Listen and repeat", prompt: model, helper: modelHelper, choices: [], correctAnswer: nil),
                 LessonStep(id: "\(id)-speak", kind: .speak, title: "Say it your way", prompt: speak, helper: speakHelper, choices: [], correctAnswer: nil),
                 LessonStep(id: "\(id)-next-line", kind: .speak, title: "Natural next line", prompt: nextLine, helper: nextLineHelper, choices: [], correctAnswer: nil),
-                LessonStep(id: "\(id)-check", kind: .choice, title: "Clear answer", prompt: checkPrompt, helper: "Choose the natural French line, then say it out loud.", choices: answerChoices, correctAnswer: correctAnswer),
+                LessonStep(id: "\(id)-check", kind: .choice, title: "Clear answer", prompt: checkPrompt, helper: "Say the natural French line out loud.", choices: [], correctAnswer: correctAnswer),
                 LessonStep(id: "\(id)-roleplay", kind: .speak, title: "Roleplay", prompt: roleplay, helper: roleplayHelper, choices: [], correctAnswer: nil),
                 LessonStep(id: "\(id)-follow-up", kind: .speak, title: "Follow-up practice", prompt: followUp, helper: followUpHelper, choices: [], correctAnswer: nil)
             ],
@@ -457,7 +453,7 @@ enum BeginnerContent {
             correctAnswer: "Do you have a larger size?",
             commonMistake: "You have more big size?",
             roleplay: "The assistant says, This one is 30 dollars, but the blue one is on sale.",
-            roleplayHelper: "Ask about the sale item or choose one.",
+            roleplayHelper: "Ask about the sale item or name the one you want.",
             followUp: "I'll take the blue one, please.",
             followUpHelper: "Use I'll take when you have decided to buy.",
             savedWords: [
@@ -637,7 +633,7 @@ enum BeginnerContent {
             correctAnswer: "Should we test it with one customer first?",
             commonMistake: "Should we testing it with one customer first?",
             roleplay: "A teammate asks, Which plan should we choose for the first version?",
-            roleplayHelper: "Choose one option and give one short work reason.",
+            roleplayHelper: "Name one option and give one short work reason.",
             followUp: "What do you think?",
             followUpHelper: "Ask back so the conversation becomes a decision.",
             savedWords: [
@@ -757,7 +753,7 @@ enum BeginnerContent {
             correctAnswer: "Just to confirm, boarding is at 6:40, right?",
             commonMistake: "Confirm, boarding at 6:40, yes?",
             roleplay: "An airline staff member asks, How can I help you?",
-            roleplayHelper: "Choose one issue: gate, delay, baggage, or confirmation.",
+            roleplayHelper: "Name one issue: gate, delay, baggage, or confirmation.",
             followUp: "Thanks. I'll go to the gate now.",
             followUpHelper: "Close with the next action after you confirm.",
             savedWords: [
