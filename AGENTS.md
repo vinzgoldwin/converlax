@@ -25,6 +25,19 @@ Converlax is a speaking-practice iOS app. Keep the product calm, direct, and eas
 - Never use sparkle icons. They make the product feel generic and less calm.
 - Generate and use app illustration assets with transparent backgrounds. Do not ship opaque white or colored square backplates unless the UI explicitly calls for a framed tile.
 
+## Anti-Slop Rules
+
+- Before adding UI, ask whether it helps the current screen do its one job. If not, hide it behind a detail screen or do not add it.
+- Do not create root-screen feature menus. Root screens should have one dominant action and, at most, a small number of quiet secondary rows.
+- Do not show two actions that do nearly the same thing on the same screen. Pick the action that best matches the screen's job.
+- Do not expose advanced lesson/practice modes from primary lesson or root flows. Keep alternate modes behind an intentional detail path only when they are truly needed.
+- Do not add fake or low-value progress, stats, counts, or metadata. Remove minute cards, level cards, item counts, XP labels, storage-location notes, and progress bars unless they directly help the learner decide what to do next.
+- Do not repeat the same instruction in multiple places. If the title says what to do, the subtitle or prompt should not say it again.
+- Do not leave dead functionality behind. If a UI path is removed, remove its unused state, handlers, computed properties, and reset code in the same change.
+- Do not keep invisible fallback flows, placeholder routes, or unreachable buttons "just in case." They increase bugs and make the product harder to reason about.
+- Do not add controls just because the data exists. A control should map to a clear learner intention on that screen.
+- After changes, scan the affected screen for duplicate verbs, duplicate counts, duplicate headings, and controls that compete with the primary action.
+
 ## Journey UX
 
 - Profile should feel emotional, not analytical.
