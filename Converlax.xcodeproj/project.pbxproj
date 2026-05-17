@@ -24,6 +24,7 @@
 		0D4A0000000000000000000C /* PhaseOneViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D4B0000000000000000000C /* PhaseOneViews.swift */; };
 		0D4A0000000000000000000D /* SpeechRecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D4B0000000000000000000D /* SpeechRecognitionService.swift */; };
 		0D4A0000000000000000000E /* AIFeedbackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D4B0000000000000000000E /* AIFeedbackService.swift */; };
+		0D4A0000000000000000000F /* TutorAIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D4B0000000000000000000F /* TutorAIService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -55,6 +56,7 @@
 		0D4B0000000000000000000C /* PhaseOneViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhaseOneViews.swift; sourceTree = "<group>"; };
 		0D4B0000000000000000000D /* SpeechRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechRecognitionService.swift; sourceTree = "<group>"; };
 		0D4B0000000000000000000E /* AIFeedbackService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIFeedbackService.swift; sourceTree = "<group>"; };
+		0D4B0000000000000000000F /* TutorAIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorAIService.swift; sourceTree = "<group>"; };
 		0D5C00000000000000000002 /* ConverlaxRootTabsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConverlaxRootTabsUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -112,6 +114,7 @@
 				0D4B0000000000000000000C /* PhaseOneViews.swift */,
 				0D4B0000000000000000000D /* SpeechRecognitionService.swift */,
 				0D4B0000000000000000000E /* AIFeedbackService.swift */,
+				0D4B0000000000000000000F /* TutorAIService.swift */,
 				0D3E81B92C9D1D1500A0C001 /* Assets.xcassets */,
 			);
 			path = Converlax;
@@ -239,6 +242,7 @@
 				0D4A0000000000000000000C /* PhaseOneViews.swift in Sources */,
 				0D4A0000000000000000000D /* SpeechRecognitionService.swift in Sources */,
 				0D4A0000000000000000000E /* AIFeedbackService.swift in Sources */,
+				0D4A0000000000000000000F /* TutorAIService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

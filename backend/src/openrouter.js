@@ -1,4 +1,9 @@
-import { feedbackJsonSchema, feedbackResponseSchema } from "./schema.js";
+import {
+  feedbackJsonSchema,
+  feedbackResponseSchema,
+  tutorJsonSchema,
+  tutorResponseSchema
+} from "./schema.js";
 
 export class UpstreamError extends Error {
   constructor(code, message, statusCode = 502, retryable = true) {
@@ -19,13 +24,34 @@ const SYSTEM_PROMPT = [
   "Be encouraging without being fluffy. Prefer one clear next action."
 ].join(" ");
 
-function buildUserPrompt(input) {
+const TUTOR_SYSTEM_PROMPT = [
+  "You are Converlax's calm conversational AI tutor for beginner English speaking practice.",
+  "Stay focused on helping the learner say one useful English idea more clearly.",
+  "Do not become a generic chatbot. Do not add lesson menus, analytics, confidence scores, or long explanations.",
+  "Return a short natural tutor reply, one corrected or more natural version, and one focused next speaking prompt.",
+  "Use recent context only to choose useful beginner practice. The learner's latest message is always the priority.",
+  "If the message is off topic, gently steer it back to simple speaking practice."
+].join(" ");
+
+function buildFeedbackUserPrompt(input) {
   return [
     "Return only JSON that matches the provided schema.",
     "Evaluate this spoken attempt for a language learner.",
     "",
     JSON.stringify({
       transcript: input.transcript,
+      context: input.context ?? {}
+    }, null, 2)
+  ].join("\n");
+}
+
+function buildTutorUserPrompt(input) {
+  return [
+    "Return only JSON that matches the provided schema.",
+    "Tutor this beginner English learner's latest message.",
+    "",
+    JSON.stringify({
+      learnerMessage: input.message,
       context: input.context ?? {}
     }, null, 2)
   ].join("\n");
@@ -75,6 +101,55 @@ function extractMessageContent(payload) {
 }
 
 export async function requestOpenRouterFeedback(input, config, fetchImpl = fetch) {
+  return requestOpenRouterJson({
+    input,
+    config,
+    fetchImpl,
+    systemPrompt: SYSTEM_PROMPT,
+    userPrompt: buildFeedbackUserPrompt(input),
+    schemaName: "converlax_speaking_feedback",
+    jsonSchema: feedbackJsonSchema,
+    responseSchema: feedbackResponseSchema,
+    invalidJsonCode: "AI_FEEDBACK_INVALID_JSON",
+    invalidSchemaCode: "AI_FEEDBACK_INVALID_SCHEMA",
+    resultKey: "feedback",
+    maxTokens: 700,
+    temperature: 0.25
+  });
+}
+
+export async function requestOpenRouterTutor(input, config, fetchImpl = fetch) {
+  return requestOpenRouterJson({
+    input,
+    config,
+    fetchImpl,
+    systemPrompt: TUTOR_SYSTEM_PROMPT,
+    userPrompt: buildTutorUserPrompt(input),
+    schemaName: "converlax_tutor_response",
+    jsonSchema: tutorJsonSchema,
+    responseSchema: tutorResponseSchema,
+    invalidJsonCode: "AI_TUTOR_INVALID_JSON",
+    invalidSchemaCode: "AI_TUTOR_INVALID_SCHEMA",
+    resultKey: "tutor",
+    maxTokens: 420,
+    temperature: 0.35
+  });
+}
+
+async function requestOpenRouterJson({
+  config,
+  fetchImpl,
+  systemPrompt,
+  userPrompt,
+  schemaName,
+  jsonSchema,
+  responseSchema,
+  invalidJsonCode,
+  invalidSchemaCode,
+  resultKey,
+  maxTokens,
+  temperature
+}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), config.openRouterTimeoutMs);
 
@@ -91,17 +166,17 @@ export async function requestOpenRouterFeedback(input, config, fetchImpl = fetch
       body: JSON.stringify({
         model: config.openRouterModel,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: buildUserPrompt(input) }
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
         ],
-        temperature: 0.25,
-        max_tokens: 700,
+        temperature,
+        max_tokens: maxTokens,
         response_format: {
           type: "json_schema",
           json_schema: {
-            name: "converlax_speaking_feedback",
+            name: schemaName,
             strict: true,
-            schema: feedbackJsonSchema
+            schema: jsonSchema
           }
         }
       }),
@@ -127,18 +202,18 @@ export async function requestOpenRouterFeedback(input, config, fetchImpl = fetch
   }
 
   const messageContent = extractMessageContent(payload);
-  const feedbackJson = safeParseJson(messageContent);
-  if (!feedbackJson) {
-    throw new UpstreamError("AI_FEEDBACK_INVALID_JSON", "The model returned feedback in an invalid format.", 502, true);
+  const responseJson = safeParseJson(messageContent);
+  if (!responseJson) {
+    throw new UpstreamError(invalidJsonCode, "The model returned an invalid format.", 502, true);
   }
 
-  const parsed = feedbackResponseSchema.safeParse(feedbackJson);
+  const parsed = responseSchema.safeParse(responseJson);
   if (!parsed.success) {
-    throw new UpstreamError("AI_FEEDBACK_INVALID_SCHEMA", "The model returned incomplete feedback.", 502, true);
+    throw new UpstreamError(invalidSchemaCode, "The model returned incomplete tutor output.", 502, true);
   }
 
   return {
-    feedback: parsed.data,
+    [resultKey]: parsed.data,
     upstream: {
       id: typeof payload.id === "string" ? payload.id : null,
       model: typeof payload.model === "string" ? payload.model : config.openRouterModel

@@ -672,36 +672,66 @@ final class LearningState: ObservableObject {
     }
 
     @discardableResult
-    func recordTutorCorrection(for message: String, aiFeedback: AIFeedback? = nil, now: Date = Date()) -> LearningFeedback {
+    func recordTutorCorrection(
+        for message: String,
+        tutorResponse: TutorAIResponse,
+        isFallback: Bool = false,
+        now: Date = Date()
+    ) -> LearningFeedback {
         var next = profile
-        let natural = tutorNaturalPhrase(for: message)
-        let feedback = makeFeedback(
+        let day = dayString(for: now)
+        let savedPhrase = tutorResponse.savedPhrase?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let reviewPrompt = tutorResponse.reviewItem?.prompt.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let reviewAnswer = tutorResponse.reviewItem?.answer.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let feedback = LearningFeedback(
+            id: "feedback-tutor-\(stableID(message + tutorResponse.correction))-\(day)",
             source: "Tutor",
-            prompt: "Tutor chat",
-            attempt: message,
-            correction: "Try: \(natural)",
-            naturalPhrase: natural,
-            pronunciationTip: tutorTip(for: natural),
-            savedTakeaway: natural,
-            nextAction: "Save the phrase, then say it once in voice mode.",
-            aiFeedback: aiFeedback
+            pronunciation: 0,
+            grammar: 0,
+            vocabulary: 0,
+            fluency: 0,
+            meaning: 0,
+            confidence: 0,
+            promptText: "Tutor chat",
+            attemptedText: message,
+            correction: tutorResponse.correction,
+            betterPhrase: tutorResponse.correction,
+            pronunciationTip: isFallback ? "Local guidance only. Say the sentence slowly and keep the final word clear." : "",
+            claritySignal: "",
+            savedTakeaway: savedPhrase ?? tutorResponse.correction,
+            nextAction: tutorResponse.nextPrompt,
+            grammarCorrection: tutorResponse.correction,
+            naturalVersion: tutorResponse.correction,
+            pronunciationNotes: "",
+            vocabularyImprovement: "",
+            fluencyTip: "",
+            didWell: tutorResponse.tutorReply,
+            tryNext: tutorResponse.nextPrompt,
+            reviewItemPrompt: reviewPrompt,
+            reviewItemAnswer: reviewAnswer,
+            feedbackProvider: isFallback ? "local-fallback" : "openrouter",
+            createdDay: day
         )
         addFeedback(feedback, in: &next)
-        addLearningObject(
-            SavedLearningObject(
-                id: "tutor-message-\(stableID(natural))",
-                kind: .tutorMessage,
-                text: natural,
-                translation: feedback.correction,
-                source: "Tutor",
-                note: feedback.pronunciationTip,
-                createdDay: dayString(for: now)
-            ),
-            in: &next,
-            now: now
-        )
+
+        if let savedPhrase, !savedPhrase.isEmpty {
+            addLearningObject(
+                SavedLearningObject(
+                    id: "tutor-message-\(stableID(savedPhrase))",
+                    kind: .tutorMessage,
+                    text: savedPhrase,
+                    translation: "Saved from Tutor",
+                    source: "Tutor",
+                    note: tutorResponse.nextPrompt,
+                    createdDay: day
+                ),
+                in: &next,
+                now: now
+            )
+        }
+
         addFeedbackReviewItemIfNeeded(feedback, source: "Tutor", in: &next, now: now)
-        updateSkill("Tutor", title: "Tutor practice", delta: 1, confidenceDelta: 2, in: &next)
+        updateSkill("Tutor", title: "Tutor practice", delta: 1, confidenceDelta: isFallback ? 0 : 2, in: &next)
         profile = next
         return feedback
     }
@@ -1281,27 +1311,6 @@ final class LearningState: ObservableObject {
             return "Make a short pause before the question so the listener hears two clear ideas."
         }
         return "Keep the sentence to one idea, then pause before adding more detail."
-    }
-
-    private func tutorNaturalPhrase(for message: String) -> String {
-        let lowercased = message.lowercased()
-        if lowercased.contains("order coffee") {
-            return "Could I have a coffee, please?"
-        }
-        if lowercased.contains("travel") {
-            return "Could you help me find the station?"
-        }
-        if lowercased.contains("saved words") {
-            return "Can we practice my saved words?"
-        }
-        return message.hasSuffix("?") ? message : "\(message)."
-    }
-
-    private func tutorTip(for phrase: String) -> String {
-        if phrase.hasSuffix("?") {
-            return "Use a gentle rising tone at the end of the question."
-        }
-        return "Say the first half slowly, then finish with a confident final word."
     }
 
     private func claritySignal(for score: Int) -> String {

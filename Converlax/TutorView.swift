@@ -2,8 +2,6 @@ import SwiftUI
 
 struct TutorView: View {
     @ObservedObject var state: LearningState
-    @State private var input = ""
-    @State private var isVoiceInputActive = true
     @State private var voicePhase: SpeechPracticePhase = .ready
     @State private var showHistory = false
     @State private var lastFeedback: LearningFeedback?
@@ -12,17 +10,11 @@ struct TutorView: View {
     @State private var voiceTranscript = ""
     @State private var voiceErrorMessage: String?
     @State private var savedMessageIDs: Set<UUID> = []
+    @State private var isTutorResponding = false
     @StateObject private var speechRecognizer = SpeechRecognitionService()
     @State private var didApplyLaunchVoiceState = false
     @State private var messages = [
-        ChatMessage(text: "Say a phrase from your current unit, or ask what to say next.", isUser: false),
-        ChatMessage(text: "I will listen first, then give you a clearer English version.", isUser: false)
-    ]
-
-    private let suggestions = [
-        "Practice my saved words",
-        "How do I order coffee?",
-        "Give me a travel phrase"
+        ChatMessage(text: "Say one English sentence. I will help you make it clearer.", isUser: false)
     ]
 
     var body: some View {
@@ -102,7 +94,7 @@ struct TutorView: View {
                 if let lastFeedback {
                     LearningFeedbackCard(feedback: lastFeedback)
                         .accessibilityIdentifier("tutor-correction-card")
-                    if lastFeedback.feedbackProvider == "local", let feedbackNotice {
+                    if lastFeedback.feedbackProvider.hasPrefix("local"), let feedbackNotice {
                         FeedbackFallbackNotice(text: feedbackNotice)
                     }
                 }
@@ -112,32 +104,19 @@ struct TutorView: View {
     }
 
     private var composer: some View {
-        Group {
-            if isVoiceInputActive {
-                SpeechPracticePanel(
-                    phase: voicePhase,
-                    transcript: voiceTranscript,
-                    feedback: nil,
-                    accent: .primaryBlue,
-                    voiceLevel: speechRecognizer.voiceLevel,
-                    errorMessage: voiceErrorMessage,
-                    primaryActionTitle: tutorVoiceActionTitle,
-                    onPrimary: handleVoicePrimaryAction,
-                    onCancel: cancelVoice
-                )
-                .padding(20)
-                .background(.regularMaterial)
-
-            } else {
-                TextComposer(
-                    input: $input,
-                    suggestions: suggestions,
-                    onSelectSuggestion: sendSuggestion,
-                    onStartVoice: startVoice,
-                    onSend: sendMessage
-                )
-            }
-        }
+        SpeechPracticePanel(
+            phase: voicePhase,
+            transcript: voiceTranscript,
+            feedback: nil,
+            accent: .primaryBlue,
+            voiceLevel: speechRecognizer.voiceLevel,
+            errorMessage: voiceErrorMessage,
+            primaryActionTitle: tutorVoiceActionTitle,
+            onPrimary: handleVoicePrimaryAction,
+            onCancel: cancelVoice
+        )
+        .padding(20)
+        .background(.regularMaterial)
     }
 
     private var tutorVoiceActionTitle: String? {
@@ -147,19 +126,6 @@ struct TutorView: View {
         default:
             nil
         }
-    }
-
-    private func sendSuggestion(_ suggestion: String) {
-        input = suggestion
-        sendMessage()
-    }
-
-    private func startVoice() {
-        noInputNotice = nil
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.86)) {
-            isVoiceInputActive = true
-        }
-        startVoiceRecording()
     }
 
     private func handleVoicePrimaryAction() {
@@ -194,24 +160,6 @@ struct TutorView: View {
         }
     }
 
-    private func sendMessage() {
-        let clean = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !clean.isEmpty else {
-            noInputNotice = "Start speaking when you are ready."
-            return
-        }
-        let word = state.courseSavedWords.last ?? state.courseLessons.first?.savedWords.first ?? BeginnerContent.lessons[0].savedWords[0]
-        withAnimation {
-            noInputNotice = nil
-            feedbackNotice = nil
-            messages.append(ChatMessage(text: clean, isUser: true))
-            messages.append(ChatMessage(text: "\(word.term) means \(word.translation). Try it in this sentence: \(word.example)", isUser: false, canSave: true))
-            messages.append(ChatMessage(text: "Next best action: \(state.nextRecommendation.title).", isUser: false, canSave: true))
-        }
-        lastFeedback = state.recordTutorCorrection(for: clean)
-        input = ""
-    }
-
     private func finishVoiceRecording() {
         voicePhase = .transcribing
         let recognizedText = speechRecognizer.stopRecording()
@@ -239,39 +187,55 @@ struct TutorView: View {
         voicePhase = .processing
         voiceErrorMessage = nil
 
-        let aiFeedback: AIFeedback?
+        await submitTutorMessage(recognizedText)
+    }
+
+    @MainActor
+    private func submitTutorMessage(_ userMessage: String) async {
+        let clean = userMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty else { return }
+        guard !isTutorResponding else { return }
+
+        isTutorResponding = true
+        withAnimation {
+            noInputNotice = nil
+            feedbackNotice = nil
+            messages.append(ChatMessage(text: clean, isUser: true))
+        }
+
+        let tutorResponse: TutorAIResponse
+        let isFallback: Bool
         do {
-            aiFeedback = try await AIFeedbackService.shared.feedback(
-                transcript: recognizedText,
-                context: AIFeedbackRequestContext(
-                    mode: "Tutor voice",
-                    lessonTitle: state.currentLesson.title,
-                    prompt: "Tutor chat voice message",
-                    expectedPhrase: nil,
-                    targetLanguage: state.profile.targetLanguage.rawValue,
-                    proficiencyLevel: state.profile.currentLevel.code,
-                    roleplayTitle: nil,
-                    roleplaySetting: nil,
-                    usefulPhrases: state.savedLines.prefix(5).map(\.text)
-                )
-            )
+            tutorResponse = try await TutorAIService.shared.response(message: clean, context: tutorContext())
+            isFallback = false
         } catch {
-            aiFeedback = nil
-            feedbackNotice = AIFeedbackService.fallbackMessage(for: error)
+            tutorResponse = TutorAIService.fallbackResponse(for: clean)
+            feedbackNotice = TutorAIService.fallbackMessage(for: error)
+            isFallback = true
         }
 
         withAnimation(.spring(response: 0.3, dampingFraction: 0.86)) {
-            addTutorResponse(for: recognizedText, aiFeedback: aiFeedback)
-            resetVoiceInput(keepVoiceReady: true)
+            messages.append(ChatMessage(text: tutorResponse.tutorReply, isUser: false, canSave: true))
+            lastFeedback = state.recordTutorCorrection(for: clean, tutorResponse: tutorResponse, isFallback: isFallback)
+            resetVoiceInput()
+            isTutorResponding = false
         }
     }
-    private func addTutorResponse(for userMessage: String, aiFeedback: AIFeedback? = nil) {
-        let lesson = state.currentLesson
-        withAnimation {
-            messages.append(ChatMessage(text: userMessage, isUser: true))
-            messages.append(ChatMessage(text: "Yes. Your next lesson is \(lesson.title.lowercased()). Start with: \(lesson.steps.first?.prompt ?? lesson.title)", isUser: false, canSave: true))
+
+    private func tutorContext() -> TutorAIRequestContext {
+        let recentMessages = messages.suffix(6).map { message in
+            TutorAIMessageContext(role: message.isUser ? "learner" : "tutor", text: message.text)
         }
-        lastFeedback = state.recordTutorCorrection(for: userMessage, aiFeedback: aiFeedback)
+
+        return TutorAIRequestContext(
+            targetLanguage: state.profile.targetLanguage.rawValue,
+            proficiencyLevel: state.profile.currentLevel.code,
+            currentLessonTitle: state.currentLesson.title,
+            currentLessonPrompt: state.currentLesson.steps.first?.prompt,
+            nextRecommendation: state.nextRecommendation.title,
+            recentSavedPhrases: state.savedLines.prefix(6).map(\.text),
+            recentTutorMessages: Array(recentMessages)
+        )
     }
 
     private func cancelVoice() {
@@ -279,9 +243,8 @@ struct TutorView: View {
         resetVoiceInput()
     }
 
-    private func resetVoiceInput(keepVoiceReady: Bool = false) {
+    private func resetVoiceInput() {
         voicePhase = .ready
-        isVoiceInputActive = keepVoiceReady
         voiceTranscript = ""
         voiceErrorMessage = nil
     }
@@ -299,12 +262,14 @@ struct TutorView: View {
 
     private func resetConversation() {
         speechRecognizer.cancelRecording()
-        messages = Array(messages.prefix(2))
+        messages = [
+            ChatMessage(text: "Say one English sentence. I will help you make it clearer.", isUser: false)
+        ]
         lastFeedback = nil
         noInputNotice = nil
         feedbackNotice = nil
         savedMessageIDs = []
-        resetVoiceInput(keepVoiceReady: true)
+        resetVoiceInput()
     }
 
     private func applyLaunchVoiceStateIfNeeded() {
@@ -314,7 +279,6 @@ struct TutorView: View {
         else { return }
 
         didApplyLaunchVoiceState = true
-        isVoiceInputActive = true
         voiceTranscript = ""
         voiceErrorMessage = nil
         noInputNotice = nil
@@ -329,7 +293,7 @@ struct TutorView: View {
             voiceErrorMessage = "Voice practice needs Microphone and Speech Recognition. Enable access in Settings, then try again."
             voicePhase = .permissionDenied
         default:
-            isVoiceInputActive = false
+            voicePhase = .ready
         }
     }
 
@@ -339,53 +303,6 @@ struct TutorView: View {
         }
         let collapsed = String(characters).split(separator: "-").joined(separator: "-")
         return String(collapsed.prefix(48)).isEmpty ? "message" : String(collapsed.prefix(48))
-    }
-}
-
-private struct TextComposer: View {
-    @Binding var input: String
-    let suggestions: [String]
-    let onSelectSuggestion: (String) -> Void
-    let onStartVoice: () -> Void
-    let onSend: () -> Void
-
-    var body: some View {
-        VStack(spacing: 12) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ForEach(suggestions, id: \.self) { suggestion in
-                        Button {
-                            onSelectSuggestion(suggestion)
-                        } label: {
-                            Text(suggestion)
-                                .font(.footnote.weight(.semibold))
-                                .foregroundStyle(Color.primaryBlue)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 10)
-                                .background(Color.primaryBlue.opacity(0.1), in: Capsule())
-                        }
-                    }
-                }
-                .padding(.horizontal, 20)
-            }
-
-            HStack(spacing: 10) {
-                Button(action: onStartVoice) {
-                    Label("Start speaking", systemImage: "mic.fill")
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 48)
-                        .background(Color.primaryBlue, in: Capsule())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Start voice input")
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 12)
-        }
-        .padding(.top, 12)
-        .background(.regularMaterial)
     }
 }
 

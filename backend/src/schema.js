@@ -18,6 +18,23 @@ export const feedbackRequestSchema = z.object({
   clientRequestId: z.string().trim().max(80).optional()
 }).strict();
 
+export const tutorRequestSchema = z.object({
+  message: z.string().trim().min(1).max(1200),
+  context: z.object({
+    targetLanguage: optionalText,
+    proficiencyLevel: optionalText,
+    currentLessonTitle: optionalText,
+    currentLessonPrompt: optionalText,
+    nextRecommendation: optionalText,
+    recentSavedPhrases: z.array(z.string().trim().min(1).max(160)).max(8).optional(),
+    recentTutorMessages: z.array(z.object({
+      role: z.enum(["learner", "tutor"]),
+      text: z.string().trim().min(1).max(360)
+    }).strict()).max(8).optional()
+  }).strict().default({}),
+  clientRequestId: z.string().trim().max(80).optional()
+}).strict();
+
 export const feedbackResponseSchema = z.object({
   overallSpeakingConfidence: z.number().int().min(0).max(100),
   pronunciationNotes: z.string().trim().min(1).max(360),
@@ -32,6 +49,17 @@ export const feedbackResponseSchema = z.object({
     prompt: z.string().trim().min(1).max(220),
     answer: z.string().trim().min(1).max(220)
   }).strict()
+}).strict();
+
+export const tutorResponseSchema = z.object({
+  tutorReply: z.string().trim().min(1).max(280),
+  correction: z.string().trim().min(1).max(280),
+  nextPrompt: z.string().trim().min(1).max(220),
+  savedPhrase: z.string().trim().min(1).max(180).optional(),
+  reviewItem: z.object({
+    prompt: z.string().trim().min(1).max(220),
+    answer: z.string().trim().min(1).max(220)
+  }).strict().optional()
 }).strict();
 
 export const feedbackJsonSchema = {
@@ -105,6 +133,55 @@ export const feedbackJsonSchema = {
       description: "A useful phrase to save for future review."
     },
     reviewItemSuggestion: {
+      type: "object",
+      additionalProperties: false,
+      required: ["prompt", "answer"],
+      properties: {
+        prompt: {
+          type: "string",
+          minLength: 1,
+          maxLength: 220
+        },
+        answer: {
+          type: "string",
+          minLength: 1,
+          maxLength: 220
+        }
+      }
+    }
+  }
+};
+
+export const tutorJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["tutorReply", "correction", "nextPrompt"],
+  properties: {
+    tutorReply: {
+      type: "string",
+      minLength: 1,
+      maxLength: 280,
+      description: "One short natural reply from a calm beginner English tutor."
+    },
+    correction: {
+      type: "string",
+      minLength: 1,
+      maxLength: 280,
+      description: "A corrected or more natural version of the learner's message."
+    },
+    nextPrompt: {
+      type: "string",
+      minLength: 1,
+      maxLength: 220,
+      description: "One focused next speaking prompt. Keep it specific and speakable."
+    },
+    savedPhrase: {
+      type: "string",
+      minLength: 1,
+      maxLength: 180,
+      description: "Optional phrase worth saving for future practice."
+    },
+    reviewItem: {
       type: "object",
       additionalProperties: false,
       required: ["prompt", "answer"],

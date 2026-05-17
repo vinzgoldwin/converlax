@@ -35,6 +35,60 @@ final class ConverlaxRootTabsUITests: XCTestCase {
         XCTAssertTrue(element("profile-journey-dashboard", in: app).exists)
     }
 
+    func testTutorIsVoiceOnly() throws {
+        let app = launchTutorApp(extraArguments: [])
+
+        XCTAssertTrue(element("speech-practice-panel", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Start speaking"].exists)
+        XCTAssertFalse(app.textFields["tutor-text-input"].exists)
+        XCTAssertFalse(app.buttons["tutor-send-button"].exists)
+    }
+
+    func testVoiceTutorUsesAIReplyNotCannedLessonText() throws {
+        let app = launchTutorApp(extraArguments: [
+            "-ConverlaxUseMockTutorAI",
+            "-ConverlaxTutorVoiceState",
+            "transcript"
+        ])
+
+        XCTAssertTrue(app.buttons["Send to Tutor"].waitForExistence(timeout: 5))
+        app.buttons["Send to Tutor"].tap()
+
+        XCTAssertTrue(app.staticTexts["Good. You're talking about yesterday, so use past tense."].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "Your next lesson is")).element.exists)
+    }
+
+    func testTutorBackendFailureShowsLocalFallback() throws {
+        let app = launchTutorApp(extraArguments: [
+            "-ConverlaxTutorAIBaseURL",
+            "http://127.0.0.1:1",
+            "-ConverlaxTutorVoiceState",
+            "transcript"
+        ])
+
+        XCTAssertTrue(app.buttons["Send to Tutor"].waitForExistence(timeout: 5))
+        app.buttons["Send to Tutor"].tap()
+
+        XCTAssertTrue(app.staticTexts["I can help with that. Keep it short and say one clear idea."].waitForExistence(timeout: 8))
+        XCTAssertTrue(anyElement(containing: "Showing local guidance", in: app).waitForExistence(timeout: 3))
+    }
+
+    func testTutorAIResponseCreatesReviewableLearningObjects() throws {
+        let app = launchTutorApp(extraArguments: [
+            "-ConverlaxUseMockTutorAI",
+            "-ConverlaxTutorVoiceState",
+            "transcript"
+        ])
+
+        XCTAssertTrue(app.buttons["Send to Tutor"].waitForExistence(timeout: 5))
+        app.buttons["Send to Tutor"].tap()
+
+        XCTAssertTrue(app.buttons["More feedback"].waitForExistence(timeout: 5))
+        app.buttons["More feedback"].tap()
+        XCTAssertTrue(anyElement(containing: "Say this in the past: I go to work yesterday.", in: app).waitForExistence(timeout: 3))
+        XCTAssertTrue(anyElement(containing: "I went to work yesterday.", in: app).exists)
+    }
+
     private func launchApp(initialTab: String) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
@@ -46,7 +100,26 @@ final class ConverlaxRootTabsUITests: XCTestCase {
         return app
     }
 
+    private func launchTutorApp(extraArguments: [String]) -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ConverlaxUseEnglishContent",
+            "-ConverlaxInitialTab",
+            "home",
+            "-ConverlaxInitialHomeRoute",
+            "tutor"
+        ] + extraArguments
+        app.launch()
+        return app
+    }
+
     private func element(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
         app.descendants(matching: .any)[identifier]
+    }
+
+    private func anyElement(containing text: String, in app: XCUIApplication) -> XCUIElement {
+        app.descendants(matching: .any)
+            .containing(NSPredicate(format: "label CONTAINS %@", text))
+            .element
     }
 }

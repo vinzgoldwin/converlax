@@ -3,8 +3,8 @@ import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import { fileURLToPath } from "node:url";
 import { loadConfig } from "./config.js";
-import { requestOpenRouterFeedback, UpstreamError } from "./openrouter.js";
-import { feedbackRequestSchema } from "./schema.js";
+import { requestOpenRouterFeedback, requestOpenRouterTutor, UpstreamError } from "./openrouter.js";
+import { feedbackRequestSchema, tutorRequestSchema } from "./schema.js";
 
 function validationErrorResponse(result) {
   return {
@@ -34,7 +34,8 @@ function publicError(code, message, retryable) {
 
 export async function buildServer({
   config = loadConfig(),
-  fetchFeedback = requestOpenRouterFeedback
+  fetchFeedback = requestOpenRouterFeedback,
+  fetchTutor = requestOpenRouterTutor
 } = {}) {
   const app = Fastify({
     logger: {
@@ -106,6 +107,52 @@ export async function buildServer({
       return reply.code(500).send(publicError(
         "INTERNAL_ERROR",
         "Feedback failed unexpectedly.",
+        true
+      ));
+    }
+  });
+
+  app.post("/v1/tutor", async (request, reply) => {
+    const parsed = tutorRequestSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send(validationErrorResponse(parsed));
+    }
+
+    if (!config.openRouterApiKey) {
+      return reply.code(503).send(publicError(
+        "OPENROUTER_NOT_CONFIGURED",
+        "AI Tutor is not configured on the backend.",
+        false
+      ));
+    }
+
+    const input = parsed.data;
+    request.log.info({
+      messageLength: input.message.length,
+      currentLessonTitle: input.context?.currentLessonTitle ?? "unknown"
+    }, "tutor request accepted");
+
+    try {
+      const result = await fetchTutor(input, config);
+      return reply.send({
+        ok: true,
+        tutor: result.tutor,
+        meta: {
+          provider: "openrouter",
+          model: result.upstream.model,
+          requestId: result.upstream.id
+        }
+      });
+    } catch (error) {
+      if (error instanceof UpstreamError) {
+        request.log.warn({ code: error.code, retryable: error.retryable }, "tutor upstream error");
+        return reply.code(error.statusCode).send(publicError(error.code, error.message, error.retryable));
+      }
+
+      request.log.error({ err: error }, "tutor unexpected error");
+      return reply.code(500).send(publicError(
+        "INTERNAL_ERROR",
+        "Tutor failed unexpectedly.",
         true
       ));
     }

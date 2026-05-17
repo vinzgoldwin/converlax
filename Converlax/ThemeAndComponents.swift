@@ -462,7 +462,9 @@ struct LearningFeedbackCard: View {
 
     @ViewBuilder
     private var speechFeedbackContent: some View {
-        FeedbackConfidenceSummary(confidence: feedback.confidence)
+        if shouldShowConfidence {
+            FeedbackConfidenceSummary(confidence: feedback.confidence)
+        }
 
         if let naturalVersion {
             FeedbackPrimaryLine(title: "Say it like this", text: naturalVersion, symbol: "quote.bubble.fill")
@@ -576,6 +578,10 @@ struct LearningFeedbackCard: View {
 
     private var feedbackTitle: String {
         isSpeechFeedback ? "Speaking feedback" : "Quick feedback"
+    }
+
+    private var shouldShowConfidence: Bool {
+        feedback.source.lowercased() != "tutor" && feedback.feedbackProvider != "local-fallback"
     }
 
     private var attemptTitle: String {
@@ -948,7 +954,7 @@ struct SpeechPracticePanel: View {
     }
 
     private var primaryActionButton: some View {
-        BreathingSpeechPrimaryButton(
+        SpeechPrimaryButton(
             title: primaryActionTitle ?? phase.actionTitle,
             symbol: primarySymbol,
             color: actionColor,
@@ -1156,23 +1162,19 @@ struct SpeechPracticePanel: View {
     }
 }
 
-private struct BreathingSpeechPrimaryButton: View {
+private struct SpeechPrimaryButton: View {
     let title: String
     let symbol: String
     let color: Color
     let phase: SpeechPracticePhase
     let isEnabled: Bool
     let action: () -> Void
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var breathes = false
-    @State private var pulses = false
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
                 Image(systemName: symbol)
                     .font(.headline.weight(.bold))
-                    .symbolEffect(.pulse, value: pulses)
                 Text(title)
                     .font(.headline.weight(.bold))
                     .lineLimit(1)
@@ -1183,122 +1185,15 @@ private struct BreathingSpeechPrimaryButton: View {
             .frame(minHeight: 56)
             .padding(.horizontal, 18)
             .background(buttonBackground)
-            .overlay(pulseOverlay)
-            .shadow(color: color.opacity(shadowOpacity), radius: shadowRadius, y: 6)
-            .scaleEffect(buttonScale)
-            .animation(animation, value: breathes)
-            .animation(animation, value: pulses)
+            .shadow(color: color.opacity(isEnabled ? 0.12 : 0), radius: 10, y: 6)
         }
         .buttonStyle(.plain)
-        .onAppear(perform: startAnimation)
-        .onChange(of: phase) { _, _ in
-            startAnimation()
-        }
         .accessibilityAddTraits(.isButton)
     }
 
     private var buttonBackground: some View {
         RoundedRectangle(cornerRadius: 14, style: .continuous)
             .fill(color)
-    }
-
-    @ViewBuilder
-    private var pulseOverlay: some View {
-        if showsMotion {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(color.opacity(phase == .recording ? 0.30 : 0.20), lineWidth: phase == .recording ? 2 : 1.5)
-                .scaleEffect(overlayScale)
-                .opacity(overlayOpacity)
-        }
-    }
-
-    private var showsMotion: Bool {
-        isEnabled && !reduceMotion && (phase == .ready || phase == .recording)
-    }
-
-    private var buttonScale: CGFloat {
-        guard showsMotion else { return 1 }
-        switch phase {
-        case .ready:
-            return breathes ? 1.025 : 0.992
-        case .recording:
-            return pulses ? 1.012 : 0.998
-        default:
-            return 1
-        }
-    }
-
-    private var overlayScale: CGFloat {
-        guard showsMotion else { return 1 }
-        switch phase {
-        case .ready:
-            return breathes ? 1.06 : 1.01
-        case .recording:
-            return pulses ? 1.095 : 1.015
-        default:
-            return 1
-        }
-    }
-
-    private var overlayOpacity: Double {
-        guard showsMotion else { return 0 }
-        switch phase {
-        case .ready:
-            return breathes ? 0.08 : 0.22
-        case .recording:
-            return pulses ? 0.06 : 0.24
-        default:
-            return 0
-        }
-    }
-
-    private var shadowOpacity: Double {
-        guard isEnabled else { return 0 }
-        switch phase {
-        case .ready:
-            return breathes && !reduceMotion ? 0.18 : 0.12
-        case .recording:
-            return pulses && !reduceMotion ? 0.22 : 0.14
-        default:
-            return 0.14
-        }
-    }
-
-    private var shadowRadius: CGFloat {
-        guard showsMotion else { return 10 }
-        return phase == .recording ? (pulses ? 15 : 10) : (breathes ? 14 : 9)
-    }
-
-    private var animation: Animation? {
-        guard showsMotion else { return nil }
-        switch phase {
-        case .ready:
-            return .easeInOut(duration: 1.9).repeatForever(autoreverses: true)
-        case .recording:
-            return .easeInOut(duration: 1.05).repeatForever(autoreverses: true)
-        default:
-            return nil
-        }
-    }
-
-    private func startAnimation() {
-        guard showsMotion else {
-            breathes = false
-            pulses = false
-            return
-        }
-
-        switch phase {
-        case .ready:
-            pulses = false
-            breathes = true
-        case .recording:
-            breathes = false
-            pulses = true
-        default:
-            breathes = false
-            pulses = false
-        }
     }
 }
 

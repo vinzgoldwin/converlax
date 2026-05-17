@@ -31,6 +31,17 @@ const sampleFeedback = {
   }
 };
 
+const sampleTutor = {
+  tutorReply: "Good. You're talking about yesterday, so use past tense.",
+  correction: "I went to work yesterday, and I was tired.",
+  nextPrompt: "Say it once more, then ask me: How was your day?",
+  savedPhrase: "I went to work yesterday.",
+  reviewItem: {
+    prompt: "Say this in the past: I go to work yesterday.",
+    answer: "I went to work yesterday."
+  }
+};
+
 test("health reports service status without exposing secrets", async () => {
   const app = await buildServer({ config: baseConfig });
   const response = await app.inject({ method: "GET", url: "/health" });
@@ -111,6 +122,87 @@ test("feedback endpoint fails closed when backend key is missing", async () => {
     url: "/v1/feedback",
     payload: {
       transcript: "I go to the store yesterday"
+    }
+  });
+
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.json().error.code, "OPENROUTER_NOT_CONFIGURED");
+
+  await app.close();
+});
+
+test("tutor endpoint validates payloads", async () => {
+  const app = await buildServer({ config: baseConfig });
+  const response = await app.inject({
+    method: "POST",
+    url: "/v1/tutor",
+    payload: { message: "" }
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.json().ok, false);
+  assert.equal(response.json().error.code, "INVALID_REQUEST");
+
+  await app.close();
+});
+
+test("tutor endpoint returns conversational tutor JSON", async () => {
+  let capturedInput;
+  const app = await buildServer({
+    config: baseConfig,
+    fetchTutor: async (input) => {
+      capturedInput = input;
+      return {
+        tutor: sampleTutor,
+        upstream: {
+          id: "gen-tutor-test",
+          model: "test/model"
+        }
+      };
+    }
+  });
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/v1/tutor",
+    payload: {
+      message: "I go to work yesterday and I tired",
+      context: {
+        currentLessonTitle: "Talk about yesterday",
+        nextRecommendation: "Practice past tense",
+        recentSavedPhrases: ["I was tired."]
+      }
+    }
+  });
+
+  const body = response.json();
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.ok, true);
+  assert.deepEqual(body.tutor, sampleTutor);
+  assert.equal(capturedInput.message, "I go to work yesterday and I tired");
+  assert.equal(capturedInput.context.currentLessonTitle, "Talk about yesterday");
+  assert.deepEqual(body.meta, {
+    provider: "openrouter",
+    model: "test/model",
+    requestId: "gen-tutor-test"
+  });
+
+  await app.close();
+});
+
+test("tutor endpoint fails closed when backend key is missing", async () => {
+  const app = await buildServer({
+    config: {
+      ...baseConfig,
+      openRouterApiKey: ""
+    }
+  });
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/v1/tutor",
+    payload: {
+      message: "I go to work yesterday"
     }
   });
 
