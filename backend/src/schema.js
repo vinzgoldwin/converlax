@@ -1,6 +1,14 @@
 import { z } from "zod";
 
 const optionalText = z.string().trim().max(500).optional();
+const mistakePatternSchema = z.object({
+  id: z.string().trim().min(1).max(80),
+  title: z.string().trim().min(1).max(80),
+  explanation: z.string().trim().min(1).max(180),
+  exampleLearnerSentence: z.string().trim().min(1).max(220),
+  correctedSentence: z.string().trim().min(1).max(220),
+  confidence: z.number().min(0).max(1).optional()
+}).strict();
 
 export const feedbackRequestSchema = z.object({
   transcript: z.string().trim().min(1).max(4000),
@@ -25,12 +33,41 @@ export const tutorRequestSchema = z.object({
     proficiencyLevel: optionalText,
     currentLessonTitle: optionalText,
     currentLessonPrompt: optionalText,
+    currentPrompt: optionalText,
+    answeredPrompt: optionalText,
+    turnCount: z.number().int().min(0).max(10).optional(),
+    maxTurns: z.number().int().min(1).max(10).optional(),
     nextRecommendation: optionalText,
     recentSavedPhrases: z.array(z.string().trim().min(1).max(160)).max(8).optional(),
     recentTutorMessages: z.array(z.object({
       role: z.enum(["learner", "tutor"]),
       text: z.string().trim().min(1).max(360)
-    }).strict()).max(8).optional()
+    }).strict()).max(8).optional(),
+    conversationTurns: z.array(z.object({
+      prompt: z.string().trim().min(1).max(160),
+      learnerMessage: z.string().trim().min(1).max(360),
+      tutorReply: z.string().trim().min(1).max(160),
+      nextPrompt: z.string().trim().min(1).max(160),
+      savedPhrase: z.string().trim().min(1).max(180).optional()
+    }).strict()).max(5).optional(),
+    recurringMistakes: z.array(z.object({
+      id: z.string().trim().min(1).max(80),
+      title: z.string().trim().min(1).max(80),
+      explanation: z.string().trim().min(1).max(180),
+      exampleLearnerSentence: z.string().trim().min(1).max(220),
+      correctedSentence: z.string().trim().min(1).max(220),
+      count: z.number().int().min(1).max(99),
+      lastSeenDay: z.string().trim().min(1).max(20),
+      priorityScore: z.number().min(0).max(1)
+    }).strict()).max(3).optional(),
+    recentReviewPerformance: z.array(z.object({
+      prompt: z.string().trim().min(1).max(220),
+      source: z.string().trim().min(1).max(120),
+      lastReviewedDay: z.string().trim().min(1).max(20).optional(),
+      ease: z.number().min(0).max(1),
+      mistakeCount: z.number().int().min(0).max(99),
+      successCount: z.number().int().min(0).max(99)
+    }).strict()).max(5).optional()
   }).strict().default({}),
   clientRequestId: z.string().trim().max(80).optional()
 }).strict();
@@ -52,14 +89,22 @@ export const feedbackResponseSchema = z.object({
 }).strict();
 
 export const tutorResponseSchema = z.object({
-  tutorReply: z.string().trim().min(1).max(280),
+  tutorReply: z.string().trim().min(1).max(120),
   correction: z.string().trim().min(1).max(280),
-  nextPrompt: z.string().trim().min(1).max(220),
-  savedPhrase: z.string().trim().min(1).max(180).optional(),
+  naturalAlternative: z.string().trim().min(1).max(220),
+  nextPrompt: z.string().trim().min(1).max(120),
+  savedPhrase: z.string().trim().min(1).max(180),
   reviewItem: z.object({
     prompt: z.string().trim().min(1).max(220),
     answer: z.string().trim().min(1).max(220)
-  }).strict().optional()
+  }).strict(),
+  mistakePattern: mistakePatternSchema,
+  sessionSummary: z.object({
+    improvedPhrase: z.string().trim().min(1).max(220),
+    mistakePattern: z.string().trim().min(1).max(80),
+    savedReviewItem: z.string().trim().min(1).max(220),
+    nextPrompt: z.string().trim().min(1).max(160)
+  }).strict()
 }).strict();
 
 export const feedbackJsonSchema = {
@@ -155,13 +200,22 @@ export const feedbackJsonSchema = {
 export const tutorJsonSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["tutorReply", "correction", "nextPrompt"],
+  required: [
+    "tutorReply",
+    "correction",
+    "naturalAlternative",
+    "nextPrompt",
+    "savedPhrase",
+    "reviewItem",
+    "mistakePattern",
+    "sessionSummary"
+  ],
   properties: {
     tutorReply: {
       type: "string",
       minLength: 1,
-      maxLength: 280,
-      description: "One short natural reply from a calm beginner English tutor."
+      maxLength: 120,
+      description: "One short natural reply from a calm beginner English tutor. Under 16 words."
     },
     correction: {
       type: "string",
@@ -169,17 +223,23 @@ export const tutorJsonSchema = {
       maxLength: 280,
       description: "A corrected or more natural version of the learner's message."
     },
-    nextPrompt: {
+    naturalAlternative: {
       type: "string",
       minLength: 1,
       maxLength: 220,
-      description: "One focused next speaking prompt. Keep it specific and speakable."
+      description: "One short natural beginner-friendly version of the corrected idea."
+    },
+    nextPrompt: {
+      type: "string",
+      minLength: 1,
+      maxLength: 120,
+      description: "Exactly one focused speaking task. Under 12 words. No 'then' or multi-step prompts."
     },
     savedPhrase: {
       type: "string",
       minLength: 1,
       maxLength: 180,
-      description: "Optional phrase worth saving for future practice."
+      description: "A useful corrected phrase worth saving for future practice."
     },
     reviewItem: {
       type: "object",
@@ -195,6 +255,72 @@ export const tutorJsonSchema = {
           type: "string",
           minLength: 1,
           maxLength: 220
+        }
+      }
+    },
+    mistakePattern: {
+      type: "object",
+      additionalProperties: false,
+      required: ["id", "title", "explanation", "exampleLearnerSentence", "correctedSentence", "confidence"],
+      properties: {
+        id: {
+          type: "string",
+          minLength: 1,
+          maxLength: 80,
+          description: "Stable kebab-case mistake pattern id, such as past-tense or missing-to-be."
+        },
+        title: {
+          type: "string",
+          minLength: 1,
+          maxLength: 80
+        },
+        explanation: {
+          type: "string",
+          minLength: 1,
+          maxLength: 180,
+          description: "Short learner-friendly explanation."
+        },
+        exampleLearnerSentence: {
+          type: "string",
+          minLength: 1,
+          maxLength: 220
+        },
+        correctedSentence: {
+          type: "string",
+          minLength: 1,
+          maxLength: 220
+        },
+        confidence: {
+          type: "number",
+          minimum: 0,
+          maximum: 1
+        }
+      }
+    },
+    sessionSummary: {
+      type: "object",
+      additionalProperties: false,
+      required: ["improvedPhrase", "mistakePattern", "savedReviewItem", "nextPrompt"],
+      properties: {
+        improvedPhrase: {
+          type: "string",
+          minLength: 1,
+          maxLength: 220
+        },
+        mistakePattern: {
+          type: "string",
+          minLength: 1,
+          maxLength: 80
+        },
+        savedReviewItem: {
+          type: "string",
+          minLength: 1,
+          maxLength: 220
+        },
+        nextPrompt: {
+          type: "string",
+          minLength: 1,
+          maxLength: 160
         }
       }
     }

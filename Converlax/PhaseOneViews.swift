@@ -85,7 +85,7 @@ struct ReviewHomeView: View {
 
     private var primaryReviewSubtitle: String {
         if reviewCount > 0 {
-            return "\(reviewCount) answer \(reviewCount == 1 ? "line" : "lines") out loud"
+            return "Start with the phrase that needs you most."
         }
 
         return personalSavedLineCount > 0 ? "No due items. Keep your lines warm." : "Start a lesson to create review lines."
@@ -1508,6 +1508,34 @@ private struct SmartReviewView: View {
         items[index % max(items.count, 1)]
     }
 
+    private var reviewMode: ReviewPracticeMode {
+        guard !items.isEmpty else { return .repeatPhrase }
+        let modes = ReviewPracticeMode.allCases
+        return modes[abs(item.id.hashValue + index) % modes.count]
+    }
+
+    private var reviewPromptText: String {
+        switch reviewMode {
+        case .repeatPhrase:
+            return item.prompt
+        case .newSituation:
+            return "Use this in a new sentence: \(item.prompt)"
+        case .relatedPrompt:
+            return relatedPrompt(for: item)
+        }
+    }
+
+    private var reviewAnswerTitle: String {
+        switch reviewMode {
+        case .repeatPhrase:
+            return "Keep"
+        case .newSituation:
+            return "Base phrase"
+        case .relatedPrompt:
+            return "Helpful answer"
+        }
+    }
+
     private var currentItemAnimationID: String {
         guard !items.isEmpty else { return "empty" }
         return items[min(index, items.count - 1)].id
@@ -1534,20 +1562,20 @@ private struct SmartReviewView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     LessonProgressBar(progress: Double(index + 1) / Double(max(items.count, 1)))
                     HStack {
-                        Text(item.kind.rawValue)
+                        Text(reviewMode.title)
                             .font(.caption.weight(.bold))
                             .foregroundStyle(Color.primaryBlue)
                         Spacer()
                     }
 
                     VStack(alignment: .leading, spacing: 12) {
-                        Text(item.prompt)
+                        Text(reviewPromptText)
                             .font(.title3.weight(.semibold))
                             .fixedSize(horizontal: false, vertical: true)
 
                         if showAnswer {
                             Divider()
-                            Text("Meaning")
+                            Text(reviewAnswerTitle)
                                 .font(.caption.weight(.bold))
                                 .foregroundStyle(Color.primaryBlue)
                             Text(item.answer)
@@ -1694,6 +1722,33 @@ private struct SmartReviewView: View {
     private func advanceReview() {
         index = min(index, max(items.count - 1, 0))
         resetSpeech()
+    }
+
+    private func relatedPrompt(for item: ScheduledReviewItem) -> String {
+        if item.kind == .mistake {
+            return "Answer again with the corrected pattern: \(item.prompt)"
+        }
+        if item.prompt.hasSuffix("?") {
+            return item.prompt
+        }
+        return "Answer a related question using: \(item.prompt)"
+    }
+}
+
+private enum ReviewPracticeMode: CaseIterable {
+    case repeatPhrase
+    case newSituation
+    case relatedPrompt
+
+    var title: String {
+        switch self {
+        case .repeatPhrase:
+            return "Repeat the corrected phrase"
+        case .newSituation:
+            return "Use it in a new situation"
+        case .relatedPrompt:
+            return "Answer a related prompt"
+        }
     }
 }
 

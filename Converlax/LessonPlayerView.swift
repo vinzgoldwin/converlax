@@ -912,7 +912,7 @@ private struct VideoLessonStepCard: View {
             switch step.kind {
             case .teach:
                 EmptyView()
-            case .choice, .speak:
+            case .choice, .speak, .roleplay, .freeResponse:
                 SpeechPracticePanel(
                     phase: speechPhase,
                     transcript: transcript,

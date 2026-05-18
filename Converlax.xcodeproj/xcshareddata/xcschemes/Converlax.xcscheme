@@ -31,6 +31,17 @@
       <Testables>
          <TestableReference
             skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "0D6C00000000000000000010"
+               BuildableName = "ConverlaxTests.xctest"
+               BlueprintName = "ConverlaxTests"
+               ReferencedContainer = "container:Converlax.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
             parallelizable = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"

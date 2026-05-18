@@ -53,6 +53,37 @@ enum HomeRoute: Hashable {
     case vocab
     case verbs
 
+    static func == (lhs: HomeRoute, rhs: HomeRoute) -> Bool {
+        lhs.navigationIdentity == rhs.navigationIdentity
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(navigationIdentity)
+    }
+
+    private var navigationIdentity: String {
+        switch self {
+        case .courseDetail:
+            return "courseDetail"
+        case .tutor:
+            return "tutor"
+        case .lesson(let lesson):
+            return "lesson:\(lesson.id)"
+        case .lessonDetail(let lesson):
+            return "lessonDetail:\(lesson.id)"
+        case .videoLesson(let lesson):
+            return "videoLesson:\(lesson.id)"
+        case .speakingDrill(let lesson):
+            return "speakingDrill:\(lesson.id)"
+        case .qaLesson(let lesson):
+            return "qaLesson:\(lesson.id)"
+        case .vocab:
+            return "vocab"
+        case .verbs:
+            return "verbs"
+        }
+    }
+
     static var launchDefaultPath: [HomeRoute] {
         let arguments = ProcessInfo.processInfo.arguments
         let launchLanguage: TargetLanguage = arguments.contains("-ConverlaxUseEnglishContent") ? .english : .french
@@ -102,6 +133,37 @@ enum PracticeRoute: Hashable {
     case favorites
     case community
     case communityRoleplay(RoleplayScenario)
+
+    static func == (lhs: PracticeRoute, rhs: PracticeRoute) -> Bool {
+        lhs.navigationIdentity == rhs.navigationIdentity
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(navigationIdentity)
+    }
+
+    private var navigationIdentity: String {
+        switch self {
+        case .session:
+            return "session"
+        case .tutor:
+            return "tutor"
+        case .topics:
+            return "topics"
+        case .topic(let topic):
+            return "topic:\(topic.id)"
+        case .roleplay(let roleplay):
+            return "roleplay:\(roleplay.id)"
+        case .history:
+            return "history"
+        case .favorites:
+            return "favorites"
+        case .community:
+            return "community"
+        case .communityRoleplay(let roleplay):
+            return "communityRoleplay:\(roleplay.id)"
+        }
+    }
 
     static var launchDefaultPath: [PracticeRoute] {
         let arguments = ProcessInfo.processInfo.arguments
@@ -524,6 +586,8 @@ enum LessonStepKind: String, Codable, Hashable {
     case teach
     case choice
     case speak
+    case roleplay
+    case freeResponse
 }
 
 enum SavedLearningKind: String, Codable, Hashable {
@@ -756,8 +820,72 @@ struct ScheduledReviewItem: Codable, Hashable, Identifiable {
     var nextDueDay: String
     var ease: Double
     var mistakeCount: Int
+    var successCount: Int
     var listeningFirst: Bool
     var speakingRetry: Bool
+
+    init(
+        id: String,
+        objectID: String,
+        kind: SavedLearningKind,
+        prompt: String,
+        answer: String,
+        source: String,
+        lastReviewedDay: String?,
+        nextDueDay: String,
+        ease: Double,
+        mistakeCount: Int,
+        successCount: Int = 0,
+        listeningFirst: Bool,
+        speakingRetry: Bool
+    ) {
+        self.id = id
+        self.objectID = objectID
+        self.kind = kind
+        self.prompt = prompt
+        self.answer = answer
+        self.source = source
+        self.lastReviewedDay = lastReviewedDay
+        self.nextDueDay = nextDueDay
+        self.ease = ease
+        self.mistakeCount = mistakeCount
+        self.successCount = successCount
+        self.listeningFirst = listeningFirst
+        self.speakingRetry = speakingRetry
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case objectID
+        case kind
+        case prompt
+        case answer
+        case source
+        case lastReviewedDay
+        case nextDueDay
+        case ease
+        case mistakeCount
+        case successCount
+        case listeningFirst
+        case speakingRetry
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        objectID = try container.decode(String.self, forKey: .objectID)
+        kind = try container.decode(SavedLearningKind.self, forKey: .kind)
+        prompt = try container.decode(String.self, forKey: .prompt)
+        answer = try container.decode(String.self, forKey: .answer)
+        source = try container.decode(String.self, forKey: .source)
+        lastReviewedDay = try container.decodeIfPresent(String.self, forKey: .lastReviewedDay)
+        nextDueDay = try container.decodeIfPresent(String.self, forKey: .nextDueDay) ?? "1970-01-01"
+        ease = try container.decodeIfPresent(Double.self, forKey: .ease) ?? 0.62
+        mistakeCount = try container.decodeIfPresent(Int.self, forKey: .mistakeCount) ?? 0
+        successCount = try container.decodeIfPresent(Int.self, forKey: .successCount) ?? 0
+        listeningFirst = (try container.decodeIfPresent(Bool.self, forKey: .listeningFirst)) ?? (kind != .word)
+        speakingRetry = (try container.decodeIfPresent(Bool.self, forKey: .speakingRetry)) ?? (kind != .word)
+    }
 }
 
 struct LearningSessionSummary: Codable, Hashable, Identifiable {
@@ -816,6 +944,12 @@ struct RoleplayScenario: Codable, Hashable, Identifiable {
     let isCommunity: Bool
 }
 
+struct CourseUnit: Codable, Hashable, Identifiable {
+    let id: Int
+    let title: String
+    let summary: String
+}
+
 struct UsageSession: Codable, Hashable, Identifiable {
     let id: String
     let title: String
@@ -839,6 +973,167 @@ struct ReviewItem: Codable, Hashable, Identifiable {
     let source: String
     var dueLabel: String = "Today"
     var confidence: Int = 70
+}
+
+struct MistakePattern: Codable, Hashable, Identifiable {
+    let id: String
+    var title: String
+    var explanation: String
+    var exampleLearnerSentence: String
+    var correctedSentence: String
+    var count: Int
+    var lastSeenDay: String
+    var priorityScore: Double
+
+    init(
+        id: String,
+        title: String,
+        explanation: String,
+        exampleLearnerSentence: String,
+        correctedSentence: String,
+        count: Int = 1,
+        lastSeenDay: String,
+        priorityScore: Double
+    ) {
+        self.id = id
+        self.title = title
+        self.explanation = explanation
+        self.exampleLearnerSentence = exampleLearnerSentence
+        self.correctedSentence = correctedSentence
+        self.count = max(1, count)
+        self.lastSeenDay = lastSeenDay
+        self.priorityScore = min(max(priorityScore, 0), 1)
+    }
+}
+
+struct MistakePatternSeed: Hashable {
+    let id: String
+    let title: String
+    let explanation: String
+    let exampleLearnerSentence: String
+    let correctedSentence: String
+    let confidence: Double
+}
+
+enum MistakePatternDetector {
+    static func detect(
+        learnerSentence: String,
+        correctedSentence: String,
+        pronunciationNote: String = ""
+    ) -> MistakePatternSeed? {
+        let learner = learnerSentence.trimmingCharacters(in: .whitespacesAndNewlines)
+        let corrected = correctedSentence.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lower = " \(learner.lowercased()) "
+        let correctedLower = " \(corrected.lowercased()) "
+        let fallbackCorrection = corrected.isEmpty ? learner : corrected
+        let wordCount = learner.split { !$0.isLetter && !$0.isNumber }.count
+
+        if containsAny(lower, [" yesterday ", " last ", " ago "]),
+           containsAnyWholeWord(lower, ["go", "do", "eat", "take", "come", "see", "meet", "buy", "make", "feel", "is", "am", "are"]),
+           containsAnyWholeWord(correctedLower, ["went", "did", "ate", "took", "came", "saw", "met", "bought", "made", "felt", "was", "were", "had"]) {
+            return MistakePatternSeed(
+                id: "past-tense",
+                title: "Past tense",
+                explanation: "Use a past verb when you talk about yesterday, last week, or another finished time.",
+                exampleLearnerSentence: learner,
+                correctedSentence: fallbackCorrection,
+                confidence: 0.82
+            )
+        }
+
+        if containsAny(lower, [" i tired ", " i happy ", " i ready ", " i busy ", " i okay ", " i late ", " it okay ", " it not ", " this good ", " he tired ", " she busy "]) ||
+            (!containsAnyWholeWord(lower, ["am", "is", "are", "was", "were"]) && containsAnyWholeWord(correctedLower, ["am", "is", "are", "was", "were"])) {
+            return MistakePatternSeed(
+                id: "missing-to-be",
+                title: "Missing be verb",
+                explanation: "Use am, is, are, was, or were before feelings, states, and descriptions.",
+                exampleLearnerSentence: learner,
+                correctedSentence: fallbackCorrection,
+                confidence: 0.78
+            )
+        }
+
+        if containsAny(lower, [" he go ", " she go ", " it work ", " he have ", " she have ", " my brother live ", " my sister live "]) ||
+            containsAnyWholeWord(correctedLower, ["goes", "works", "has", "lives"]) {
+            return MistakePatternSeed(
+                id: "subject-verb-agreement",
+                title: "Subject and verb agreement",
+                explanation: "With he, she, it, or one person, the present-tense verb often changes.",
+                exampleLearnerSentence: learner,
+                correctedSentence: fallbackCorrection,
+                confidence: 0.76
+            )
+        }
+
+        if containsAny(lower, [" i have cat ", " i need taxi ", " i want coffee ", " i bought shirt ", " i saw movie ", " i found place "]),
+           containsAnyWholeWord(correctedLower, ["a", "an", "the"]) {
+            return MistakePatternSeed(
+                id: "missing-articles",
+                title: "Articles",
+                explanation: "Use a, an, or the before many singular nouns.",
+                exampleLearnerSentence: learner,
+                correctedSentence: fallbackCorrection,
+                confidence: 0.7
+            )
+        }
+
+        if containsAny(lower, [" what i should ", " where i can ", " how i can ", " where is the station is ", " why you are "]) {
+            return MistakePatternSeed(
+                id: "word-order",
+                title: "Question word order",
+                explanation: "In many questions, put the helper verb before the subject: Where can I...?",
+                exampleLearnerSentence: learner,
+                correctedSentence: fallbackCorrection,
+                confidence: 0.72
+            )
+        }
+
+        if containsAny(lower, [" in yesterday ", " at tomorrow ", " in tomorrow ", " in monday ", " in night ", " on night ", " in ten "]) {
+            return MistakePatternSeed(
+                id: "time-expression",
+                title: "Time expression",
+                explanation: "Use common time phrases like yesterday, tomorrow, on Monday, and at night.",
+                exampleLearnerSentence: learner,
+                correctedSentence: fallbackCorrection,
+                confidence: 0.7
+            )
+        }
+
+        if wordCount > 0 && wordCount < 4 {
+            return MistakePatternSeed(
+                id: "short-answer",
+                title: "Complete answers",
+                explanation: "Try giving one complete sentence so the listener has enough context.",
+                exampleLearnerSentence: learner,
+                correctedSentence: fallbackCorrection,
+                confidence: 0.58
+            )
+        }
+
+        let pronunciation = pronunciationNote.lowercased()
+        if containsAny(pronunciation, ["unclear", "not clear", "slowly", "final word", "ending", "pronunciation"]) {
+            return MistakePatternSeed(
+                id: "clarity",
+                title: "Speech clarity",
+                explanation: "Slow down a little and make the last important word clear.",
+                exampleLearnerSentence: learner,
+                correctedSentence: fallbackCorrection,
+                confidence: 0.56
+            )
+        }
+
+        return nil
+    }
+
+    private static func containsAny(_ text: String, _ needles: [String]) -> Bool {
+        needles.contains { text.contains($0) }
+    }
+
+    private static func containsAnyWholeWord(_ text: String, _ words: [String]) -> Bool {
+        words.contains { word in
+            text.range(of: "\\b\(NSRegularExpression.escapedPattern(for: word))\\b", options: .regularExpression) != nil
+        }
+    }
 }
 
 struct NextLearningRecommendation: Equatable {
@@ -1027,6 +1322,16 @@ struct BeginnerLesson: Hashable, Identifiable {
     let minutes: Int
     let steps: [LessonStep]
     let savedWords: [SavedWord]
+    var visualAssetKind: String = ""
+    var primarySkill: String = ""
+    var modelPhrase: String = ""
+    var helperText: String = ""
+    var savedPhrases: [String] = []
+    var reviewPrompts: [String] = []
+    var roleplayPrompt: String = ""
+    var expectedLearnerAction: String = ""
+    var naturalVersionExamples: [String] = []
+    var aiVariationPrompts: [String] = []
 }
 
 struct LearningProfile: Codable, Equatable {
@@ -1046,6 +1351,7 @@ struct LearningProfile: Codable, Equatable {
     var scheduledReviews: [ScheduledReviewItem] = []
     var feedbackEvents: [LearningFeedback] = []
     var sessionSummaries: [LearningSessionSummary] = []
+    var mistakePatterns: [MistakePattern] = []
     var skillProgress: [SkillProgress] = []
     var favoriteRoleplayIDs: Set<String> = []
     var usageSessions: [UsageSession] = []
@@ -1076,6 +1382,7 @@ struct LearningProfile: Codable, Equatable {
         scheduledReviews = try container.decodeIfPresent([ScheduledReviewItem].self, forKey: .scheduledReviews) ?? []
         feedbackEvents = try container.decodeIfPresent([LearningFeedback].self, forKey: .feedbackEvents) ?? []
         sessionSummaries = try container.decodeIfPresent([LearningSessionSummary].self, forKey: .sessionSummaries) ?? []
+        mistakePatterns = try container.decodeIfPresent([MistakePattern].self, forKey: .mistakePatterns) ?? []
         skillProgress = try container.decodeIfPresent([SkillProgress].self, forKey: .skillProgress) ?? []
         favoriteRoleplayIDs = try container.decodeIfPresent(Set<String>.self, forKey: .favoriteRoleplayIDs) ?? []
         usageSessions = try container.decodeIfPresent([UsageSession].self, forKey: .usageSessions) ?? []
@@ -1095,6 +1402,8 @@ struct ChatMessage: Identifiable, Equatable {
     let text: String
     let isUser: Bool
     var canSave = false
+    var savedArtifactText: String?
+    var savedArtifactNote: String?
 }
 
 enum QuickPracticeRoute: Hashable {

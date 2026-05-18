@@ -322,6 +322,10 @@ extension LessonStepKind {
             return .review
         case .speak:
             return .freeTalk
+        case .roleplay:
+            return .roleplay
+        case .freeResponse:
+            return .customLesson
         }
     }
 }
@@ -466,7 +470,13 @@ struct LearningFeedbackCard: View {
             FeedbackConfidenceSummary(confidence: feedback.confidence)
         }
 
-        if let naturalVersion {
+        if let correctedPhrase, correctedPhrase != (naturalVersion ?? "") {
+            FeedbackCoachLine(title: "Correct phrase", text: correctedPhrase, symbol: "textformat", color: .primaryBlue)
+        }
+
+        if let naturalAlternative {
+            FeedbackPrimaryLine(title: "Natural version", text: naturalAlternative, symbol: "quote.bubble.fill")
+        } else if let naturalVersion {
             FeedbackPrimaryLine(title: "Say it like this", text: naturalVersion, symbol: "quote.bubble.fill")
         }
 
@@ -598,6 +608,16 @@ struct LearningFeedbackCard: View {
 
     private var naturalVersion: String? {
         cleanCoachText(feedback.naturalVersion) ?? cleanCoachText(feedback.betterPhrase) ?? cleanCoachText(feedback.correction)
+    }
+
+    private var naturalAlternative: String? {
+        guard let alternative = cleanCoachText(feedback.naturalVersion) else { return nil }
+        guard alternative != correctedPhrase else { return nil }
+        return alternative
+    }
+
+    private var correctedPhrase: String? {
+        cleanCoachText(feedback.grammarCorrection) ?? cleanCoachText(feedback.correction)
     }
 
     private var grammarCorrection: String? {
@@ -842,6 +862,7 @@ struct SpeechPracticePanel: View {
     let transcript: String
     let feedback: LearningFeedback?
     let accent: Color
+    var prompt: String? = nil
     var voiceLevel: Double = 0
     var errorMessage: String?
     var primaryActionTitle: String? = nil
@@ -851,6 +872,10 @@ struct SpeechPracticePanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: panelSpacing) {
             header
+
+            if let promptText {
+                SpeechPromptBlock(text: promptText)
+            }
 
             inputContent
 
@@ -878,6 +903,8 @@ struct SpeechPracticePanel: View {
     private var inputContent: some View {
         if showsFeedbackCard {
             EmptyView()
+        } else if phase == .transcript {
+            transcriptSection
         } else {
             VStack(spacing: 16) {
                 VoiceInputOrb(
@@ -992,12 +1019,21 @@ struct SpeechPracticePanel: View {
         !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    private var promptText: String? {
+        let trimmed = prompt?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
     private var panelSpacing: CGFloat {
         showsFeedbackCard ? 14 : 18
     }
 
     private var contentMinHeight: CGFloat {
-        showsMessage ? 116 : 142
+        if phase == .transcript {
+            return 0
+        }
+
+        return showsMessage ? 116 : 142
     }
 
     private var transcriptTitle: String {
@@ -1214,6 +1250,25 @@ private struct SpeechStatusBadge: View {
     }
 }
 
+private struct SpeechPromptBlock: View {
+    let text: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Tutor prompt")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text(text)
+                .font(.title3.weight(.bold))
+                .foregroundStyle(Color.converlaxInk)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("tutor-active-prompt")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 4)
+    }
+}
+
 private struct VoiceInputOrb: View {
     let phase: SpeechPracticePhase
     let accent: Color
@@ -1313,10 +1368,8 @@ private struct SpeechTranscriptBlock: View {
                 .lineLimit(isLive ? 3 : nil)
                 .fixedSize(horizontal: false, vertical: !isLive)
         }
-        .padding(14)
+        .padding(.vertical, 2)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.appBackground.opacity(0.74), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.clayStroke.opacity(0.65)))
         .accessibilityLabel(title)
         .accessibilityValue(text)
     }

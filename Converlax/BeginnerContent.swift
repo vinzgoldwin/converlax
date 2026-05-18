@@ -3,6 +3,176 @@ import Foundation
 enum BeginnerContent {
     static let lessons: [BeginnerLesson] = englishLessons
 
+    static let englishUnitCatalog: [CourseUnit] = [
+        CourseUnit(id: 1, title: "Starter English", summary: "First chats, routines, likes, and simple questions."),
+        CourseUnit(id: 2, title: "Everyday English", summary: "Food, shopping, directions, transport, appointments, and help."),
+        CourseUnit(id: 3, title: "Social English", summary: "Small talk, hobbies, plans, invitations, stories, and follow-up questions."),
+        CourseUnit(id: 4, title: "Work English", summary: "Introductions, updates, meetings, blockers, opinions, requests, and calls."),
+        CourseUnit(id: 5, title: "Travel English", summary: "Airport, hotel, restaurant, pharmacy, lost items, delays, and local questions."),
+        CourseUnit(id: 6, title: "Confidence Builder", summary: "Past stories, future plans, reasons, comparisons, preferences, and repairs.")
+    ]
+
+    private struct EnglishLessonSeed {
+        let id: String
+        let unit: Int
+        let title: String
+        let subtitle: String
+        let icon: String
+        let accent: LessonAccent
+        let model: String
+        let helper: String
+        let speak: String
+        let swap: String
+        let check: String
+        let answer: String
+        let roleplay: String
+        let followUp: String
+        let phrases: [String]
+    }
+
+    private static func expandedLesson(_ seed: EnglishLessonSeed) -> BeginnerLesson {
+        englishConversationLesson(
+            id: seed.id,
+            unit: seed.unit,
+            title: seed.title,
+            subtitle: seed.subtitle,
+            icon: seed.icon,
+            accent: seed.accent,
+            minutes: seed.unit == 6 ? 7 : 6,
+            goal: goalPrompt(for: seed),
+            model: seed.model,
+            modelHelper: seed.helper,
+            speak: seed.speak,
+            speakHelper: seed.swap,
+            alternative: seed.followUp,
+            alternativeHelper: "Use this as the next natural line after your answer.",
+            mistakePrompt: seed.check,
+            correctAnswer: seed.answer,
+            commonMistake: seed.answer.replacingOccurrences(of: " to ", with: " "),
+            roleplay: seed.roleplay,
+            roleplayHelper: roleplayHelper(for: seed),
+            followUp: seed.followUp,
+            followUpHelper: followUpHelper(for: seed),
+            savedWords: seed.phrases.map { phrase($0, savedPhraseNote(for: seed, phrase: $0), seed.model) },
+            extraMistake: seed.answer.replacingOccurrences(of: "I ", with: "I am ")
+        )
+    }
+
+    private static func goalPrompt(for seed: EnglishLessonSeed) -> String {
+        switch seed.unit {
+        case 1:
+            return "Today, say \(seed.subtitle) in one clear sentence."
+        case 2:
+            return "Practice a real errand: \(seed.subtitle)."
+        case 3:
+            return "Keep a social chat moving as you \(seed.subtitle)."
+        case 4:
+            return "Use calm work English to \(seed.subtitle)."
+        case 5:
+            return "Handle a travel moment: \(seed.subtitle)."
+        default:
+            return "Build confidence as you \(seed.subtitle)."
+        }
+    }
+
+    private static func roleplayHelper(for seed: EnglishLessonSeed) -> String {
+        switch seed.unit {
+        case 1:
+            return "Answer warmly, then add one small true detail."
+        case 2:
+            return "Say the need first, then ask for one clear next step."
+        case 3:
+            return "React to the other person before you add your answer."
+        case 4:
+            return "Keep it brief: status, detail, then one request."
+        case 5:
+            return "Use short lines so the other person can help quickly."
+        default:
+            return "Use two or three connected sentences, then pause."
+        }
+    }
+
+    private static func followUpHelper(for seed: EnglishLessonSeed) -> String {
+        switch seed.unit {
+        case 1:
+            return "Swap one detail so the line is true for you."
+        case 2:
+            return "Change the place, item, or time to match a real errand."
+        case 3:
+            return "Ask it like you want the other person to keep talking."
+        case 4:
+            return "Keep the tone direct and low-pressure."
+        case 5:
+            return "Make the request specific enough for a stranger to answer."
+        default:
+            return "Add one reason, repair, or follow-up so the answer feels complete."
+        }
+    }
+
+    private static func savedPhraseNote(for seed: EnglishLessonSeed, phrase: String) -> String {
+        switch seed.unit {
+        case 1:
+            return "starter phrase for \(seed.subtitle)"
+        case 2:
+            return "practical errand phrase"
+        case 3:
+            return "social follow-up phrase"
+        case 4:
+            return "work conversation phrase"
+        case 5:
+            return "travel problem-solving phrase"
+        default:
+            return "confidence-building phrase"
+        }
+    }
+
+    private static let englishExpansionLessons: [BeginnerLesson] = englishExpansionSeeds.map(expandedLesson)
+
+    private static let englishExpansionSeeds: [EnglishLessonSeed] = [
+        EnglishLessonSeed(id: "english-feelings-simple", unit: 1, title: "Say how you feel", subtitle: "share one feeling and one reason", icon: "heart.fill", accent: .mint, model: "I'm a little nervous, but I'm ready to try.", helper: "This is honest without sounding negative.", speak: "I'm happy because I finished work early.", swap: "Change the feeling and the reason.", check: "You want to say you feel tired today.", answer: "I'm tired today, but I'm okay.", roleplay: "A classmate asks how you feel before practice.", followUp: "How are you feeling today?", phrases: ["a little nervous", "ready to try", "because I", "how are you feeling"]),
+        EnglishLessonSeed(id: "english-name-country-job", unit: 1, title: "Name, country, job", subtitle: "introduce three basic details", icon: "person.text.rectangle.fill", accent: .blue, model: "My name is Alex. I'm from Indonesia, and I work in design.", helper: "Three details are enough for a first answer.", speak: "I'm from Jakarta, and I work at a small company.", swap: "Change the city and job.", check: "You want to say your job naturally.", answer: "I work as a teacher.", roleplay: "Someone at a meetup asks you to introduce yourself.", followUp: "What do you do?", phrases: ["my name is", "I'm from", "I work in", "what do you do"]),
+        EnglishLessonSeed(id: "english-basic-questions", unit: 1, title: "Ask basic questions", subtitle: "ask simple friendly questions", icon: "questionmark.bubble.fill", accent: .violet, model: "Where are you from?", helper: "Short questions keep the conversation easy.", speak: "What do you do on weekends?", swap: "Change weekends to mornings, evenings, or holidays.", check: "You need to ask about someone's job.", answer: "What do you do?", roleplay: "You meet a new person and ask two simple questions.", followUp: "How long have you lived here?", phrases: ["where are you from", "what do you do", "on weekends", "how long"]),
+        EnglishLessonSeed(id: "english-family-basics", unit: 1, title: "Talk about family", subtitle: "mention family simply", icon: "house.fill", accent: .amber, model: "I live with my family.", helper: "Use live with for people in your home.", speak: "My brother lives nearby.", swap: "Change brother to friend, sister, or parents.", check: "You want to say your parents are in another city.", answer: "My parents live in another city.", roleplay: "A friend asks if your family lives nearby.", followUp: "Do you live with family or friends?", phrases: ["live with", "lives nearby", "another city", "family or friends"]),
+        EnglishLessonSeed(id: "english-food-likes", unit: 1, title: "Food likes", subtitle: "say likes and dislikes", icon: "fork.knife", accent: .mint, model: "I like spicy food, but I don't eat it every day.", helper: "But helps you add a limit.", speak: "I don't really like sweet drinks.", swap: "Change sweet drinks to one food or drink.", check: "You want to say you enjoy noodles.", answer: "I like eating noodles.", roleplay: "A coworker asks what food you like.", followUp: "What kind of food do you like?", phrases: ["spicy food", "don't really like", "every day", "what kind of food"]),
+        EnglishLessonSeed(id: "english-review-starter-week", unit: 1, title: "Starter week check", subtitle: "combine first-week phrases", icon: "checkmark.seal.fill", accent: .blue, model: "Hi, I'm Alex. I'm from Jakarta, and I'm learning English for work.", helper: "This pulls together name, place, and reason.", speak: "I'm a little nervous, but I want to practice.", swap: "Change the name, place, and reason.", check: "You explain your learning reason.", answer: "I'm learning English because I want to speak confidently.", roleplay: "Start a short first conversation with name, feeling, and one question.", followUp: "How about you?", phrases: ["learning English for work", "want to practice", "speak confidently", "how about you"]),
+        EnglishLessonSeed(id: "english-appointment-time", unit: 2, title: "Make an appointment", subtitle: "choose and confirm a time", icon: "calendar", accent: .blue, model: "Do you have any openings on Friday morning?", helper: "Openings means available appointment times.", speak: "Could I come in at three?", swap: "Change the day and time.", check: "You need to move an appointment.", answer: "Can I move my appointment to Monday?", roleplay: "A clinic asks what time works for you.", followUp: "Friday morning works for me.", phrases: ["any openings", "come in at three", "move my appointment", "works for me"]),
+        EnglishLessonSeed(id: "english-simple-service-problem", unit: 2, title: "Report a simple problem", subtitle: "say what is wrong and ask for help", icon: "wrench.adjustable.fill", accent: .amber, model: "Sorry, this isn't working.", helper: "Start with the problem before details.", speak: "The card reader isn't accepting my card.", swap: "Change card reader to machine, app, or door.", check: "You need help with a machine.", answer: "Could you help me with this machine?", roleplay: "A staff member asks what happened.", followUp: "What should I try next?", phrases: ["isn't working", "accepting my card", "help me with", "try next"]),
+        EnglishLessonSeed(id: "english-return-item", unit: 2, title: "Return an item", subtitle: "explain a return politely", icon: "arrow.uturn.backward.circle.fill", accent: .violet, model: "I'd like to return this shirt.", helper: "I'd like to is polite and direct.", speak: "It doesn't fit me.", swap: "Change the reason: too small, damaged, wrong color.", check: "You need a different size.", answer: "Could I exchange it for a larger size?", roleplay: "A shop assistant asks why you want to return it.", followUp: "Do I need the receipt?", phrases: ["I'd like to return", "doesn't fit me", "exchange it for", "need the receipt"]),
+        EnglishLessonSeed(id: "english-bank-payment", unit: 2, title: "Payment questions", subtitle: "ask about cards and receipts", icon: "creditcard.fill", accent: .mint, model: "Can I pay by card?", helper: "Use by card, in cash, or with this app.", speak: "Could I get a receipt, please?", swap: "Change receipt to bag, copy, or invoice.", check: "You ask if cash is accepted.", answer: "Do you accept cash?", roleplay: "The cashier says the card machine is down.", followUp: "Is there another way to pay?", phrases: ["pay by card", "get a receipt", "accept cash", "another way to pay"]),
+        EnglishLessonSeed(id: "english-ask-local-recommendation", unit: 2, title: "Ask for a recommendation", subtitle: "ask for one local suggestion", icon: "mappin.and.ellipse", accent: .blue, model: "Do you know a good place for lunch nearby?", helper: "Good place for is useful for local questions.", speak: "I'm looking for a quiet cafe.", swap: "Change quiet cafe to pharmacy, ATM, or bookstore.", check: "You want a place that is not expensive.", answer: "Is there an affordable restaurant nearby?", roleplay: "A hotel worker asks what kind of place you need.", followUp: "Is it easy to walk there?", phrases: ["good place for", "nearby", "looking for", "easy to walk there"]),
+        EnglishLessonSeed(id: "english-everyday-review", unit: 2, title: "Everyday review", subtitle: "handle errands in short lines", icon: "checkmark.seal.fill", accent: .amber, model: "Excuse me, I'm looking for the station. Is it far from here?", helper: "This combines attention, need, and distance.", speak: "Could you say that again more slowly?", swap: "Change station to one useful place.", check: "You ask for help after missing directions.", answer: "Could you repeat the directions?", roleplay: "You need to buy something, ask directions, and clarify one answer.", followUp: "Thanks, that helps.", phrases: ["looking for the station", "far from here", "more slowly", "repeat the directions"]),
+        EnglishLessonSeed(id: "english-hobbies-detail", unit: 3, title: "Add hobby details", subtitle: "describe a hobby with one detail", icon: "paintpalette.fill", accent: .violet, model: "I like photography because it helps me slow down.", helper: "Because makes the hobby more personal.", speak: "I started running last year.", swap: "Change running to your hobby.", check: "You want to say you enjoy cooking at home.", answer: "I enjoy cooking at home.", roleplay: "A friend asks why you like your hobby.", followUp: "How did you get into it?", phrases: ["because it helps me", "started last year", "enjoy cooking", "get into it"]),
+        EnglishLessonSeed(id: "english-weekend-plans", unit: 3, title: "Weekend plans", subtitle: "say plans and ask back", icon: "sun.max.fill", accent: .amber, model: "I'm going to visit my cousins this weekend.", helper: "Going to is simple future for plans.", speak: "I might stay home if it rains.", swap: "Change stay home to another backup plan.", check: "You ask about Saturday plans.", answer: "What are you doing on Saturday?", roleplay: "A coworker asks about your weekend.", followUp: "Do you have any plans?", phrases: ["going to visit", "this weekend", "might stay home", "any plans"]),
+        EnglishLessonSeed(id: "english-invitation-accept", unit: 3, title: "Accept an invitation", subtitle: "accept and confirm details", icon: "envelope.open.fill", accent: .mint, model: "That sounds nice. What time should I come?", helper: "Accept first, then ask one detail.", speak: "I'd love to join.", swap: "Change join to come, help, or try it.", check: "You accept dinner politely.", answer: "I'd love to come for dinner.", roleplay: "A friend invites you to a small dinner.", followUp: "Should I bring anything?", phrases: ["sounds nice", "what time should I come", "I'd love to", "bring anything"]),
+        EnglishLessonSeed(id: "english-invitation-decline", unit: 3, title: "Decline gently", subtitle: "say no without closing the relationship", icon: "hand.raised.fill", accent: .blue, model: "I can't make it tonight, but thank you for inviting me.", helper: "Give a clear no and appreciation.", speak: "Maybe another time?", swap: "Change tonight to tomorrow, Friday, or this weekend.", check: "You are busy this weekend.", answer: "I'm busy this weekend, but I'd like to join next time.", roleplay: "A friend invites you when you already have plans.", followUp: "Please invite me next time.", phrases: ["can't make it", "thank you for inviting me", "another time", "next time"]),
+        EnglishLessonSeed(id: "english-short-story-yesterday", unit: 3, title: "Tell a short story", subtitle: "tell three past actions", icon: "book.closed.fill", accent: .violet, model: "Yesterday I went to the market, bought fruit, and cooked dinner.", helper: "Three past verbs make a simple story.", speak: "I met a friend and we talked for an hour.", swap: "Change the verbs to your real day.", check: "You say you went to work yesterday.", answer: "I went to work yesterday.", roleplay: "A friend asks what you did yesterday.", followUp: "What did you do after that?", phrases: ["yesterday I went", "bought fruit", "talked for an hour", "after that"]),
+        EnglishLessonSeed(id: "english-social-review", unit: 3, title: "Social review", subtitle: "keep a friendly conversation moving", icon: "person.2.wave.2.fill", accent: .mint, model: "That sounds nice. How did you get into it?", helper: "React first, then ask a follow-up.", speak: "I'd love to join, but I need to check my schedule.", swap: "Change join to one social plan.", check: "You ask a follow-up about a hobby.", answer: "How long have you been doing that?", roleplay: "Talk with a new friend about hobbies, plans, and one invitation.", followUp: "Let's talk again soon.", phrases: ["that sounds nice", "check my schedule", "how long have you", "talk again soon"]),
+        EnglishLessonSeed(id: "english-work-clarify-task", unit: 4, title: "Clarify a task", subtitle: "ask what needs to happen next", icon: "list.bullet.clipboard.fill", accent: .blue, model: "Just to clarify, what should I send first?", helper: "Just to clarify makes the question feel careful.", speak: "Do you need the full report or just the summary?", swap: "Change report and summary to your task.", check: "You ask who owns the next task.", answer: "Who is responsible for the next step?", roleplay: "Your manager gives a task with missing details.", followUp: "I'll send the summary first.", phrases: ["just to clarify", "send first", "full report", "next step"]),
+        EnglishLessonSeed(id: "english-work-blocker", unit: 4, title: "Explain a blocker", subtitle: "name a blocker and request help", icon: "exclamationmark.triangle.fill", accent: .amber, model: "I'm blocked because I don't have access to the file.", helper: "Blocked is common at work when progress stops.", speak: "I can continue after I get the login details.", swap: "Change file and login details to your situation.", check: "You need access before you can start.", answer: "I need access before I can start.", roleplay: "A teammate asks why the task is not moving.", followUp: "Could you add me to the folder?", phrases: ["I'm blocked because", "don't have access", "can continue after", "add me to the folder"]),
+        EnglishLessonSeed(id: "english-polite-request", unit: 4, title: "Make a polite request", subtitle: "ask for help without pressure", icon: "hand.point.up.left.fill", accent: .mint, model: "Could you take a quick look when you have time?", helper: "When you have time lowers pressure.", speak: "Could you check this before Friday?", swap: "Change check this to review this, approve this, or send this.", check: "You ask for a short review.", answer: "Could you review this quickly?", roleplay: "You need a teammate to look at your draft.", followUp: "No rush if today is busy.", phrases: ["take a quick look", "when you have time", "before Friday", "no rush"]),
+        EnglishLessonSeed(id: "english-meeting-clarification", unit: 4, title: "Clarify in a meeting", subtitle: "interrupt gently and check meaning", icon: "person.3.fill", accent: .violet, model: "Sorry, can I check one thing?", helper: "This is a gentle way to enter the meeting.", speak: "Do you mean we should launch this week?", swap: "Change launch this week to the decision you heard.", check: "You missed the deadline.", answer: "Sorry, what is the deadline?", roleplay: "In a meeting, you missed one important detail.", followUp: "Thanks, that makes sense.", phrases: ["check one thing", "do you mean", "what is the deadline", "makes sense"]),
+        EnglishLessonSeed(id: "english-video-call-issues", unit: 4, title: "Video call phrases", subtitle: "handle call problems calmly", icon: "video.fill", accent: .blue, model: "Sorry, my audio is cutting out.", helper: "Name the technical problem clearly.", speak: "Could you repeat the last point?", swap: "Change audio to connection, camera, or screen.", check: "You cannot hear the speaker.", answer: "Sorry, I can't hear you clearly.", roleplay: "Your video call has a connection problem.", followUp: "I'll reconnect and join again.", phrases: ["audio is cutting out", "repeat the last point", "hear you clearly", "join again"]),
+        EnglishLessonSeed(id: "english-work-review", unit: 4, title: "Work review", subtitle: "combine update, blocker, and request", icon: "checkmark.seal.fill", accent: .amber, model: "The draft is ready, but I'm blocked on the final numbers.", helper: "This gives status plus blocker.", speak: "Could you review the summary when you have time?", swap: "Change draft, numbers, and summary.", check: "You need feedback by tomorrow.", answer: "Could you send feedback by tomorrow?", roleplay: "Give a short work update with one request.", followUp: "After that, I can finish the next version.", phrases: ["draft is ready", "blocked on", "review the summary", "next version"]),
+        EnglishLessonSeed(id: "english-airport-checkin", unit: 5, title: "Airport check-in", subtitle: "check in and ask about bags", icon: "airplane.circle.fill", accent: .blue, model: "Hi, I'd like to check in for my flight to Singapore.", helper: "Use flight to plus the destination.", speak: "Can I check this bag?", swap: "Change Singapore and bag details.", check: "You ask where to drop your bag.", answer: "Where should I drop off my bag?", roleplay: "An airline agent asks for your passport and destination.", followUp: "Is the flight still on time?", phrases: ["check in for my flight", "check this bag", "drop off my bag", "on time"]),
+        EnglishLessonSeed(id: "english-flight-delay", unit: 5, title: "Flight delay", subtitle: "ask about a delay and next step", icon: "clock.badge.exclamationmark.fill", accent: .amber, model: "My flight is delayed. What should I do now?", helper: "Ask for the next action, not all details.", speak: "Will I miss my connection?", swap: "Change connection to bus, train, or meeting.", check: "You ask for the new boarding time.", answer: "What is the new boarding time?", roleplay: "Staff announces a delay and you need clear next steps.", followUp: "Do I need to go to a different gate?", phrases: ["flight is delayed", "what should I do now", "miss my connection", "different gate"]),
+        EnglishLessonSeed(id: "english-hotel-problem", unit: 5, title: "Hotel problem", subtitle: "report one room issue", icon: "bed.double.circle.fill", accent: .violet, model: "Excuse me, the air conditioning isn't working.", helper: "Name the object and the problem.", speak: "Could someone check it, please?", swap: "Change air conditioning to shower, key card, or light.", check: "Your key card does not work.", answer: "My key card isn't working.", roleplay: "You return to reception with a room problem.", followUp: "Is another room available?", phrases: ["isn't working", "someone check it", "key card", "another room available"]),
+        EnglishLessonSeed(id: "english-restaurant-travel", unit: 5, title: "Restaurant while traveling", subtitle: "order and ask local questions", icon: "fork.knife.circle.fill", accent: .mint, model: "Could I have the local special, please?", helper: "Local special is a simple restaurant question.", speak: "Is it spicy?", swap: "Change spicy to vegetarian, sweet, or popular.", check: "You ask for the bill.", answer: "Could I have the bill, please?", roleplay: "A server recommends a local dish.", followUp: "What do people usually order here?", phrases: ["local special", "is it spicy", "have the bill", "usually order"]),
+        EnglishLessonSeed(id: "english-lost-item", unit: 5, title: "Lost item", subtitle: "describe a lost item", icon: "questionmark.folder.fill", accent: .blue, model: "I think I left my phone in the taxi.", helper: "I think I left is useful when you are not sure.", speak: "It's a black phone with a blue case.", swap: "Change the item and color.", check: "You ask if anyone found your bag.", answer: "Has anyone found a small black bag?", roleplay: "You are at a hotel desk and your item is missing.", followUp: "Where is the lost and found?", phrases: ["left my phone", "in the taxi", "blue case", "lost and found"]),
+        EnglishLessonSeed(id: "english-pharmacy-travel", unit: 5, title: "Pharmacy abroad", subtitle: "ask for medicine advice", icon: "cross.vial.fill", accent: .amber, model: "Do you have something for a headache?", helper: "Something for is simple when you need medicine.", speak: "I took this medicine this morning.", swap: "Change headache and timing.", check: "You ask how often to take medicine.", answer: "How often should I take this?", roleplay: "A pharmacist asks what symptoms you have.", followUp: "Should I take it with food?", phrases: ["something for", "headache", "how often", "with food"]),
+        EnglishLessonSeed(id: "english-local-transport", unit: 5, title: "Local transport", subtitle: "ask the best way to travel", icon: "bus.fill", accent: .mint, model: "What's the best way to get to the museum?", helper: "Best way lets the local person choose transport.", speak: "Should I take a bus or a taxi?", swap: "Change museum and transport options.", check: "You ask how long it takes.", answer: "How long does it take to get there?", roleplay: "A local gives you two transport options.", followUp: "Which option is easier?", phrases: ["best way to get to", "take a bus", "how long does it take", "which option"]),
+        EnglishLessonSeed(id: "english-travel-emergency", unit: 5, title: "Travel emergency", subtitle: "ask for urgent travel help", icon: "cross.case.circle.fill", accent: .violet, model: "I need urgent help. I lost my passport.", helper: "Short sentences are best when the situation is urgent.", speak: "Where is the nearest police station?", swap: "Change passport to wallet, phone, or bag.", check: "You need an embassy.", answer: "How can I contact my embassy?", roleplay: "A hotel worker asks what kind of help you need.", followUp: "Can you call someone who speaks English?", phrases: ["urgent help", "lost my passport", "police station", "contact my embassy"]),
+        EnglishLessonSeed(id: "english-travel-review", unit: 5, title: "Travel review", subtitle: "handle a travel day", icon: "checkmark.seal.fill", accent: .blue, model: "My flight is delayed, and I might miss my connection.", helper: "This joins problem and consequence.", speak: "Could you help me find another option?", swap: "Change the delay and option.", check: "You explain a lost phone.", answer: "I left my phone in the taxi.", roleplay: "Handle check-in, a delay, and one local question.", followUp: "Thanks for helping me.", phrases: ["miss my connection", "another option", "left my phone", "thanks for helping"]),
+        EnglishLessonSeed(id: "english-past-story", unit: 6, title: "Past story builder", subtitle: "tell a three-sentence past story", icon: "book.fill", accent: .violet, model: "Last weekend I visited my friend. We cooked dinner. Then we watched a movie.", helper: "Three short sentences are clearer than one long sentence.", speak: "Yesterday I finished work, went home, and rested.", swap: "Change the day and three actions.", check: "You talk about last night.", answer: "Last night I stayed home and studied English.", roleplay: "Tell a friend what you did last weekend.", followUp: "What did you do last weekend?", phrases: ["last weekend", "then we", "yesterday I", "last night"]),
+        EnglishLessonSeed(id: "english-future-plans-confidence", unit: 6, title: "Future plans", subtitle: "explain a plan and reason", icon: "calendar.circle.fill", accent: .blue, model: "Next month I'm going to start a new project because I want a challenge.", helper: "Plan plus reason makes the answer stronger.", speak: "This year I want to speak English more at work.", swap: "Change month, project, and reason.", check: "You say your plan for tomorrow.", answer: "Tomorrow I'm going to practice for ten minutes.", roleplay: "A coworker asks about your goals for this month.", followUp: "What are you planning to do next?", phrases: ["next month", "going to start", "because I want", "planning to do"]),
+        EnglishLessonSeed(id: "english-explain-reasons", unit: 6, title: "Explain reasons", subtitle: "give two simple reasons", icon: "text.bubble.fill", accent: .amber, model: "I prefer the morning because it's quiet and I can focus.", helper: "Because plus two short reasons sounds complete.", speak: "I chose this class because it fits my schedule.", swap: "Change morning and reasons.", check: "You explain why you like online lessons.", answer: "I like online lessons because they are flexible.", roleplay: "Someone asks why you chose this option.", followUp: "The main reason is time.", phrases: ["I prefer", "because it's quiet", "fits my schedule", "main reason"]),
+        EnglishLessonSeed(id: "english-compare-options", unit: 6, title: "Compare options", subtitle: "compare two choices", icon: "arrow.left.arrow.right.circle.fill", accent: .mint, model: "The train is cheaper, but the taxi is faster.", helper: "Cheaper but faster is a useful comparison frame.", speak: "This room is quieter than the first one.", swap: "Change the items and comparison words.", check: "You compare two restaurants.", answer: "This restaurant is cheaper than that one.", roleplay: "A friend asks which option you prefer and why.", followUp: "Which one would you choose?", phrases: ["cheaper but faster", "quieter than", "which option", "would you choose"]),
+        EnglishLessonSeed(id: "english-give-preference", unit: 6, title: "Give preferences", subtitle: "state a preference politely", icon: "slider.horizontal.3", accent: .blue, model: "I'd rather meet in the afternoon if that works for you.", helper: "I'd rather is clear but polite.", speak: "I prefer a quiet place because it's easier to talk.", swap: "Change afternoon and quiet place.", check: "You prefer tea instead of coffee.", answer: "I'd rather have tea, please.", roleplay: "A friend offers two meeting times.", followUp: "Does that work for you?", phrases: ["I'd rather", "if that works", "I prefer", "easier to talk"]),
+        EnglishLessonSeed(id: "english-repair-misunderstanding", unit: 6, title: "Repair misunderstandings", subtitle: "fix meaning during a conversation", icon: "arrow.triangle.2.circlepath.circle.fill", accent: .violet, model: "Sorry, I mean Friday morning, not Friday night.", helper: "I mean lets you repair the message quickly.", speak: "Let me say that again more clearly.", swap: "Change Friday morning to the detail you need.", check: "You correct a wrong time.", answer: "Sorry, I meant three o'clock, not two.", roleplay: "Someone misunderstood your plan.", followUp: "Is that clearer?", phrases: ["I mean", "not Friday night", "say that again", "is that clearer"]),
+        EnglishLessonSeed(id: "english-longer-answer", unit: 6, title: "Longer answer practice", subtitle: "answer in three to five sentences", icon: "text.alignleft", accent: .amber, model: "I like my neighborhood. It is quiet in the morning. There are small shops nearby. I usually walk there after work.", helper: "Short connected sentences build confidence.", speak: "My English goal is simple. I want to speak at work. I practice a little every day.", swap: "Change the topic and three details.", check: "You give a three-sentence answer about your city.", answer: "I live in Jakarta. It is busy, but I like it. There is always good food nearby.", roleplay: "Answer a familiar question with three or four short sentences.", followUp: "Can you tell me a little more?", phrases: ["my neighborhood", "small shops nearby", "my English goal", "a little every day"]),
+        EnglishLessonSeed(id: "english-weekly-speaking-check-1", unit: 6, title: "Weekly speaking check", subtitle: "answer a familiar prompt clearly", icon: "waveform.circle.fill", accent: .mint, model: "This week I practiced introductions, travel questions, and work updates.", helper: "A weekly check should be short and familiar.", speak: "One phrase I want to keep is, Could you say that again?", swap: "Change the phrase and topics.", check: "You name one next focus.", answer: "Next week I want to answer more naturally.", roleplay: "Give a short weekly summary: what improved, one phrase to keep, and one next focus.", followUp: "One thing that improved is my confidence.", phrases: ["this week I practiced", "want to keep", "next week", "one thing that improved"]),
+        EnglishLessonSeed(id: "english-confidence-final", unit: 6, title: "Confidence conversation", subtitle: "hold a longer realistic exchange", icon: "checkmark.seal.fill", accent: .blue, model: "Hi, I'm Alex. I'm here for work, but I'm also exploring the city this weekend.", helper: "This combines identity, reason, and plan.", speak: "Yesterday I had a small problem with my hotel room, but the staff helped me.", swap: "Change the situation and outcome.", check: "You repair a misunderstanding in conversation.", answer: "Sorry, I mean tomorrow morning, not tonight.", roleplay: "Have a three-turn conversation about travel, work, and a small problem.", followUp: "Thanks for your help. I feel more confident now.", phrases: ["here for work", "exploring the city", "staff helped me", "feel more confident"])
+    ]
+
     static func lessons(for language: TargetLanguage) -> [BeginnerLesson] {
         switch language {
         case .english: englishLessons
@@ -80,11 +250,66 @@ enum BeginnerContent {
                 LessonStep(id: "\(id)-speak", kind: .speak, title: "Say it your way", prompt: speak, helper: speakHelper, choices: [], correctAnswer: nil),
                 LessonStep(id: "\(id)-alternative", kind: .speak, title: "Natural alternative", prompt: alternative, helper: alternativeHelper, choices: [], correctAnswer: nil),
                 LessonStep(id: "\(id)-mistake", kind: .choice, title: "Common mistake", prompt: mistakePrompt, helper: "Say the clear line out loud.", choices: [], correctAnswer: correctAnswer),
-                LessonStep(id: "\(id)-roleplay", kind: .speak, title: "Roleplay", prompt: roleplay, helper: roleplayHelper, choices: [], correctAnswer: nil),
-                LessonStep(id: "\(id)-follow-up", kind: .speak, title: "Follow-up practice", prompt: followUp, helper: followUpHelper, choices: [], correctAnswer: nil)
+                LessonStep(id: "\(id)-roleplay", kind: .roleplay, title: "Roleplay", prompt: roleplay, helper: roleplayHelper, choices: [], correctAnswer: nil),
+                LessonStep(id: "\(id)-follow-up", kind: .freeResponse, title: "Follow-up practice", prompt: followUp, helper: followUpHelper, choices: [], correctAnswer: nil)
             ],
-            savedWords: savedWords
+            savedWords: savedWords,
+            visualAssetKind: icon,
+            primarySkill: goal.replacingOccurrences(of: "My goal is to ", with: ""),
+            modelPhrase: model,
+            helperText: modelHelper,
+            savedPhrases: savedWords.map(\.term),
+            reviewPrompts: [
+                correctAnswer,
+                followUp,
+                "Change one detail: \(speak)"
+            ],
+            roleplayPrompt: roleplay,
+            expectedLearnerAction: roleplayHelper,
+            naturalVersionExamples: [model, speak, alternative, followUp],
+            aiVariationPrompts: aiVariationPrompts(for: unit)
         )
+    }
+
+    private static func aiVariationPrompts(for unit: Int) -> [String] {
+        switch unit {
+        case 1:
+            return [
+                "Keep the answer to one friendly sentence before asking back.",
+                "Change only one personal detail at a time.",
+                "If the learner freezes, offer a two-word starter."
+            ]
+        case 2:
+            return [
+                "Use one practical place, item, time, or problem.",
+                "Ask for the next step after the learner states the need.",
+                "Keep the roleplay realistic for a shop, counter, clinic, or street."
+            ]
+        case 3:
+            return [
+                "React naturally before asking a follow-up.",
+                "Invite the learner to add one feeling, reason, or plan.",
+                "Make the second turn social, not transactional."
+            ]
+        case 4:
+            return [
+                "Keep work replies concise: status, blocker, request.",
+                "Use polite pressure only when a deadline is part of the prompt.",
+                "Ask one clarifying question before adding complexity."
+            ]
+        case 5:
+            return [
+                "Keep travel problem lines short and specific.",
+                "Ask for one useful detail such as time, place, gate, or next step.",
+                "Use calm repair phrases when the learner did not understand."
+            ]
+        default:
+            return [
+                "Ask for a longer answer only after a clear short answer.",
+                "Invite one reason, comparison, preference, or repair.",
+                "End with a practical next speaking prompt, not a score."
+            ]
+        }
     }
 
     private static func frenchConversationLesson(
@@ -133,7 +358,8 @@ enum BeginnerContent {
         )
     }
 
-    private static let englishLessons: [BeginnerLesson] = [
+    private static let englishLessons: [BeginnerLesson] = {
+        let baseLessons: [BeginnerLesson] = [
         englishConversationLesson(
             id: "english-introductions",
             unit: 1,
@@ -496,7 +722,7 @@ enum BeginnerContent {
         ),
         englishConversationLesson(
             id: "english-work-chat",
-            unit: 3,
+            unit: 4,
             title: "Start a work chat",
             subtitle: "Share your role and find the next step",
             icon: "briefcase.fill",
@@ -526,7 +752,7 @@ enum BeginnerContent {
         ),
         englishConversationLesson(
             id: "english-meeting-check-in",
-            unit: 3,
+            unit: 4,
             title: "Give a meeting update",
             subtitle: "Join the check-in and move work forward",
             icon: "person.2.fill",
@@ -556,7 +782,7 @@ enum BeginnerContent {
         ),
         englishConversationLesson(
             id: "english-phone-call",
-            unit: 3,
+            unit: 4,
             title: "Make a work call",
             subtitle: "Open the call and state the purpose",
             icon: "phone.fill",
@@ -586,7 +812,7 @@ enum BeginnerContent {
         ),
         englishConversationLesson(
             id: "english-explain-problem",
-            unit: 3,
+            unit: 4,
             title: "Explain a problem",
             subtitle: "Report the issue and the next blocker",
             icon: "exclamationmark.bubble.fill",
@@ -616,7 +842,7 @@ enum BeginnerContent {
         ),
         englishConversationLesson(
             id: "english-give-opinion",
-            unit: 3,
+            unit: 4,
             title: "Give a simple opinion",
             subtitle: "Share a choice and one useful reason",
             icon: "lightbulb.fill",
@@ -646,7 +872,7 @@ enum BeginnerContent {
         ),
         englishConversationLesson(
             id: "english-agree-disagree",
-            unit: 3,
+            unit: 4,
             title: "Agree and disagree politely",
             subtitle: "Support the goal and adjust the plan",
             icon: "hand.thumbsup.fill",
@@ -676,7 +902,7 @@ enum BeginnerContent {
         ),
         englishConversationLesson(
             id: "english-hotel-check-in",
-            unit: 4,
+            unit: 5,
             title: "Check in at a hotel",
             subtitle: "Give your name and ask practical questions",
             icon: "bed.double.fill",
@@ -706,7 +932,7 @@ enum BeginnerContent {
         ),
         englishConversationLesson(
             id: "english-travel-plans",
-            unit: 4,
+            unit: 5,
             title: "Talk about travel plans",
             subtitle: "Say where you are going and what you plan to do",
             icon: "airplane.departure",
@@ -736,7 +962,7 @@ enum BeginnerContent {
         ),
         englishConversationLesson(
             id: "english-airport-travel",
-            unit: 4,
+            unit: 5,
             title: "Handle airport moments",
             subtitle: "Ask about gates, bags, and delays",
             icon: "airplane",
@@ -766,7 +992,7 @@ enum BeginnerContent {
         ),
         englishConversationLesson(
             id: "english-emergency-help",
-            unit: 4,
+            unit: 5,
             title: "Emergency help phrases",
             subtitle: "Ask for urgent help and say what is wrong",
             icon: "cross.case.fill",
@@ -796,7 +1022,7 @@ enum BeginnerContent {
         ),
         englishConversationLesson(
             id: "english-doctor-pharmacy",
-            unit: 4,
+            unit: 5,
             title: "Doctor and pharmacy",
             subtitle: "Describe symptoms and ask for medicine",
             icon: "pills.fill",
@@ -826,7 +1052,7 @@ enum BeginnerContent {
         ),
         englishConversationLesson(
             id: "english-course-wrap-up",
-            unit: 4,
+            unit: 5,
             title: "Full conversation practice",
             subtitle: "Use the course phrases in one realistic exchange",
             icon: "checkmark.seal.fill",
@@ -854,7 +1080,12 @@ enum BeginnerContent {
             ],
             extraMistake: "I missed last part. Could say once more?"
         )
-    ]
+        ]
+
+        return (1...6).flatMap { unit in
+            baseLessons.filter { $0.unit == unit } + englishExpansionLessons.filter { $0.unit == unit }
+        }
+    }()
 
     private static let frenchLessons: [BeginnerLesson] = [
         frenchConversationLesson(

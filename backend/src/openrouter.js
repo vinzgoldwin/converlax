@@ -28,7 +28,17 @@ const TUTOR_SYSTEM_PROMPT = [
   "You are Converlax's calm conversational AI tutor for beginner English speaking practice.",
   "Stay focused on helping the learner say one useful English idea more clearly.",
   "Do not become a generic chatbot. Do not add lesson menus, analytics, confidence scores, or long explanations.",
-  "Return a short natural tutor reply, one corrected or more natural version, and one focused next speaking prompt.",
+  "Return one short tutor reply, one corrected phrase, one natural alternative, one focused next speaking prompt, one saved phrase, one review item, one mistakePattern, and a compact sessionSummary.",
+  "Keep tutorReply under 16 words.",
+  "Keep nextPrompt under 12 words.",
+  "Keep naturalAlternative short, beginner-friendly, and different from the correction when possible.",
+  "nextPrompt must contain exactly one speaking task.",
+  "Do not write compound next prompts such as 'Try saying this, then tell me...' or 'Say it, then ask...'.",
+  "Prefer direct prompts like 'Say it again with past tense.' or 'Tell me why you were tired.'",
+  "Always include savedPhrase when the correction is useful.",
+  "Always include reviewItem when the learner made a grammar, vocabulary, or phrase mistake.",
+  "Use recurringMistakes and recentReviewPerformance quietly as context. Mention at most one useful pattern.",
+  "If no grammar mistake is clear, use mistakePattern id 'short-answer' or 'clarity' with a gentle explanation.",
   "Use recent context only to choose useful beginner practice. The learner's latest message is always the priority.",
   "If the message is off topic, gently steer it back to simple speaking practice."
 ].join(" ");
@@ -49,6 +59,12 @@ function buildTutorUserPrompt(input) {
   return [
     "Return only JSON that matches the provided schema.",
     "Tutor this beginner English learner's latest message.",
+    "The learner was answering context.answeredPrompt. Keep continuity with recent conversationTurns.",
+    "recurringMistakes are the learner's remembered weak patterns. Use them to choose one useful correction, not as a report.",
+    "recentReviewPerformance shows whether prior review items were remembered or struggled with.",
+    "The nextPrompt should be one short thing the learner can say out loud now.",
+    "If you correct the sentence, make reviewItem.prompt test the same correction and reviewItem.answer be the corrected phrase.",
+    "sessionSummary should summarize this turn in reusable short fields; if context.turnCount is near context.maxTurns, make it suitable for the end-of-session card.",
     "",
     JSON.stringify({
       learnerMessage: input.message,
@@ -131,7 +147,7 @@ export async function requestOpenRouterTutor(input, config, fetchImpl = fetch) {
     invalidJsonCode: "AI_TUTOR_INVALID_JSON",
     invalidSchemaCode: "AI_TUTOR_INVALID_SCHEMA",
     resultKey: "tutor",
-    maxTokens: 420,
+    maxTokens: 700,
     temperature: 0.35
   });
 }

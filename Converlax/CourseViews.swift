@@ -256,7 +256,12 @@ private struct LessonRowLink: View {
 
     var body: some View {
         NavigationLink(value: HomeRoute.lessonDetail(lesson)) {
-            LessonRow(lesson: lesson, isCurrent: state.isCurrent(lesson), isCompleted: state.isCompleted(lesson))
+            LessonRow(
+                lesson: lesson,
+                isCurrent: state.isCurrent(lesson),
+                isCompleted: state.isCompleted(lesson),
+                isUnlocked: state.isUnlocked(lesson)
+            )
         }
         .buttonStyle(.plain)
         .disabled(!state.isUnlocked(lesson))
@@ -277,15 +282,22 @@ struct CourseDetailView: View {
                     CurrentCourseLessonStart(state: state)
 
                     VStack(alignment: .leading, spacing: 12) {
-                        SectionHeader(title: "Choose a lesson", subtitle: "Each one builds a useful conversation.")
+                        SectionHeader(title: "Course path", subtitle: "Short speaking lessons in order.")
                         ForEach(groupedLessons) { group in
                             VStack(alignment: .leading, spacing: 10) {
-                                CourseUnitSectionHeader(unit: group.unit, title: group.title)
+                                CourseUnitSectionHeader(unit: group.unit, title: group.title, summary: group.summary)
                                 ForEach(group.lessons) { lesson in
                                     NavigationLink(value: HomeRoute.lessonDetail(lesson)) {
-                                        LessonRow(lesson: lesson, isCurrent: state.isCurrent(lesson), isCompleted: state.isCompleted(lesson))
+                                        LessonRow(
+                                            lesson: lesson,
+                                            isCurrent: state.isCurrent(lesson),
+                                            isCompleted: state.isCompleted(lesson),
+                                            isUnlocked: state.isUnlocked(lesson)
+                                        )
                                     }
                                     .buttonStyle(.plain)
+                                    .disabled(!state.isUnlocked(lesson))
+                                    .opacity(state.isUnlocked(lesson) ? 1 : 0.5)
                                 }
                             }
                         }
@@ -304,6 +316,7 @@ struct CourseDetailView: View {
             CourseLessonGroup(
                 unit: unit,
                 title: unitTitle(for: unit),
+                summary: unitSummary(for: unit),
                 lessons: lessonsByUnit[unit] ?? []
             )
         }
@@ -314,24 +327,22 @@ struct CourseDetailView: View {
             return "Beginner essentials"
         }
 
-        switch unit {
-        case 1:
-            return "First conversations"
-        case 2:
-            return "Around town"
-        case 3:
-            return "Work and calls"
-        case 4:
-            return "Travel and help"
-        default:
-            return "Conversation practice"
+        return BeginnerContent.englishUnitCatalog.first { $0.id == unit }?.title ?? "Conversation practice"
+    }
+
+    private func unitSummary(for unit: Int) -> String {
+        guard state.profile.targetLanguage == .english else {
+            return state.profile.targetLanguage.unitDescription
         }
+
+        return BeginnerContent.englishUnitCatalog.first { $0.id == unit }?.summary ?? "Practice useful spoken patterns."
     }
 }
 
 private struct CourseLessonGroup: Identifiable {
     let unit: Int
     let title: String
+    let summary: String
     let lessons: [BeginnerLesson]
 
     var id: Int { unit }
@@ -340,14 +351,19 @@ private struct CourseLessonGroup: Identifiable {
 private struct CourseUnitSectionHeader: View {
     let unit: Int
     let title: String
+    let summary: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 3) {
             Text("Unit \(unit)")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(Color.primaryBlue)
             Text(title)
                 .font(.headline.weight(.semibold))
+            Text(summary)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.top, unit == 1 ? 0 : 8)
     }
@@ -393,6 +409,7 @@ private struct LessonRow: View {
     let lesson: BeginnerLesson
     let isCurrent: Bool
     let isCompleted: Bool
+    let isUnlocked: Bool
 
     var body: some View {
         HStack(spacing: 14) {
@@ -413,15 +430,15 @@ private struct LessonRow: View {
                             .background(Color.primaryBlue, in: Capsule())
                     }
                 }
-                Text(lesson.subtitle)
+                Text(isUnlocked ? lesson.subtitle : "Finish the previous lesson first.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             Spacer()
 
-            Image(systemName: isCompleted ? "checkmark.circle.fill" : "chevron.right")
-                .foregroundStyle(isCompleted ? Color.mintSuccess : Color.secondary.opacity(0.7))
+            Image(systemName: trailingSymbol)
+                .foregroundStyle(trailingColor)
         }
         .frame(minHeight: 56)
         .padding(.horizontal, 8)
@@ -432,6 +449,17 @@ private struct LessonRow: View {
                 .stroke(isCurrent ? Color.primaryBlue.opacity(0.28) : Color.clayStroke.opacity(0.42), lineWidth: isCurrent ? 1.25 : 1)
         )
         .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private var trailingSymbol: String {
+        if isCompleted { return "checkmark.circle.fill" }
+        if !isUnlocked { return "lock.fill" }
+        return "chevron.right"
+    }
+
+    private var trailingColor: Color {
+        if isCompleted { return Color.mintSuccess }
+        return Color.secondary.opacity(0.7)
     }
 }
 

@@ -11,6 +11,7 @@
 		0D3E81B72C9D1D1500A0C001 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D3E81B62C9D1D1500A0C001 /* ContentView.swift */; };
 		0D3E81BA2C9D1D1500A0C001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0D3E81B92C9D1D1500A0C001 /* Assets.xcassets */; };
 		0D5C00000000000000000001 /* ConverlaxRootTabsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D5C00000000000000000002 /* ConverlaxRootTabsUITests.swift */; };
+		0D6C00000000000000000001 /* ConverlaxContentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D6C00000000000000000002 /* ConverlaxContentTests.swift */; };
 		0D4A00000000000000000001 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D4B00000000000000000001 /* Models.swift */; };
 		0D4A00000000000000000002 /* BeginnerContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D4B00000000000000000002 /* BeginnerContent.swift */; };
 		0D4A00000000000000000003 /* LearningState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D4B00000000000000000003 /* LearningState.swift */; };
@@ -35,11 +36,19 @@
 			remoteGlobalIDString = 0D3E81AA2C9D1D1500A0C001;
 			remoteInfo = Converlax;
 		};
+		0D6C00000000000000000003 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0D3E81A32C9D1D1500A0C001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0D3E81AA2C9D1D1500A0C001;
+			remoteInfo = Converlax;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		0D3E81AB2C9D1D1500A0C001 /* Converlax.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Converlax.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0D5C00000000000000000004 /* ConverlaxUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ConverlaxUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0D6C00000000000000000004 /* ConverlaxTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ConverlaxTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0D3E81B42C9D1D1500A0C001 /* ConverlaxApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConverlaxApp.swift; sourceTree = "<group>"; };
 		0D3E81B62C9D1D1500A0C001 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		0D3E81B92C9D1D1500A0C001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -58,6 +67,7 @@
 		0D4B0000000000000000000E /* AIFeedbackService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIFeedbackService.swift; sourceTree = "<group>"; };
 		0D4B0000000000000000000F /* TutorAIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorAIService.swift; sourceTree = "<group>"; };
 		0D5C00000000000000000002 /* ConverlaxRootTabsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConverlaxRootTabsUITests.swift; sourceTree = "<group>"; };
+		0D6C00000000000000000002 /* ConverlaxContentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConverlaxContentTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -75,6 +85,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		0D6C00000000000000000005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -82,6 +99,7 @@
 			isa = PBXGroup;
 			children = (
 				0D3E81B32C9D1D1500A0C001 /* Converlax */,
+				0D6C00000000000000000006 /* ConverlaxTests */,
 				0D5C00000000000000000006 /* ConverlaxUITests */,
 				0D3E81AC2C9D1D1500A0C001 /* Products */,
 			);
@@ -91,6 +109,7 @@
 			isa = PBXGroup;
 			children = (
 				0D3E81AB2C9D1D1500A0C001 /* Converlax.app */,
+				0D6C00000000000000000004 /* ConverlaxTests.xctest */,
 				0D5C00000000000000000004 /* ConverlaxUITests.xctest */,
 			);
 			name = Products;
@@ -126,6 +145,14 @@
 				0D5C00000000000000000002 /* ConverlaxRootTabsUITests.swift */,
 			);
 			path = ConverlaxUITests;
+			sourceTree = "<group>";
+		};
+		0D6C00000000000000000006 /* ConverlaxTests */ = {
+			isa = PBXGroup;
+			children = (
+				0D6C00000000000000000002 /* ConverlaxContentTests.swift */,
+			);
+			path = ConverlaxTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -166,6 +193,24 @@
 			productReference = 0D5C00000000000000000004 /* ConverlaxUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		0D6C00000000000000000010 /* ConverlaxTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0D6C00000000000000000011 /* Build configuration list for PBXNativeTarget "ConverlaxTests" */;
+			buildPhases = (
+				0D6C00000000000000000012 /* Sources */,
+				0D6C00000000000000000005 /* Frameworks */,
+				0D6C00000000000000000013 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0D6C00000000000000000014 /* PBXTargetDependency */,
+			);
+			name = ConverlaxTests;
+			productName = ConverlaxTests;
+			productReference = 0D6C00000000000000000004 /* ConverlaxTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -180,6 +225,10 @@
 						CreatedOnToolsVersion = 26.3;
 					};
 					0D5C00000000000000000010 = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = 0D3E81AA2C9D1D1500A0C001;
+					};
+					0D6C00000000000000000010 = {
 						CreatedOnToolsVersion = 26.3;
 						TestTargetID = 0D3E81AA2C9D1D1500A0C001;
 					};
@@ -199,6 +248,7 @@
 			projectRoot = "";
 			targets = (
 				0D3E81AA2C9D1D1500A0C001 /* Converlax */,
+				0D6C00000000000000000010 /* ConverlaxTests */,
 				0D5C00000000000000000010 /* ConverlaxUITests */,
 			);
 		};
@@ -214,6 +264,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		0D5C00000000000000000013 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0D6C00000000000000000013 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -254,6 +311,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		0D6C00000000000000000012 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0D6C00000000000000000001 /* ConverlaxContentTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -261,6 +326,11 @@
 			isa = PBXTargetDependency;
 			target = 0D3E81AA2C9D1D1500A0C001 /* Converlax */;
 			targetProxy = 0D5C00000000000000000003 /* PBXContainerItemProxy */;
+		};
+		0D6C00000000000000000014 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0D3E81AA2C9D1D1500A0C001 /* Converlax */;
+			targetProxy = 0D6C00000000000000000003 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -494,6 +564,56 @@
 			};
 			name = Release;
 		};
+		0D6C00000000000000000015 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kego.converlaxTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Converlax.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Converlax";
+			};
+			name = Debug;
+		};
+		0D6C00000000000000000016 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kego.converlaxTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Converlax.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Converlax";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -520,6 +640,15 @@
 			buildConfigurations = (
 				0D5C00000000000000000015 /* Debug */,
 				0D5C00000000000000000016 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0D6C00000000000000000011 /* Build configuration list for PBXNativeTarget "ConverlaxTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0D6C00000000000000000015 /* Debug */,
+				0D6C00000000000000000016 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

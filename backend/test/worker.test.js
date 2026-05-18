@@ -14,11 +14,26 @@ const baseEnv = {
 const sampleTutor = {
   tutorReply: "Good. You're talking about yesterday, so use past tense.",
   correction: "I went to work yesterday, and I was tired.",
-  nextPrompt: "Say it once more, then ask me: How was your day?",
+  naturalAlternative: "I had a long day at work yesterday.",
+  nextPrompt: "Tell me why you were tired.",
   savedPhrase: "I went to work yesterday.",
   reviewItem: {
     prompt: "Say this in the past: I go to work yesterday.",
     answer: "I went to work yesterday."
+  },
+  mistakePattern: {
+    id: "past-tense",
+    title: "Past tense",
+    explanation: "Use a past verb for yesterday or another finished time.",
+    exampleLearnerSentence: "I go to work yesterday and I tired",
+    correctedSentence: "I went to work yesterday, and I was tired.",
+    confidence: 0.86
+  },
+  sessionSummary: {
+    improvedPhrase: "I had a long day at work yesterday.",
+    mistakePattern: "Past tense",
+    savedReviewItem: "I went to work yesterday.",
+    nextPrompt: "Tell me why you were tired."
   }
 };
 
@@ -62,7 +77,17 @@ test("worker exposes tutor endpoint", async () => {
       context: {
         targetLanguage: "English",
         proficiencyLevel: "beginner",
-        currentLessonTitle: "Introduce yourself"
+        currentLessonTitle: "Introduce yourself",
+        recurringMistakes: [{
+          id: "past-tense",
+          title: "Past tense",
+          explanation: "Use a past verb for finished time.",
+          exampleLearnerSentence: "I go yesterday.",
+          correctedSentence: "I went yesterday.",
+          count: 2,
+          lastSeenDay: "2026-05-18",
+          priorityScore: 0.88
+        }]
       }
     }), baseEnv);
     const body = await response.json();

@@ -72,18 +72,66 @@ final class LearningState: ObservableObject {
         return scheduledReviewItems
             .filter { $0.nextDueDay <= today }
             .sorted { lhs, rhs in
+                let lhsScore = reviewPriorityScore(lhs, today: today)
+                let rhsScore = reviewPriorityScore(rhs, today: today)
+                if lhsScore != rhsScore {
+                    return lhsScore > rhsScore
+                }
                 if lhs.nextDueDay != rhs.nextDueDay {
                     return lhs.nextDueDay < rhs.nextDueDay
                 }
-                let lhsPersonal = isPersonalReviewItem(lhs)
-                let rhsPersonal = isPersonalReviewItem(rhs)
-                if lhsPersonal != rhsPersonal {
-                    return lhsPersonal
-                }
-                if lhs.mistakeCount != rhs.mistakeCount {
-                    return lhs.mistakeCount > rhs.mistakeCount
-                }
                 return lhs.id < rhs.id
+            }
+    }
+
+    var recurringMistakePatterns: [MistakePattern] {
+        profile.mistakePatterns.sorted { lhs, rhs in
+            if lhs.priorityScore != rhs.priorityScore {
+                return lhs.priorityScore > rhs.priorityScore
+            }
+            if lhs.count != rhs.count {
+                return lhs.count > rhs.count
+            }
+            return lhs.lastSeenDay > rhs.lastSeenDay
+        }
+    }
+
+    var tutorMistakeContext: [TutorAIMistakePatternContext] {
+        recurringMistakePatterns.prefix(3).map {
+            TutorAIMistakePatternContext(
+                id: $0.id,
+                title: $0.title,
+                explanation: $0.explanation,
+                exampleLearnerSentence: $0.exampleLearnerSentence,
+                correctedSentence: $0.correctedSentence,
+                count: $0.count,
+                lastSeenDay: $0.lastSeenDay,
+                priorityScore: $0.priorityScore
+            )
+        }
+    }
+
+    var tutorReviewPerformanceContext: [TutorAIReviewPerformanceContext] {
+        scheduledReviewItems
+            .filter { $0.lastReviewedDay != nil || $0.mistakeCount > 0 || $0.successCount > 0 }
+            .sorted { lhs, rhs in
+                let lhsDay = lhs.lastReviewedDay ?? lhs.nextDueDay
+                let rhsDay = rhs.lastReviewedDay ?? rhs.nextDueDay
+                if lhsDay != rhsDay {
+                    return lhsDay > rhsDay
+                }
+                return lhs.mistakeCount > rhs.mistakeCount
+            }
+            .prefix(5)
+            .map {
+                TutorAIReviewPerformanceContext(
+                    prompt: $0.prompt,
+                    source: $0.source,
+                    lastReviewedDay: $0.lastReviewedDay,
+                    ease: $0.ease,
+                    mistakeCount: $0.mistakeCount,
+                    successCount: $0.successCount
+                )
             }
     }
 
@@ -237,8 +285,7 @@ final class LearningState: ObservableObject {
     func isUnlocked(_ lesson: BeginnerLesson) -> Bool {
         guard let index = courseLessons.firstIndex(of: lesson) else { return false }
         if index == 0 { return true }
-        let previous = courseLessons[index - 1]
-        return isCompleted(previous) || isCompleted(lesson)
+        return courseLessons[..<index].allSatisfy(isCompleted)
     }
 
     func completionCelebration(
@@ -420,11 +467,11 @@ final class LearningState: ObservableObject {
             next.currentLessonID = lesson.id
         }
 
-        profile = next
+        profile = Self.sanitized(next)
     }
 
     func saveLessonResume(lesson: BeginnerLesson, stepIndex: Int) {
-        guard !lesson.steps.isEmpty, !isCompleted(lesson) else { return }
+        guard !lesson.steps.isEmpty, !isCompleted(lesson), isUnlocked(lesson) else { return }
         var next = profile
         next.currentLessonID = lesson.id
         let boundedStepIndex = min(max(stepIndex, 0), lesson.steps.count - 1)
@@ -529,6 +576,14 @@ final class LearningState: ObservableObject {
             now: now
         )
         addFeedbackReviewItemIfNeeded(feedback, source: mode, in: &next, now: now)
+        recordMistakePattern(
+            learnerSentence: cleanTranscript,
+            correctedSentence: feedback.correction,
+            source: mode,
+            pronunciationNote: feedback.pronunciationTip,
+            in: &next,
+            now: now
+        )
         updateSkill("Speaking", title: "Speaking confidence", delta: 1, confidenceDelta: 5, in: &next)
         profile = next
         return feedback
@@ -546,14 +601,24 @@ final class LearningState: ObservableObject {
         }
 
         next.scheduledReviews[reviewIndex].lastReviewedDay = today
-        next.scheduledReviews[reviewIndex].mistakeCount += remembered ? 0 : 1
-        next.scheduledReviews[reviewIndex].ease = min(max(next.scheduledReviews[reviewIndex].ease + (remembered ? 0.12 : -0.18), 0.35), 0.98)
+        if remembered {
+            next.scheduledReviews[reviewIndex].successCount += 1
+            if next.scheduledReviews[reviewIndex].successCount >= 2 {
+                next.scheduledReviews[reviewIndex].mistakeCount = max(0, next.scheduledReviews[reviewIndex].mistakeCount - 1)
+            }
+        } else {
+            next.scheduledReviews[reviewIndex].successCount = 0
+            next.scheduledReviews[reviewIndex].mistakeCount += 1
+        }
+        next.scheduledReviews[reviewIndex].ease = min(max(next.scheduledReviews[reviewIndex].ease + (remembered ? 0.12 : -0.2), 0.35), 0.98)
         next.scheduledReviews[reviewIndex].listeningFirst = !remembered && item.kind != .word
         next.scheduledReviews[reviewIndex].speakingRetry = !remembered || item.kind != .word
 
-        let dayOffset = remembered ? max(1, Int(next.scheduledReviews[reviewIndex].ease * 5)) : 1
+        let graduationBoost = next.scheduledReviews[reviewIndex].successCount >= 2 ? 3 : 0
+        let dayOffset = remembered ? max(1 + graduationBoost, Int(next.scheduledReviews[reviewIndex].ease * Double(5 + graduationBoost))) : 1
         let nextDate = calendar.date(byAdding: .day, value: dayOffset, to: now) ?? now
         next.scheduledReviews[reviewIndex].nextDueDay = dayString(for: nextDate)
+        adjustMistakePriority(for: next.scheduledReviews[reviewIndex], remembered: remembered, today: today, in: &next)
 
         let usage = UsageSession(
             id: "usage-review-\(today)",
@@ -644,6 +709,14 @@ final class LearningState: ObservableObject {
         if let reviewID = addFeedbackReviewItemIfNeeded(feedback, source: title, in: &next, now: now) {
             reviewIDs.append(reviewID)
         }
+        recordMistakePattern(
+            learnerSentence: transcript,
+            correctedSentence: feedback.correction,
+            source: title,
+            pronunciationNote: feedback.pronunciationTip,
+            in: &next,
+            now: now
+        )
 
         let summary = LearningSessionSummary(
             id: "summary-\(usage.id)",
@@ -680,9 +753,13 @@ final class LearningState: ObservableObject {
     ) -> LearningFeedback {
         var next = profile
         let day = dayString(for: now)
-        let savedPhrase = tutorResponse.savedPhrase?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let reviewPrompt = tutorResponse.reviewItem?.prompt.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let reviewAnswer = tutorResponse.reviewItem?.answer.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let savedPhrase = tutorResponse.savedPhrase.trimmingCharacters(in: .whitespacesAndNewlines)
+        let naturalAlternative = tutorResponse.naturalAlternative.trimmingCharacters(in: .whitespacesAndNewlines)
+        let reviewPrompt = tutorResponse.reviewItem.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        let reviewAnswer = tutorResponse.reviewItem.answer.trimmingCharacters(in: .whitespacesAndNewlines)
+        let correctedPhrase = nonEmpty(tutorResponse.correction)
+        let savedArtifact = nonEmpty(savedPhrase) ?? correctedPhrase
+        let savedTakeaway = savedArtifact ?? nonEmpty(naturalAlternative) ?? tutorResponse.correction
         let feedback = LearningFeedback(
             id: "feedback-tutor-\(stableID(message + tutorResponse.correction))-\(day)",
             source: "Tutor",
@@ -698,10 +775,10 @@ final class LearningState: ObservableObject {
             betterPhrase: tutorResponse.correction,
             pronunciationTip: isFallback ? "Local guidance only. Say the sentence slowly and keep the final word clear." : "",
             claritySignal: "",
-            savedTakeaway: savedPhrase ?? tutorResponse.correction,
+            savedTakeaway: savedTakeaway,
             nextAction: tutorResponse.nextPrompt,
             grammarCorrection: tutorResponse.correction,
-            naturalVersion: tutorResponse.correction,
+            naturalVersion: nonEmpty(naturalAlternative) ?? tutorResponse.correction,
             pronunciationNotes: "",
             vocabularyImprovement: "",
             fluencyTip: "",
@@ -714,15 +791,31 @@ final class LearningState: ObservableObject {
         )
         addFeedback(feedback, in: &next)
 
-        if let savedPhrase, !savedPhrase.isEmpty {
+        if let savedArtifact {
             addLearningObject(
                 SavedLearningObject(
-                    id: "tutor-message-\(stableID(savedPhrase))",
+                    id: "tutor-message-\(stableID(savedArtifact))",
                     kind: .tutorMessage,
-                    text: savedPhrase,
-                    translation: "Saved from Tutor",
+                    text: savedArtifact,
+                    translation: savedArtifact,
                     source: "Tutor",
-                    note: tutorResponse.nextPrompt,
+                    note: nonEmpty(message).map { "Corrected from: \($0)" } ?? tutorResponse.nextPrompt,
+                    createdDay: day
+                ),
+                in: &next,
+                now: now
+            )
+        }
+
+        if let naturalAlternative = nonEmpty(naturalAlternative), naturalAlternative != (savedArtifact ?? "") {
+            addLearningObject(
+                SavedLearningObject(
+                    id: "tutor-natural-\(stableID(naturalAlternative))",
+                    kind: .phrase,
+                    text: naturalAlternative,
+                    translation: tutorResponse.correction,
+                    source: "Tutor",
+                    note: "More natural spoken English.",
                     createdDay: day
                 ),
                 in: &next,
@@ -731,9 +824,80 @@ final class LearningState: ObservableObject {
         }
 
         addFeedbackReviewItemIfNeeded(feedback, source: "Tutor", in: &next, now: now)
+        recordMistakePattern(
+            learnerSentence: message,
+            correctedSentence: tutorResponse.correction,
+            source: "Tutor",
+            aiPattern: tutorResponse.mistakePattern,
+            in: &next,
+            now: now
+        )
         updateSkill("Tutor", title: "Tutor practice", delta: 1, confidenceDelta: isFallback ? 0 : 2, in: &next)
         profile = next
         return feedback
+    }
+
+    @discardableResult
+    func recordMistakePattern(
+        learnerSentence: String,
+        correctedSentence: String,
+        source: String = "Tutor",
+        now: Date = Date()
+    ) -> MistakePattern? {
+        var next = profile
+        let pattern = recordMistakePattern(
+            learnerSentence: learnerSentence,
+            correctedSentence: correctedSentence,
+            source: source,
+            in: &next,
+            now: now
+        )
+        profile = next
+        return pattern
+    }
+
+    func recordTutorSessionSummary(
+        improvedPhrase: String,
+        mistakePatternTitle: String,
+        reviewItem: String,
+        nextAction: String,
+        turnCount: Int,
+        now: Date = Date()
+    ) {
+        var next = profile
+        let today = dayString(for: now)
+        let cleanImprovedPhrase = nonEmpty(improvedPhrase) ?? "One clear English sentence."
+        let cleanMistakePattern = nonEmpty(mistakePatternTitle) ?? "Complete answers"
+        let cleanReviewItem = nonEmpty(reviewItem) ?? "Review today's corrected phrase."
+        let cleanNextAction = nonEmpty(nextAction) ?? nextRecommendation.title
+        let usage = UsageSession(
+            id: "usage-tutor-\(today)-\(stableID(cleanImprovedPhrase + cleanReviewItem))",
+            title: "Tutor practice",
+            detail: "\(max(turnCount, 1)) speaking turns",
+            minutes: max(turnCount, 1),
+            dateLabel: "Today"
+        )
+        let createdSession = upsertUsageSession(usage, in: &next)
+        let summary = LearningSessionSummary(
+            id: "summary-\(usage.id)",
+            title: "Tutor practice",
+            transcript: "",
+            corrections: [cleanImprovedPhrase],
+            strongPhrases: [cleanImprovedPhrase],
+            weakPhrases: [cleanMistakePattern],
+            suggestedReviewIDs: next.scheduledReviews.filter { $0.source == "Tutor" }.prefix(3).map(\.id),
+            nextRecommendation: cleanNextAction,
+            dateLabel: "Today"
+        )
+        upsertSessionSummary(summary, in: &next)
+        if createdSession {
+            updateStreak(in: &next, now: now)
+            prependActivity(
+                LearningActivity(id: "activity-\(usage.id)", title: "Completed Tutor practice", detail: cleanReviewItem, symbol: "waveform", dateLabel: "Today"),
+                in: &next
+            )
+        }
+        profile = next
     }
 
     func removeLine(_ line: SavedLine) {
@@ -786,6 +950,7 @@ final class LearningState: ObservableObject {
         next.scheduledReviews = []
         next.feedbackEvents = []
         next.sessionSummaries = []
+        next.mistakePatterns = []
         next.skillProgress = []
         next.favoriteRoleplayIDs = []
         next.usageSessions = []
@@ -863,6 +1028,7 @@ final class LearningState: ObservableObject {
                 nextDueDay: review.nextDueDay,
                 ease: review.ease,
                 mistakeCount: review.mistakeCount,
+                successCount: review.successCount,
                 listeningFirst: review.listeningFirst,
                 speakingRetry: review.speakingRetry
             )
@@ -915,6 +1081,66 @@ final class LearningState: ObservableObject {
         return persistedReviewIDs.contains(item.id) && !seededStandaloneIDs.contains(item.id)
     }
 
+    private func reviewPriorityScore(_ item: ScheduledReviewItem, today: String) -> Double {
+        var score = 0.0
+        if item.nextDueDay <= today {
+            score += 20
+        }
+        if item.nextDueDay < today {
+            score += 3
+        }
+        if isPersonalReviewItem(item) {
+            score += 6
+        }
+        if item.kind == .mistake {
+            score += 5
+        }
+        if item.source.localizedCaseInsensitiveContains("Tutor") {
+            score += 2
+        }
+        score += min(8, Double(item.mistakeCount) * 1.6)
+        score += max(0, 1 - item.ease) * 5
+        score -= min(4, Double(item.successCount) * 1.2)
+
+        if let pattern = mistakePattern(for: item) {
+            score += pattern.priorityScore * 8
+            score += min(4, Double(pattern.count))
+            if pattern.lastSeenDay == today {
+                score += 2
+            }
+        }
+
+        return score
+    }
+
+    private func mistakePattern(for item: ScheduledReviewItem) -> MistakePattern? {
+        let patternID: String
+        if item.objectID.hasPrefix("mistake-") {
+            patternID = String(item.objectID.dropFirst("mistake-".count))
+        } else if item.id.hasPrefix("review-mistake-") {
+            patternID = String(item.id.dropFirst("review-mistake-".count))
+        } else {
+            return nil
+        }
+
+        return profile.mistakePatterns.first { $0.id == patternID }
+    }
+
+    private func adjustMistakePriority(for item: ScheduledReviewItem, remembered: Bool, today: String, in profile: inout LearningProfile) {
+        guard item.objectID.hasPrefix("mistake-") else { return }
+        let patternID = String(item.objectID.dropFirst("mistake-".count))
+        guard let index = profile.mistakePatterns.firstIndex(where: { $0.id == patternID }) else { return }
+
+        if remembered {
+            let decrease = item.successCount >= 2 ? 0.16 : 0.06
+            profile.mistakePatterns[index].priorityScore = max(0.12, profile.mistakePatterns[index].priorityScore - decrease)
+        } else {
+            profile.mistakePatterns[index].priorityScore = min(1, profile.mistakePatterns[index].priorityScore + 0.12)
+            profile.mistakePatterns[index].count += 1
+            profile.mistakePatterns[index].lastSeenDay = today
+        }
+    }
+
     private func lessonCompletionObjects(for lesson: BeginnerLesson, now: Date) -> [SavedLearningObject] {
         let today = dayString(for: now)
         let reviewableSteps = lesson.steps
@@ -965,6 +1191,124 @@ final class LearningState: ObservableObject {
         profile.sessionSummaries = Array(profile.sessionSummaries.prefix(30))
     }
 
+    @discardableResult
+    private func recordMistakePattern(
+        learnerSentence: String,
+        correctedSentence: String,
+        source: String,
+        pronunciationNote: String = "",
+        aiPattern: TutorAIMistakePattern? = nil,
+        in profile: inout LearningProfile,
+        now: Date
+    ) -> MistakePattern? {
+        let day = dayString(for: now)
+        guard let seed = mistakeSeed(
+            learnerSentence: learnerSentence,
+            correctedSentence: correctedSentence,
+            pronunciationNote: pronunciationNote,
+            aiPattern: aiPattern
+        ) else {
+            return nil
+        }
+
+        let existingIndex = profile.mistakePatterns.firstIndex { $0.id == seed.id }
+        let pattern: MistakePattern
+        if let existingIndex {
+            var existing = profile.mistakePatterns[existingIndex]
+            existing.count += 1
+            existing.title = seed.title
+            existing.explanation = seed.explanation
+            existing.exampleLearnerSentence = seed.exampleLearnerSentence
+            existing.correctedSentence = seed.correctedSentence
+            existing.lastSeenDay = day
+            existing.priorityScore = min(1, max(existing.priorityScore, seed.confidence) + min(0.24, Double(existing.count) * 0.04))
+            profile.mistakePatterns[existingIndex] = existing
+            pattern = existing
+        } else {
+            pattern = MistakePattern(
+                id: seed.id,
+                title: seed.title,
+                explanation: seed.explanation,
+                exampleLearnerSentence: seed.exampleLearnerSentence,
+                correctedSentence: seed.correctedSentence,
+                lastSeenDay: day,
+                priorityScore: seed.confidence
+            )
+            profile.mistakePatterns.insert(pattern, at: 0)
+        }
+
+        profile.mistakePatterns = Array(
+            profile.mistakePatterns
+                .sorted { lhs, rhs in
+                    if lhs.priorityScore != rhs.priorityScore {
+                        return lhs.priorityScore > rhs.priorityScore
+                    }
+                    return lhs.lastSeenDay > rhs.lastSeenDay
+                }
+                .prefix(16)
+        )
+
+        upsertMistakePatternReview(pattern, source: source, in: &profile, now: now)
+        return pattern
+    }
+
+    private func mistakeSeed(
+        learnerSentence: String,
+        correctedSentence: String,
+        pronunciationNote: String,
+        aiPattern: TutorAIMistakePattern?
+    ) -> MistakePatternSeed? {
+        if let aiPattern, let seed = aiPattern.seed(defaultLearnerSentence: learnerSentence, defaultCorrectedSentence: correctedSentence) {
+            return seed
+        }
+
+        return MistakePatternDetector.detect(
+            learnerSentence: learnerSentence,
+            correctedSentence: correctedSentence,
+            pronunciationNote: pronunciationNote
+        )
+    }
+
+    private func upsertMistakePatternReview(_ pattern: MistakePattern, source: String, in profile: inout LearningProfile, now: Date) {
+        let day = dayString(for: now)
+        let object = SavedLearningObject(
+            id: "mistake-\(pattern.id)",
+            kind: .mistake,
+            text: pattern.correctedSentence,
+            translation: pattern.exampleLearnerSentence,
+            source: source,
+            note: pattern.explanation,
+            createdDay: day
+        )
+
+        profile.savedLearningObjects.removeAll { $0.id == object.id }
+        profile.savedLearningObjects.insert(object, at: 0)
+        profile.savedLearningObjects = Array(profile.savedLearningObjects.prefix(80))
+
+        let newReview = reviewItem(for: object, now: now)
+        if let reviewIndex = profile.scheduledReviews.firstIndex(where: { $0.id == newReview.id || $0.objectID == object.id }) {
+            let existing = profile.scheduledReviews[reviewIndex]
+            profile.scheduledReviews[reviewIndex] = ScheduledReviewItem(
+                id: existing.id,
+                objectID: object.id,
+                kind: .mistake,
+                prompt: newReview.prompt,
+                answer: newReview.answer,
+                source: source,
+                lastReviewedDay: existing.lastReviewedDay,
+                nextDueDay: day,
+                ease: min(existing.ease, 0.48),
+                mistakeCount: max(existing.mistakeCount + 1, pattern.count),
+                successCount: 0,
+                listeningFirst: true,
+                speakingRetry: true
+            )
+        } else {
+            profile.scheduledReviews.insert(newReview, at: 0)
+        }
+        profile.scheduledReviews = Array(profile.scheduledReviews.prefix(100))
+    }
+
     private func addLearningObject(_ object: SavedLearningObject, in profile: inout LearningProfile, now: Date) {
         let speakableObject = speakableLearningObject(object)
         if !profile.savedLearningObjects.contains(where: { $0.id == speakableObject.id }) {
@@ -998,7 +1342,7 @@ final class LearningState: ObservableObject {
     }
 
     private func speakableLearningObject(_ object: SavedLearningObject) -> SavedLearningObject {
-        guard object.kind != .word else { return object }
+        guard object.kind != .word, object.kind != .mistake else { return object }
 
         let phrase = Self.speakablePhrase(prompt: object.text, answer: object.translation)
         guard phrase != object.text else { return object }
@@ -1018,6 +1362,24 @@ final class LearningState: ObservableObject {
     }
 
     private func speakableReviewItem(_ item: ScheduledReviewItem) -> ScheduledReviewItem {
+        if item.kind == .mistake {
+            return ScheduledReviewItem(
+                id: item.id,
+                objectID: item.objectID,
+                kind: item.kind,
+                prompt: item.prompt,
+                answer: item.answer,
+                source: item.source,
+                lastReviewedDay: item.lastReviewedDay,
+                nextDueDay: item.nextDueDay,
+                ease: item.ease,
+                mistakeCount: item.mistakeCount,
+                successCount: item.successCount,
+                listeningFirst: item.listeningFirst,
+                speakingRetry: item.speakingRetry
+            )
+        }
+
         if item.kind == .word {
             return ScheduledReviewItem(
                 id: item.id,
@@ -1030,6 +1392,7 @@ final class LearningState: ObservableObject {
                 nextDueDay: item.nextDueDay,
                 ease: item.ease,
                 mistakeCount: item.mistakeCount,
+                successCount: item.successCount,
                 listeningFirst: item.listeningFirst,
                 speakingRetry: item.speakingRetry
             )
@@ -1049,6 +1412,7 @@ final class LearningState: ObservableObject {
             nextDueDay: item.nextDueDay,
             ease: item.ease,
             mistakeCount: item.mistakeCount,
+            successCount: item.successCount,
             listeningFirst: item.listeningFirst,
             speakingRetry: item.speakingRetry
         )
@@ -1115,6 +1479,7 @@ final class LearningState: ObservableObject {
             || lowercased.hasPrefix("review:")
             || lowercased.hasPrefix("retry:")
             || lowercased.hasPrefix("use this tutor phrase:")
+            || lowercased.hasPrefix("use ")
             || lowercased.hasPrefix("say ")
             || lowercased.hasPrefix("ask ")
             || lowercased.hasPrefix("describe ")
@@ -1384,6 +1749,11 @@ final class LearningState: ObservableObject {
         return formatter.string(from: date)
     }
 
+    private func nonEmpty(_ text: String?) -> String? {
+        let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
     private func stableID(_ text: String) -> String {
         let characters = text.lowercased().map { character -> Character in
             character.isLetter || character.isNumber ? character : "-"
@@ -1393,7 +1763,8 @@ final class LearningState: ObservableObject {
     }
 
     private func nextFirstLessonID(for language: TargetLanguage, completedLessonIDs: Set<String>) -> String {
-        BeginnerContent.lessons(for: language).first { !completedLessonIDs.contains($0.id) }?.id ?? BeginnerContent.firstLessonID(for: language)
+        let normalizedCompletedIDs = Self.normalizedCompletedLessonIDs(completedLessonIDs)
+        return BeginnerContent.lessons(for: language).first { !normalizedCompletedIDs.contains($0.id) }?.id ?? BeginnerContent.firstLessonID(for: language)
     }
 
     private func inferredResumeStepIndex(for lesson: BeginnerLesson) -> Int {
@@ -1437,33 +1808,93 @@ final class LearningState: ObservableObject {
         next.schemaVersion = LearningProfile.currentSchemaVersion
         next.learnerProfile = next.learnerProfile.sanitized
         let validIDs = Set(TargetLanguage.allCases.flatMap { BeginnerContent.lessons(for: $0).map(\.id) })
-        next.completedLessonIDs = next.completedLessonIDs.intersection(validIDs)
+        next.completedLessonIDs = normalizedCompletedLessonIDs(next.completedLessonIDs)
         next.lessonResumeStepIndices = next.lessonResumeStepIndices.reduce(into: [:]) { result, item in
             guard
                 validIDs.contains(item.key),
                 !next.completedLessonIDs.contains(item.key),
                 let lesson = BeginnerContent.lesson(id: item.key),
+                isLessonUnlocked(lesson.id, completedLessonIDs: next.completedLessonIDs),
                 !lesson.steps.isEmpty
             else { return }
 
             result[item.key] = min(max(item.value, 0), lesson.steps.count - 1)
         }
         next.dailyGoal = min(max(next.dailyGoal, 1), 6)
+        next.mistakePatterns = next.mistakePatterns.compactMap { pattern in
+            let id = pattern.id.trimmingCharacters(in: .whitespacesAndNewlines)
+            let title = pattern.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            let corrected = pattern.correctedSentence.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !id.isEmpty, !title.isEmpty, !corrected.isEmpty else { return nil }
+            return MistakePattern(
+                id: id,
+                title: String(title.prefix(80)),
+                explanation: String(pattern.explanation.trimmingCharacters(in: .whitespacesAndNewlines).prefix(180)),
+                exampleLearnerSentence: String(pattern.exampleLearnerSentence.trimmingCharacters(in: .whitespacesAndNewlines).prefix(220)),
+                correctedSentence: String(corrected.prefix(220)),
+                count: min(max(pattern.count, 1), 99),
+                lastSeenDay: pattern.lastSeenDay.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "1970-01-01" : pattern.lastSeenDay,
+                priorityScore: pattern.priorityScore
+            )
+        }
+        next.scheduledReviews = next.scheduledReviews.map { review in
+            ScheduledReviewItem(
+                id: review.id,
+                objectID: review.objectID,
+                kind: review.kind,
+                prompt: review.prompt,
+                answer: review.answer,
+                source: review.source,
+                lastReviewedDay: review.lastReviewedDay,
+                nextDueDay: review.nextDueDay.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "1970-01-01" : review.nextDueDay,
+                ease: min(max(review.ease, 0.35), 0.98),
+                mistakeCount: min(max(review.mistakeCount, 0), 99),
+                successCount: min(max(review.successCount, 0), 99),
+                listeningFirst: review.listeningFirst,
+                speakingRetry: review.speakingRetry
+            )
+        }
         if next.savedLines.isEmpty {
             next.savedLines = []
         }
         if !next.targetLanguage.isAvailable {
             next.targetLanguage = .french
         }
-        let currentLanguageIDs = Set(BeginnerContent.lessons(for: next.targetLanguage).map(\.id))
-        if !currentLanguageIDs.contains(next.currentLessonID) {
-            next.currentLessonID = BeginnerContent.lessons(for: next.targetLanguage).first { !next.completedLessonIDs.contains($0.id) }?.id ?? BeginnerContent.firstLessonID(for: next.targetLanguage)
-        }
-        if next.completedLessonIDs.contains(next.currentLessonID),
-           let nextIncompleteLessonID = BeginnerContent.lessons(for: next.targetLanguage).first(where: { !next.completedLessonIDs.contains($0.id) })?.id {
+        let currentLessons = BeginnerContent.lessons(for: next.targetLanguage)
+        let currentLanguageIDs = Set(currentLessons.map(\.id))
+        if let nextIncompleteLessonID = currentLessons.first(where: { !next.completedLessonIDs.contains($0.id) })?.id {
             next.currentLessonID = nextIncompleteLessonID
+        } else if !currentLanguageIDs.contains(next.currentLessonID) {
+            next.currentLessonID = BeginnerContent.firstLessonID(for: next.targetLanguage)
         }
         return next
+    }
+
+    private static func normalizedCompletedLessonIDs(_ completedLessonIDs: Set<String>) -> Set<String> {
+        var normalized: Set<String> = []
+
+        for language in TargetLanguage.allCases {
+            let lessons = BeginnerContent.lessons(for: language)
+            guard !lessons.isEmpty else { continue }
+
+            for lesson in lessons {
+                guard completedLessonIDs.contains(lesson.id) else { break }
+                normalized.insert(lesson.id)
+            }
+        }
+
+        return normalized
+    }
+
+    private static func isLessonUnlocked(_ lessonID: String, completedLessonIDs: Set<String>) -> Bool {
+        for language in TargetLanguage.allCases {
+            let lessons = BeginnerContent.lessons(for: language)
+            guard let index = lessons.firstIndex(where: { $0.id == lessonID }) else { continue }
+            if index == 0 { return true }
+            return lessons[..<index].allSatisfy { completedLessonIDs.contains($0.id) }
+        }
+
+        return false
     }
 
     private static func launchAdjusted(_ profile: LearningProfile) -> LearningProfile {
@@ -1481,6 +1912,47 @@ final class LearningState: ObservableObject {
         next.currentLevel = .beginner
         next.currentLessonID = launchLessonID.flatMap(BeginnerContent.lesson(id:))?.id ?? BeginnerContent.firstLessonID(for: .english)
         next.hasCompletedOnboarding = true
+        if arguments.contains("-ConverlaxSeedTutorReview") {
+            let pattern = MistakePattern(
+                id: "past-tense",
+                title: "Past tense",
+                explanation: "Use a past verb when you talk about yesterday.",
+                exampleLearnerSentence: "I go to work yesterday.",
+                correctedSentence: "I went to work yesterday.",
+                count: 2,
+                lastSeenDay: "2026-05-18",
+                priorityScore: 0.88
+            )
+            let object = SavedLearningObject(
+                id: "mistake-past-tense",
+                kind: .mistake,
+                text: pattern.correctedSentence,
+                translation: pattern.exampleLearnerSentence,
+                source: "Tutor",
+                note: pattern.explanation,
+                createdDay: pattern.lastSeenDay
+            )
+            let review = ScheduledReviewItem(
+                id: "review-mistake-past-tense",
+                objectID: object.id,
+                kind: .mistake,
+                prompt: object.text,
+                answer: object.note,
+                source: "Tutor",
+                lastReviewedDay: nil,
+                nextDueDay: "1970-01-01",
+                ease: 0.42,
+                mistakeCount: 2,
+                listeningFirst: true,
+                speakingRetry: true
+            )
+            next.mistakePatterns.removeAll { $0.id == pattern.id }
+            next.mistakePatterns.insert(pattern, at: 0)
+            next.savedLearningObjects.removeAll { $0.id == object.id }
+            next.savedLearningObjects.insert(object, at: 0)
+            next.scheduledReviews.removeAll { $0.id == review.id }
+            next.scheduledReviews.insert(review, at: 0)
+        }
         return next
     }
 }

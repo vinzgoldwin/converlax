@@ -34,11 +34,26 @@ const sampleFeedback = {
 const sampleTutor = {
   tutorReply: "Good. You're talking about yesterday, so use past tense.",
   correction: "I went to work yesterday, and I was tired.",
-  nextPrompt: "Say it once more, then ask me: How was your day?",
+  naturalAlternative: "I had a long day at work yesterday.",
+  nextPrompt: "Tell me why you were tired.",
   savedPhrase: "I went to work yesterday.",
   reviewItem: {
     prompt: "Say this in the past: I go to work yesterday.",
     answer: "I went to work yesterday."
+  },
+  mistakePattern: {
+    id: "past-tense",
+    title: "Past tense",
+    explanation: "Use a past verb for yesterday or another finished time.",
+    exampleLearnerSentence: "I go to work yesterday and I tired",
+    correctedSentence: "I went to work yesterday, and I was tired.",
+    confidence: 0.86
+  },
+  sessionSummary: {
+    improvedPhrase: "I had a long day at work yesterday.",
+    mistakePattern: "Past tense",
+    savedReviewItem: "I went to work yesterday.",
+    nextPrompt: "Tell me why you were tired."
   }
 };
 
@@ -170,7 +185,25 @@ test("tutor endpoint returns conversational tutor JSON", async () => {
       context: {
         currentLessonTitle: "Talk about yesterday",
         nextRecommendation: "Practice past tense",
-        recentSavedPhrases: ["I was tired."]
+        recentSavedPhrases: ["I was tired."],
+        recurringMistakes: [{
+          id: "past-tense",
+          title: "Past tense",
+          explanation: "Use a past verb for finished time.",
+          exampleLearnerSentence: "I go yesterday.",
+          correctedSentence: "I went yesterday.",
+          count: 2,
+          lastSeenDay: "2026-05-18",
+          priorityScore: 0.88
+        }],
+        recentReviewPerformance: [{
+          prompt: "I went yesterday.",
+          source: "Tutor",
+          lastReviewedDay: "2026-05-18",
+          ease: 0.48,
+          mistakeCount: 2,
+          successCount: 0
+        }]
       }
     }
   });
@@ -181,6 +214,7 @@ test("tutor endpoint returns conversational tutor JSON", async () => {
   assert.deepEqual(body.tutor, sampleTutor);
   assert.equal(capturedInput.message, "I go to work yesterday and I tired");
   assert.equal(capturedInput.context.currentLessonTitle, "Talk about yesterday");
+  assert.equal(capturedInput.context.recurringMistakes[0].id, "past-tense");
   assert.deepEqual(body.meta, {
     provider: "openrouter",
     model: "test/model",
