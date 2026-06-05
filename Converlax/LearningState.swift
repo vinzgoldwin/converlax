@@ -542,7 +542,7 @@ final class LearningState: ObservableObject {
             naturalPhrase: naturalLine,
             pronunciationTip: rhythmTip(for: correctedLine),
             savedTakeaway: naturalLine,
-            nextAction: "Say the natural phrase once more, then continue.",
+            nextAction: "Say the better line once more.",
             aiFeedback: aiFeedback
         )
         addFeedback(feedback, in: &next)
@@ -1149,7 +1149,7 @@ final class LearningState: ObservableObject {
 
     private func lessonSummaryRecommendation(after lesson: BeginnerLesson, reviewCount: Int, in profile: LearningProfile) -> String {
         if reviewCount > 0 {
-            return "Review \(reviewCount) new \(reviewCount == 1 ? "item" : "items"), then continue the course."
+            return "Review \(reviewCount) new \(reviewCount == 1 ? "item" : "items")."
         }
         if let upcoming = BeginnerContent.lessons(for: profile.targetLanguage, level: profile.currentLevel).first(where: { !profile.completedLessonIDs.contains($0.id) }) {
             return "Continue with \(upcoming.title)."
@@ -1587,7 +1587,7 @@ final class LearningState: ObservableObject {
     private func correctedSpeechLine(for step: LessonStep, transcript: String) -> String {
         let expected = correctedLine(for: step)
         guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return "No clear speech was captured. Try: \(expected)"
+            return "Say one short sentence. Try: \(expected)"
         }
 
         if expected.localizedCaseInsensitiveContains("reservation") {
@@ -1688,7 +1688,7 @@ final class LearningState: ObservableObject {
 
     private func nextRecommendationForSession(title: String, weakPhrases: [String]) -> String {
         if let weakPhrase = weakPhrases.first {
-            return "Repeat this once, then review it today: \(weakPhrase)"
+            return "Repeat this once today: \(weakPhrase)"
         }
         return "Try another \(title.lowercased()) session with one longer answer."
     }

@@ -191,6 +191,46 @@ final class ConverlaxContentTests: XCTestCase {
         XCTAssertFalse(state.dueReviewItems.isEmpty)
     }
 
+    func testLessonSpeakingTurnCreatesReviewItemAndReviewCompletionClearsDueItem() throws {
+        let state = makeState()
+        let lesson = try XCTUnwrap(BeginnerContent.lessons(for: .english).first)
+        let step = try XCTUnwrap(lesson.steps.first { $0.kind == .speak })
+        let transcript = try XCTUnwrap(step.correctAnswer ?? step.prompt.components(separatedBy: ".").first)
+        let now = Date()
+
+        let feedback = state.acceptSpeechPractice(
+            lesson: lesson,
+            step: step,
+            transcript: transcript,
+            mode: "Speaking practice",
+            now: now
+        )
+
+        XCTAssertEqual(feedback.attemptedText, transcript)
+        XCTAssertFalse(feedback.savedTakeaway.isEmpty)
+
+        let reviewItem = try XCTUnwrap(state.dueReviewItems.first {
+            $0.source == "Speaking practice" && $0.prompt == feedback.savedTakeaway
+        })
+        XCTAssertEqual(reviewItem.kind, .phrase)
+        XCTAssertNil(reviewItem.lastReviewedDay)
+
+        state.recordReview(reviewItem, remembered: true, now: now)
+
+        let storedReview = try XCTUnwrap(state.profile.scheduledReviews.first { $0.id == reviewItem.id })
+        XCTAssertEqual(storedReview.successCount, 1)
+        XCTAssertEqual(storedReview.mistakeCount, 0)
+        XCTAssertNotEqual(storedReview.nextDueDay, reviewItem.nextDueDay)
+        XCTAssertFalse(state.dueReviewItems.contains { $0.id == reviewItem.id })
+
+        if state.dueReviewItems.isEmpty {
+            XCTAssertTrue(state.nextRecommendation.title.localizedCaseInsensitiveContains("continue"))
+        } else {
+            XCTAssertTrue(state.nextRecommendation.title.localizedCaseInsensitiveContains("review"))
+            XCTAssertFalse(try XCTUnwrap(state.dueReviewItems.first).prompt.isEmpty)
+        }
+    }
+
     func testEnglishLessonsUnlockInCourseOrderOnly() {
         let suiteName = "ConverlaxContentTests-\(UUID().uuidString)"
         let suite = UserDefaults(suiteName: suiteName)!

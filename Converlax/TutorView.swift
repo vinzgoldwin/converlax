@@ -89,10 +89,6 @@ struct TutorView: View {
                         .accessibilityIdentifier("tutor-no-input-notice")
                 }
 
-                if let savedPhrase = tutorSavedPhrase {
-                    TranslationCard(phrase: savedPhrase.phrase, detail: savedPhrase.detail)
-                }
-
                 if let lastFeedback {
                     LearningFeedbackCard(feedback: lastFeedback, startsExpanded: shouldStartFeedbackExpanded)
                         .accessibilityIdentifier("tutor-correction-card")
@@ -155,19 +151,6 @@ struct TutorView: View {
         }
     }
 
-    private var tutorSavedPhrase: (phrase: String, detail: String)? {
-        if let lastFeedback,
-           let savedTakeaway = nonEmpty(lastFeedback.savedTakeaway) {
-            return (savedTakeaway, "Saved from this Tutor reply.")
-        }
-
-        if let savedObject = state.savedLearningObjects.first(where: { $0.source == "Tutor" && $0.kind == .tutorMessage }) {
-            return (savedObject.text, savedObject.note)
-        }
-
-        return nil
-    }
-
     private func handleVoicePrimaryAction() {
         if isPracticeComplete {
             resetConversation()
@@ -219,7 +202,7 @@ struct TutorView: View {
         voiceTranscript = recognizedText
 
         guard !recognizedText.isEmpty else {
-            voiceErrorMessage = "No clear speech was captured. Try again a little slower and closer to the mic."
+            voiceErrorMessage = "Nothing clear was captured. Say one short sentence and try again."
             voicePhase = .noSpeech
             return
         }
@@ -231,7 +214,7 @@ struct TutorView: View {
     private func submitVoiceTranscript() async {
         let recognizedText = voiceTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !recognizedText.isEmpty else {
-            voiceErrorMessage = "No clear speech was captured. Try again a little slower and closer to the mic."
+            voiceErrorMessage = "Nothing clear was captured. Say one short sentence and try again."
             voicePhase = .noSpeech
             return
         }
@@ -471,7 +454,7 @@ struct TutorView: View {
             voiceTranscript = "I went to work yesterday"
             voicePhase = .transcript
         case "permissionDenied", "permission":
-            voiceErrorMessage = "Voice practice needs Microphone and Speech Recognition. Enable access in Settings, then try again."
+            voiceErrorMessage = "Voice practice needs Microphone and Speech Recognition. Allow access in Settings and try again."
             voicePhase = .permissionDenied
         default:
             voicePhase = .ready
@@ -607,36 +590,6 @@ private struct ChatBubble: View {
             if !message.isUser {
                 Spacer(minLength: 48)
             }
-        }
-    }
-}
-
-private struct TranslationCard: View {
-    let phrase: String
-    let detail: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Saved phrase")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            HStack {
-                Image(systemName: "speaker.wave.2.fill")
-                    .foregroundStyle(Color.primaryBlue)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(phrase)
-                        .font(.headline.weight(.bold))
-                        .foregroundStyle(Color.primaryBlue)
-                    Text(detail)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Image(systemName: "bookmark.fill")
-                    .foregroundStyle(Color.primaryBlue)
-            }
-            .padding(.vertical, 8)
         }
     }
 }

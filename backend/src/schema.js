@@ -133,31 +133,31 @@ export const feedbackJsonSchema = {
       type: "string",
       minLength: 1,
       maxLength: 360,
-      description: "Pronunciation-oriented advice based only on transcript evidence, rhythm, stress, endings, and likely clarity."
+      description: "One short transcript-based rhythm, stress, ending, or clarity note. Do not claim audio was heard."
     },
     grammarCorrection: {
       type: "string",
       minLength: 1,
       maxLength: 360,
-      description: "A corrected version or a brief grammar note."
+      description: "One corrected phrase or sentence. Keep it suitable for the Better row."
     },
     naturalVersion: {
       type: "string",
       minLength: 1,
       maxLength: 360,
-      description: "A more natural spoken version."
+      description: "One short natural spoken version for the Better row."
     },
     vocabularyImprovement: {
       type: "string",
       minLength: 1,
       maxLength: 360,
-      description: "A concise vocabulary upgrade the learner can use."
+      description: "One concise vocabulary improvement, if useful. No lists."
     },
     fluencyTip: {
       type: "string",
       minLength: 1,
       maxLength: 360,
-      description: "One practical fluency tip for the next attempt."
+      description: "One practical fluency tip for the next attempt. No multi-step instructions."
     },
     didWell: {
       type: "string",
@@ -169,13 +169,13 @@ export const feedbackJsonSchema = {
       type: "string",
       minLength: 1,
       maxLength: 240,
-      description: "One small action to try next."
+      description: "One small spoken action for the Try next row."
     },
     suggestedSavedPhrase: {
       type: "string",
       minLength: 1,
       maxLength: 200,
-      description: "A useful phrase to save for future review."
+      description: "A useful phrase to save for future review. Match the same single correction."
     },
     reviewItemSuggestion: {
       type: "object",
@@ -221,13 +221,13 @@ export const tutorJsonSchema = {
       type: "string",
       minLength: 1,
       maxLength: 280,
-      description: "A corrected or more natural version of the learner's message, focused on one beginner fix."
+      description: "A corrected version of the learner's message, focused on one beginner fix."
     },
     naturalAlternative: {
       type: "string",
       minLength: 1,
       maxLength: 220,
-      description: "One short natural beginner-friendly version of the corrected idea."
+      description: "One short natural beginner-friendly Better phrase."
     },
     nextPrompt: {
       type: "string",
@@ -239,7 +239,7 @@ export const tutorJsonSchema = {
       type: "string",
       minLength: 1,
       maxLength: 180,
-      description: "A useful corrected phrase worth saving for future practice. It should target the same single fix as the mistake pattern."
+      description: "A useful corrected phrase worth saving for future practice. Target the same single fix as the mistake pattern."
     },
     reviewItem: {
       type: "object",

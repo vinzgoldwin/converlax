@@ -252,7 +252,7 @@ struct LessonPlayerView: View {
         transcript = capturedTranscript
 
         guard !capturedTranscript.isEmpty else {
-            speechErrorMessage = "No clear speech was captured. Try again a little slower and closer to the mic."
+            speechErrorMessage = "Nothing clear was captured. Say one short sentence and try again."
             speechPhase = .noSpeech
             return
         }
@@ -264,7 +264,7 @@ struct LessonPlayerView: View {
     private func generateSpeechFeedback() async {
         let cleanTranscript = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanTranscript.isEmpty else {
-            speechErrorMessage = "No clear speech was captured. Try again a little slower and closer to the mic."
+            speechErrorMessage = "Nothing clear was captured. Say one short sentence and try again."
             speechPhase = .noSpeech
             return
         }
@@ -371,7 +371,7 @@ struct LessonPlayerView: View {
             speechPhase = .feedback
         case "permissionDenied", "permission":
             transcript = ""
-            speechErrorMessage = "Voice practice needs Microphone and Speech Recognition. Enable access in Settings, then try again."
+            speechErrorMessage = "Voice practice needs Microphone and Speech Recognition. Allow access in Settings and try again."
             speechPhase = .permissionDenied
         default:
             break

@@ -439,28 +439,24 @@ struct TutorPromptBar: View {
 
 struct LearningFeedbackCard: View {
     let feedback: LearningFeedback
-    @State private var showsMoreFeedback = false
 
-    init(feedback: LearningFeedback, startsExpanded: Bool = false) {
+    init(feedback: LearningFeedback, startsExpanded _: Bool = false) {
         self.feedback = feedback
-        _showsMoreFeedback = State(initialValue: startsExpanded)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: isSpeechFeedback ? 0 : 14) {
-            if isSpeechFeedback {
-                speechFeedbackContent
-            } else {
+        VStack(alignment: .leading, spacing: isSpeechFeedback ? 10 : 14) {
+            if !isSpeechFeedback {
                 HStack(alignment: .top, spacing: 10) {
-                    Label(feedbackTitle, systemImage: "checkmark.seal.fill")
+                    Label("Feedback", systemImage: "checkmark.seal.fill")
                         .font(.headline.weight(.semibold))
                         .foregroundStyle(Color.primaryBlue)
 
                     Spacer(minLength: 10)
                 }
-
-                standardFeedbackContent
             }
+
+            feedbackContent
         }
         .padding(isSpeechFeedback ? 0 : 16)
         .background {
@@ -479,142 +475,21 @@ struct LearningFeedbackCard: View {
     }
 
     @ViewBuilder
-    private var speechFeedbackContent: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text("Best line")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(Color.primaryBlue)
-
-                Spacer(minLength: 10)
-
-                if shouldShowConfidence {
-                    FeedbackConfidenceSummary(confidence: feedback.confidence)
-                }
-            }
-            .padding(.bottom, 6)
-
-            if let primaryLine {
-                Text(primaryLine)
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.bottom, compactRowPadding)
-            }
-
-            if let compactFix {
-                FeedbackCompactRow(title: "Small fix", text: compactFix, color: .primaryBlue)
-            }
-
-            if let tryNext {
-                FeedbackCompactRow(title: "Try again", text: tryNext, color: .primaryBlue)
-            }
-
-            if hasMoreFeedback {
-                HStack(spacing: 8) {
-                    Text("More detail")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.primaryBlue)
-
-                    Spacer(minLength: 8)
-
-                    Image(systemName: showsMoreFeedback ? "chevron.up" : "chevron.down")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Color.primaryBlue)
-                }
-                .padding(.top, compactRowPadding)
-                .contentShape(Rectangle())
-                .onTapGesture(perform: toggleMoreFeedback)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("More detail")
-                .accessibilityValue(showsMoreFeedback ? "Expanded" : "Collapsed")
-                .accessibilityAddTraits(.isButton)
-                .accessibilityIdentifier("learning-feedback-more-detail")
-                .accessibilityAction {
-                    toggleMoreFeedback()
-                }
-
-                if showsMoreFeedback {
-                    VStack(alignment: .leading, spacing: 0) {
-                        if let attemptText {
-                            FeedbackCompactRow(title: "You said", text: attemptText, color: .secondary)
-                        }
-
-                        if let didWell {
-                            FeedbackCompactRow(title: "Did well", text: didWell, color: .mintSuccess)
-                        }
-
-                        if let coachTip {
-                            FeedbackCompactRow(title: "Pronunciation", text: coachTip, color: .warmAmber)
-                        }
-                    }
-                    .padding(.top, 4)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-                }
-            }
-        }
-    }
-
-    private func toggleMoreFeedback() {
-        withAnimation(.easeInOut(duration: 0.18)) {
-            showsMoreFeedback.toggle()
-        }
-    }
-
-    @ViewBuilder
-    private var standardFeedbackContent: some View {
+    private var feedbackContent: some View {
         if let attemptText {
-            FeedbackCoachLine(title: attemptTitle, text: attemptText, symbol: attemptSymbol, color: .primaryBlue)
+            FeedbackCompactRow(title: "You said", text: attemptText, color: .secondary)
         }
 
-        if let naturalVersion {
-            FeedbackCoachLine(title: "Natural version", text: naturalVersion, symbol: "quote.bubble.fill", color: .mintSuccess)
-        }
-
-        if let grammarCorrection {
-            FeedbackCoachLine(title: "Grammar", text: grammarCorrection, symbol: "textformat", color: .primaryBlue)
-        }
-
-        if let vocabularyImprovement {
-            FeedbackCoachLine(title: "Vocabulary", text: vocabularyImprovement, symbol: "character.book.closed.fill", color: .violetAccent)
-        }
-
-        if let coachTip {
-            FeedbackCoachLine(title: "Coach tip", text: coachTip, symbol: "waveform", color: .warmAmber)
-        }
-
-        if let didWell {
-            FeedbackCoachLine(title: "Did well", text: didWell, symbol: "checkmark.seal.fill", color: .mintSuccess)
+        if let betterLine {
+            FeedbackCompactRow(title: "Better", text: betterLine, color: .mintSuccess)
         }
 
         if let tryNext {
-            FeedbackCoachLine(title: "Try next", text: tryNext, symbol: "arrow.forward.circle.fill", color: .primaryBlue)
+            FeedbackCompactRow(title: "Try next", text: tryNext, color: .primaryBlue)
         }
 
-        if let reviewItem {
-            FeedbackCoachLine(title: "Review later", text: reviewItem, symbol: "arrow.clockwise", color: .warmAmber)
-        }
-
-        if let savedTakeaway {
-            HStack(alignment: .top, spacing: 8) {
-                Image(systemName: "bookmark.fill")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(Color.primaryBlue)
-                    .padding(.top, 2)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Saved takeaway")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Color.primaryBlue)
-                    Text(savedTakeaway)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.primaryBlue.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        if let savedPhrase {
+            FeedbackSavedPhraseRow(text: savedPhrase)
         }
     }
 
@@ -628,22 +503,6 @@ struct LearningFeedbackCard: View {
             source.contains("conversation") ||
             source.contains("roleplay") ||
             prompt.contains("roleplay")
-    }
-
-    private var feedbackTitle: String {
-        isSpeechFeedback ? "Speaking feedback" : "Quick feedback"
-    }
-
-    private var shouldShowConfidence: Bool {
-        feedback.source.lowercased() != "tutor" && feedback.feedbackProvider != "local-fallback"
-    }
-
-    private var attemptTitle: String {
-        isSpeechFeedback ? "You said" : "You chose"
-    }
-
-    private var attemptSymbol: String {
-        isSpeechFeedback ? "mic.fill" : "checkmark.circle.fill"
     }
 
     private var attemptText: String? {
@@ -664,85 +523,23 @@ struct LearningFeedbackCard: View {
         cleanCoachText(feedback.grammarCorrection) ?? cleanCoachText(feedback.correction)
     }
 
-    private var grammarCorrection: String? {
-        let grammar = cleanCoachText(feedback.grammarCorrection)
-        guard grammar != naturalVersion else { return nil }
-        return grammar
-    }
-
-    private var vocabularyImprovement: String? {
-        clean(feedback.vocabularyImprovement)
-    }
-
-    private var fixDetails: String? {
-        let details = [
-            grammarCorrection,
-            vocabularyImprovement
-        ].compactMap { $0 }
-
-        guard !details.isEmpty else { return nil }
-        return details.joined(separator: "\n")
-    }
-
-    private var primaryLine: String? {
+    private var betterLine: String? {
         naturalAlternative ?? naturalVersion ?? correctedPhrase
-    }
-
-    private var compactFix: String? {
-        let details = [
-            correctedPhrase,
-            vocabularyImprovement
-        ].compactMap { $0 }
-
-        guard !details.isEmpty else { return nil }
-        let joined = details.joined(separator: " ")
-        guard joined != primaryLine else { return nil }
-        return joined
-    }
-
-    private var compactRowPadding: CGFloat {
-        10
-    }
-
-    private var coachTip: String? {
-        let rawTips = [
-            clean(feedback.pronunciationNotes) ?? clean(feedback.pronunciationTip),
-            clean(feedback.fluencyTip)
-        ]
-        var tips: [String] = []
-        for tip in rawTips.compactMap({ $0 }) where !tips.contains(tip) {
-            tips.append(tip)
-        }
-
-        guard !tips.isEmpty else { return nil }
-        return tips.joined(separator: " ")
-    }
-
-    private var didWell: String? {
-        clean(feedback.didWell)
     }
 
     private var tryNext: String? {
         clean(feedback.tryNext.isEmpty ? feedback.nextAction : feedback.tryNext)
     }
 
-    private var reviewItem: String? {
-        guard
-            let prompt = clean(feedback.reviewItemPrompt),
-            let answer = clean(feedback.reviewItemAnswer)
-        else { return nil }
-
-        return "\(prompt)\n\(answer)"
-    }
-
-    private var savedTakeaway: String? {
-        cleanCoachText(feedback.savedTakeaway)
-    }
-
-    private var hasMoreFeedback: Bool {
-        attemptText != nil ||
-            coachTip != nil ||
-            didWell != nil
+    private var savedPhrase: String? {
+        guard let saved = cleanCoachText(feedback.savedTakeaway) else { return nil }
+        let visibleLines = [
+            attemptText,
+            betterLine,
+            tryNext
+        ].compactMap { $0 }
+        guard !visibleLines.contains(where: { isSameLine($0, saved) }) else { return nil }
+        return saved
     }
 
     private func clean(_ text: String) -> String? {
@@ -778,6 +575,45 @@ struct LearningFeedbackCard: View {
 
         return clean(cleaned)
     }
+
+    private func isSameLine(_ lhs: String, _ rhs: String) -> Bool {
+        normalizeLine(lhs) == normalizeLine(rhs)
+    }
+
+    private func normalizeLine(_ text: String) -> String {
+        text
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .filter { $0.isLetter || $0.isNumber || $0.isWhitespace }
+            .split(separator: " ")
+            .joined(separator: " ")
+    }
+}
+
+private struct FeedbackSavedPhraseRow: View {
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "bookmark.fill")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Color.primaryBlue)
+                .padding(.top, 2)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Saved phrase")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.primaryBlue)
+                Text(text)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.primaryBlue.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
 }
 
 struct FeedbackFallbackNotice: View {
@@ -789,133 +625,6 @@ struct FeedbackFallbackNotice: View {
             .foregroundStyle(Color.warmAmber)
             .padding(.vertical, 2)
             .fixedSize(horizontal: false, vertical: true)
-    }
-}
-
-private struct FeedbackConfidenceLine: View {
-    let confidence: Int
-
-    private var progress: Double {
-        Double(min(100, max(0, confidence))) / 100
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack {
-                Text("Speaking confidence")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text("\(min(100, max(0, confidence)))%")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(Color.primaryBlue)
-            }
-
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Color.appBackground.opacity(0.82))
-                    Capsule()
-                        .fill(Color.primaryBlue)
-                        .frame(width: proxy.size.width * progress)
-                }
-            }
-            .frame(height: 7)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Speaking confidence \(confidence) percent")
-    }
-}
-
-private struct FeedbackConfidenceSummary: View {
-    let confidence: Int
-
-    private var boundedConfidence: Int {
-        min(100, max(0, confidence))
-    }
-
-    private var summary: String {
-        switch boundedConfidence {
-        case 85...100:
-            return "Strong attempt"
-        case 70..<85:
-            return "Clear attempt"
-        case 55..<70:
-            return "Good start"
-        default:
-            return "Keep practicing"
-        }
-    }
-
-    var body: some View {
-        Text("\(summary) · \(boundedConfidence)%")
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(.secondary)
-            .accessibilityLabel("\(summary), \(boundedConfidence) percent")
-    }
-}
-
-private struct FeedbackPrimaryLine: View {
-    let title: String
-    let text: String
-    let symbol: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Label(title, systemImage: symbol)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(Color.primaryBlue)
-
-            Text(text)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(.primary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-private struct FeedbackActionLine: View {
-    let text: String
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "arrow.forward.circle.fill")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Color.primaryBlue)
-                .padding(.top, 2)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Try next")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(Color.primaryBlue)
-                Text(text)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-private struct FeedbackCoachLine: View {
-    let title: String
-    let text: String
-    let symbol: String
-    let color: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Label(title, systemImage: symbol)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(color)
-            Text(text)
-                .font(.subheadline)
-                .foregroundStyle(.primary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -1155,11 +864,11 @@ struct SpeechPracticePanel: View {
     private var transcriptPlaceholder: String {
         switch phase {
         case .recording:
-            "Listening for your answer..."
+            "Listening for one clear answer."
         case .requestingPermission:
-            "iOS will ask for microphone and speech recognition access before the first recording."
+            "iOS may ask for Microphone and Speech Recognition."
         case .processing, .transcribing:
-            "Turning your speech into text..."
+            "Checking what you said."
         case .transcript:
             "Your words will appear here."
         case .permissionNeeded, .permissionDenied:
@@ -1268,22 +977,22 @@ struct SpeechPracticePanel: View {
     private var messageText: String {
         switch phase {
         case .permissionNeeded, .permissionDenied:
-            return errorMessage ?? "Voice practice needs Microphone and Speech Recognition. Allow access in Settings when you are ready."
+            return errorMessage ?? "Allow Microphone and Speech Recognition in Settings. Come back and try the same line."
         case .noSpeech:
-            return errorMessage ?? "No speech was recognized. Hold the phone close, speak one clear sentence, and try again."
+            return errorMessage ?? "Nothing clear was captured. Hold the phone close and say one short sentence."
         case .feedback:
             return errorMessage ?? "Feedback is ready."
         default:
-            return errorMessage ?? "Voice input stopped unexpectedly. Try again with a shorter answer."
+            return errorMessage ?? "Voice input stopped. Try again with one shorter answer."
         }
     }
 
     private var statusDetail: String {
         switch phase {
         case .requestingPermission:
-            "Waiting for iOS permission."
+            "Waiting for access."
         case .permissionNeeded, .permissionDenied:
-            "Enable access in Settings, then try again."
+            "Fix access and retry this turn."
         case .ready:
             readyInstructionText ?? "Answer the prompt out loud."
         case .recording:
@@ -1291,17 +1000,17 @@ struct SpeechPracticePanel: View {
         case .paused:
             "Resume when you are ready."
         case .processing, .transcribing:
-            "Checking your audio."
+            "Checking your answer."
         case .transcript:
-            "Review before feedback."
+            "Use it, or cancel and try again."
         case .feedback:
             "Continue when you are ready."
         case .accepted:
             "Saved."
         case .noSpeech:
-            "Try again with one clear sentence."
+            "Say one short sentence."
         case .error:
-            "Retry when you are ready."
+            "Retry this turn."
         }
     }
 

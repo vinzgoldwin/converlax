@@ -27,7 +27,7 @@ Production assets live in `Converlax/Assets.xcassets` as transparent PNG image s
 
 - `ClxMascot*`: mascot states used by `ConverlaxMascotView`.
 - `ClxAssetAskInfo`, `ClxAssetBookAccommodation`, `ClxAssetAskDirections`: task and roleplay categories.
-- `ClxAssetVocab`, `ClxAssetVerbs`, `ClxAssetReview`, `ClxAssetSavedLines`: learning and review assets.
+- `ClxAssetVocab`, `ClxAssetReview`, `ClxAssetSavedLines`: learning and review assets.
 - `ClxAssetFreeTalk`, `ClxAssetCustomLesson`, `ClxAssetRoleplay`: practice entry points.
 - `ClxAssetHistoryUsage`, `ClxAssetSettings`, `ClxAssetStreak`: profile and system surfaces.
 

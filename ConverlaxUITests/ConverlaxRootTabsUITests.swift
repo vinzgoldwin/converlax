@@ -130,11 +130,12 @@ final class ConverlaxRootTabsUITests: XCTestCase {
         app.buttons["Send to Tutor"].tap()
 
         XCTAssertTrue(app.staticTexts["Good. You're talking about yesterday, so use past tense."].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Best line"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Better"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.staticTexts["I went to work yesterday."].exists)
-        XCTAssertTrue(app.staticTexts["Saved from this Tutor reply."].exists)
+        XCTAssertTrue(app.staticTexts["Saved phrase"].exists)
         XCTAssertFalse(app.staticTexts["latest project notes"].exists)
-        XCTAssertTrue(app.staticTexts["Small fix"].exists)
+        XCTAssertTrue(app.staticTexts["You said"].exists)
+        XCTAssertTrue(app.staticTexts["Try next"].exists)
         XCTAssertTrue(app.staticTexts["Yesterday, I went to work."].exists)
         XCTAssertTrue(app.staticTexts["Say it again in past tense."].waitForExistence(timeout: 3))
         XCTAssertFalse(anyElement(containing: "then", in: app).exists)
@@ -208,9 +209,10 @@ final class ConverlaxRootTabsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Send to Tutor"].waitForExistence(timeout: 5))
         app.buttons["Send to Tutor"].tap()
 
-        XCTAssertTrue(app.buttons["More detail"].waitForExistence(timeout: 5))
+        XCTAssertTrue(anyElement(containing: "Better", in: app).waitForExistence(timeout: 5))
         XCTAssertTrue(anyElement(containing: "You said", in: app).waitForExistence(timeout: 3))
         XCTAssertFalse(anyElement(containing: "Review later", in: app).exists)
+        XCTAssertFalse(app.buttons["More detail"].exists)
         XCTAssertTrue(anyElement(containing: "I went to work yesterday.", in: app).exists)
     }
 

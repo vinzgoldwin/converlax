@@ -82,7 +82,7 @@ struct ReviewHomeView: View {
             return "Start with the phrase that needs you most."
         }
 
-        return personalSavedLineCount > 0 ? "No due items. Keep your lines warm." : "Start a lesson to create review lines."
+        return personalSavedLineCount > 0 ? "Nothing due. Keep one saved line warm." : "Speak once. Converlax will save what to review."
     }
 
     var body: some View {
@@ -784,7 +784,7 @@ private struct FreeTalkSessionView: View {
         transcript = capturedTranscript
 
         guard !capturedTranscript.isEmpty else {
-            speechErrorMessage = "No clear speech was captured. Try again a little slower and closer to the mic."
+            speechErrorMessage = "Nothing clear was captured. Say one short sentence and try again."
             speechPhase = .noSpeech
             return
         }
@@ -795,7 +795,7 @@ private struct FreeTalkSessionView: View {
     private func saveSession(with spokenText: String) async {
         let cleanText = spokenText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanText.isEmpty else {
-            speechErrorMessage = "No clear speech was captured. Try again a little slower and closer to the mic."
+            speechErrorMessage = "Nothing clear was captured. Say one short sentence and try again."
             speechPhase = .noSpeech
             return
         }
@@ -1091,7 +1091,7 @@ private struct RoleplayDetailView: View {
         transcript = capturedTranscript
 
         guard !capturedTranscript.isEmpty else {
-            speechErrorMessage = "No clear speech was captured. Try again a little slower and closer to the mic."
+            speechErrorMessage = "Nothing clear was captured. Say one short sentence and try again."
             speechPhase = .noSpeech
             return
         }
@@ -1102,7 +1102,7 @@ private struct RoleplayDetailView: View {
     private func saveSession(with spokenText: String) async {
         let cleanText = spokenText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanText.isEmpty else {
-            speechErrorMessage = "No clear speech was captured. Try again a little slower and closer to the mic."
+            speechErrorMessage = "Nothing clear was captured. Say one short sentence and try again."
             speechPhase = .noSpeech
             return
         }
@@ -1346,7 +1346,7 @@ private struct SmartReviewView: View {
                 ContentUnavailableView {
                     Label("No review due", systemImage: "checkmark.seal.fill")
                 } description: {
-                    Text("Nothing due today.")
+                    Text("Speak once and Converlax will save the useful phrase for later.")
                 } actions: {
                     NavigationLink(value: ReviewRoute.startLesson) {
                         Label("Start speaking", systemImage: "play.fill")
@@ -1483,7 +1483,7 @@ private struct SmartReviewView: View {
         transcript = capturedTranscript
 
         guard !capturedTranscript.isEmpty else {
-            speechErrorMessage = "No clear speech was captured. Try again a little slower and closer to the mic."
+            speechErrorMessage = "Nothing clear was captured. Say one short sentence and try again."
             speechPhase = .noSpeech
             return
         }
@@ -1579,7 +1579,7 @@ private struct ReviewCompletionResultView: View {
             )
 
             NavigationLink(value: ReviewRoute.startLesson) {
-                Label("Start speaking", systemImage: "play.fill")
+                Label("Continue speaking", systemImage: "play.fill")
             }
             .buttonStyle(PrimaryButtonStyle())
 
@@ -1664,7 +1664,7 @@ private struct SavedLinesReviewView: View {
                 ContentUnavailableView {
                     Label("No saved lines", systemImage: "bookmark")
                 } description: {
-                    Text("Save a useful line during practice.")
+                    Text("Speak once and save the best line from feedback.")
                 } actions: {
                     NavigationLink(value: ReviewRoute.startLesson) {
                         Label("Start speaking", systemImage: "play.fill")
@@ -1741,7 +1741,7 @@ private struct SavedLinesReviewView: View {
         transcript = capturedTranscript
 
         guard !capturedTranscript.isEmpty else {
-            speechErrorMessage = "No clear speech was captured. Try again a little slower and closer to the mic."
+            speechErrorMessage = "Nothing clear was captured. Say one short sentence and try again."
             speechPhase = .noSpeech
             return
         }
@@ -1753,7 +1753,7 @@ private struct SavedLinesReviewView: View {
         guard let line else { return }
         let cleanText = spokenText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanText.isEmpty else {
-            speechErrorMessage = "No clear speech was captured. Try again a little slower and closer to the mic."
+            speechErrorMessage = "Nothing clear was captured. Say one short sentence and try again."
             speechPhase = .noSpeech
             return
         }
@@ -1872,17 +1872,17 @@ private struct SavedLinesView: View {
             .listRowBackground(Color.clear)
 
             if hasNoSearchResults {
-                ContentUnavailableView("No saved content", systemImage: "magnifyingglass", description: Text("Try a different search."))
+                ContentUnavailableView("No match", systemImage: "magnifyingglass", description: Text("Try a shorter search."))
             }
 
             if isEmptyBeforeSearch {
-                ContentUnavailableView("No saved content", systemImage: "bookmark", description: Text("Save a phrase from a lesson, Free Talk, or a situation."))
+                ContentUnavailableView("Nothing saved yet", systemImage: "bookmark", description: Text("Speak once and save the best phrase from feedback."))
             }
 
             if showsLines {
                 Section("Lines to practice") {
                     if filteredLines.isEmpty {
-                        Text("Saved lines will appear here.")
+                        Text("Saved lines appear after speaking feedback.")
                             .foregroundStyle(.secondary)
                     } else {
                         ForEach(filteredLines) { line in
@@ -1897,7 +1897,7 @@ private struct SavedLinesView: View {
             if showsSituations {
                 Section("Saved situations") {
                     if filteredRoleplays.isEmpty {
-                        Text("Saved situations will appear here.")
+                        Text("Saved situations appear after you bookmark one.")
                             .foregroundStyle(.secondary)
                     } else {
                         ForEach(filteredRoleplays) { roleplay in

@@ -23,7 +23,7 @@ final class SpeechRecognitionService: ObservableObject {
         errorMessage = nil
 
         guard await requestPermissions() else {
-            errorMessage = "Voice practice needs Microphone and Speech Recognition. You can allow access in Settings, then try again."
+            errorMessage = "Voice practice needs Microphone and Speech Recognition. Allow access in Settings and try again."
             return false
         }
 
