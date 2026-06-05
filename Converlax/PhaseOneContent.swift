@@ -36,19 +36,9 @@ enum PhaseOneContent {
         savedLine("line-full-close", "Thanks for your help. It was nice talking to you.", "Close a helpful conversation", "Full conversation practice", "Use after someone helps you.")
     ]
 
-    static let topics: [RoleplayTopic] = [
-        RoleplayTopic(id: "everyday", title: "Everyday starts", subtitle: "Introductions, small talk, routines, and plans", symbol: "bubble.left.and.bubble.right.fill", colorName: .mint, scenarioIDs: ["first-meeting", "small-talk-neighbor", "free-time-chat", "make-weekend-plan"]),
-        RoleplayTopic(id: "food", title: "Food and shops", subtitle: "Cafes, restaurants, shopping, and payment", symbol: "cup.and.saucer.fill", colorName: .amber, scenarioIDs: ["coffee-order", "restaurant-menu", "shop-price-check"]),
-        RoleplayTopic(id: "around-town", title: "Around town", subtitle: "Directions, transport, and clarification", symbol: "map.fill", colorName: .blue, scenarioIDs: ["station-directions", "buy-ticket", "clarify-help"]),
-        RoleplayTopic(id: "work", title: "Work and calls", subtitle: "Introductions, meetings, calls, and support issues", symbol: "briefcase.fill", colorName: .violet, scenarioIDs: ["team-intro", "video-meeting", "phone-call-audio", "support-problem"]),
-        RoleplayTopic(id: "opinions", title: "Opinions and decisions", subtitle: "Give opinions, agree, disagree, and explain reasons", symbol: "lightbulb.fill", colorName: .mint, scenarioIDs: ["choose-option", "polite-disagreement"]),
-        RoleplayTopic(id: "travel", title: "Travel and help", subtitle: "Hotels, airports, health, and urgent help", symbol: "airplane", colorName: .blue, scenarioIDs: ["hotel-check-in", "airport-delay", "pharmacy-symptoms", "lost-phone-help"])
-    ]
-
     static let roleplays: [RoleplayScenario] = [
         RoleplayScenario(
             id: "first-meeting",
-            topicID: "everyday",
             title: "Meet someone new",
             subtitle: "Say your name, where you are from, and ask back",
             setting: "Language meetup",
@@ -58,12 +48,10 @@ enum PhaseOneContent {
                 savedLine("meeting-line-1", "Hi, I'm Alex. Nice to meet you.", "Introduce yourself", "Situation", "Swap in your own name."),
                 savedLine("meeting-line-2", "I'm from Indonesia. How about you?", "Say where you are from and ask back", "Situation", "Use your country or city."),
                 savedLine("meeting-line-3", "I'm learning English because I want to speak more confidently.", "Explain your reason", "Situation", "Keep the reason short.")
-            ],
-            isCommunity: false
+            ]
         ),
         RoleplayScenario(
             id: "small-talk-neighbor",
-            topicID: "everyday",
             title: "Chat with a neighbor",
             subtitle: "Answer a check-in, ask back, and close naturally",
             setting: "Apartment lobby",
@@ -73,12 +61,10 @@ enum PhaseOneContent {
                 savedLine("neighbor-line-1", "Pretty good, thanks. How about you?", "Answer and ask back", "Situation", "Works for How are you? and How's your day?"),
                 savedLine("neighbor-line-2", "Not bad. I'm just heading to work.", "Add one everyday detail", "Situation", "Keep the extra detail short."),
                 savedLine("neighbor-line-3", "It was nice talking to you. See you later.", "Close politely", "Situation", "Use when you need to leave.")
-            ],
-            isCommunity: true
+            ]
         ),
         RoleplayScenario(
             id: "free-time-chat",
-            topicID: "everyday",
             title: "Talk about free time",
             subtitle: "Share one hobby and ask a follow-up",
             setting: "Lunch break",
@@ -88,12 +74,10 @@ enum PhaseOneContent {
                 savedLine("free-time-line-1", "I like walking around the city on weekends.", "Say a free-time activity", "Situation", "Change the activity to your real life."),
                 savedLine("free-time-line-2", "I'm into cooking these days.", "Give a natural alternative", "Situation", "I'm into means I like it right now."),
                 savedLine("free-time-line-3", "What do you like doing on weekends?", "Ask a follow-up", "Situation", "This keeps the conversation moving.")
-            ],
-            isCommunity: false
+            ]
         ),
         RoleplayScenario(
             id: "make-weekend-plan",
-            topicID: "everyday",
             title: "Make a simple plan",
             subtitle: "Invite someone, choose a time, and confirm",
             setting: "After class",
@@ -103,12 +87,10 @@ enum PhaseOneContent {
                 savedLine("plan-line-1", "Would you like to get coffee tomorrow?", "Invite someone politely", "Situation", "Use would you like to for friendly invitations."),
                 savedLine("plan-line-2", "Let's meet at six near the station.", "Confirm time and place", "Situation", "Give one clear detail."),
                 savedLine("plan-line-3", "Great, see you there at six.", "Close the plan", "Situation", "Repeat the time or place.")
-            ],
-            isCommunity: true
+            ]
         ),
         RoleplayScenario(
             id: "coffee-order",
-            topicID: "food",
             title: "Order at a cafe",
             subtitle: "Choose a drink, answer the barista, and finish politely",
             setting: "Busy cafe",
@@ -118,12 +100,10 @@ enum PhaseOneContent {
                 savedLine("coffee-line-1", "Could I have a small latte, please?", "Order a drink with a size", "Situation", "Small can become medium or large."),
                 savedLine("coffee-line-2", "For here, please.", "Answer where you will drink", "Situation", "Use to go if you are leaving."),
                 savedLine("coffee-line-3", "No, that's all. Thank you.", "Say you do not need anything else", "Situation", "Use this after Anything else?")
-            ],
-            isCommunity: false
+            ]
         ),
         RoleplayScenario(
             id: "restaurant-menu",
-            topicID: "food",
             title: "Ask about a menu",
             subtitle: "Check ingredients, spice, and the bill",
             setting: "Casual restaurant",
@@ -133,12 +113,10 @@ enum PhaseOneContent {
                 savedLine("restaurant-line-1", "Does this have nuts in it?", "Check ingredients", "Situation", "Useful for allergies."),
                 savedLine("restaurant-line-2", "Is this dish spicy?", "Ask about spice level", "Situation", "A simple yes-or-no question."),
                 savedLine("restaurant-line-3", "Could we get the bill, please?", "Ask to pay", "Situation", "Use at table-service restaurants.")
-            ],
-            isCommunity: true
+            ]
         ),
         RoleplayScenario(
             id: "station-directions",
-            topicID: "around-town",
             title: "Find the station",
             subtitle: "Ask where to go and check the answer",
             setting: "Street corner",
@@ -148,12 +126,10 @@ enum PhaseOneContent {
                 savedLine("station-line-1", "Excuse me, where is the nearest station?", "Ask for the closest station", "Situation", "Start with excuse me for politeness."),
                 savedLine("station-line-2", "Is it far from here?", "Ask about distance", "Situation", "Useful before you start walking."),
                 savedLine("station-line-3", "So I go straight and turn left at the bank?", "Check the route", "Situation", "Repeat the directions back.")
-            ],
-            isCommunity: true
+            ]
         ),
         RoleplayScenario(
             id: "buy-ticket",
-            topicID: "around-town",
             title: "Buy a ticket",
             subtitle: "Ask for a ticket and check the route",
             setting: "Train station counter",
@@ -163,12 +139,10 @@ enum PhaseOneContent {
                 savedLine("ticket-line-1", "One ticket to City Hall, please.", "Ask for a ticket", "Situation", "Change City Hall to your destination."),
                 savedLine("ticket-line-2", "Does this train go downtown?", "Check the route", "Situation", "Use bus or train as needed."),
                 savedLine("ticket-line-3", "How many stops is it from here?", "Ask when to get off", "Situation", "Useful on public transport.")
-            ],
-            isCommunity: false
+            ]
         ),
         RoleplayScenario(
             id: "shop-price-check",
-            topicID: "food",
             title: "Ask about a price",
             subtitle: "Ask the cost, size, and payment question",
             setting: "Small shop",
@@ -178,12 +152,10 @@ enum PhaseOneContent {
                 savedLine("shop-line-1", "How much is this?", "Ask the price", "Situation", "Use this while pointing to one item."),
                 savedLine("shop-line-2", "Do you have this in a smaller size?", "Ask for another size", "Situation", "Swap smaller size for another color."),
                 savedLine("shop-line-3", "Can I pay by card?", "Ask about payment", "Situation", "Useful at shops, cafes, and counters.")
-            ],
-            isCommunity: false
+            ]
         ),
         RoleplayScenario(
             id: "clarify-help",
-            topicID: "around-town",
             title: "Ask for help",
             subtitle: "Ask someone to repeat and speak more slowly",
             setting: "Ticket machine",
@@ -193,12 +165,10 @@ enum PhaseOneContent {
                 savedLine("help-line-1", "Could you help me, please?", "Ask politely for help", "Situation", "Works when you are stuck."),
                 savedLine("help-line-2", "Could you say that again, please?", "Ask someone to repeat", "Situation", "Use this when you did not understand."),
                 savedLine("help-line-3", "Sorry, could you speak more slowly?", "Ask someone to slow down", "Situation", "Helpful with fast speech.")
-            ],
-            isCommunity: true
+            ]
         ),
         RoleplayScenario(
             id: "team-intro",
-            topicID: "work",
             title: "Meet a new teammate",
             subtitle: "Introduce your role and ask about their team",
             setting: "Office chat",
@@ -208,12 +178,10 @@ enum PhaseOneContent {
                 savedLine("work-line-1", "Hi, I'm Alex. I work in product.", "Introduce yourself at work", "Situation", "Change product to your role or team."),
                 savedLine("work-line-2", "What team are you on?", "Ask about someone's team", "Situation", "Useful for first work conversations."),
                 savedLine("work-line-3", "Nice to meet you. I look forward to working with you.", "Close politely", "Situation", "Good for new teammates and meetings.")
-            ],
-            isCommunity: true
+            ]
         ),
         RoleplayScenario(
             id: "video-meeting",
-            topicID: "work",
             title: "Join a video meeting",
             subtitle: "Check audio, ask for a recap, and continue",
             setting: "Remote team call",
@@ -223,12 +191,10 @@ enum PhaseOneContent {
                 savedLine("meeting-call-line-1", "Hi everyone, can you hear me okay?", "Check audio", "Situation", "Use when you join a call."),
                 savedLine("meeting-call-line-2", "Sorry I'm a little late. What did I miss?", "Ask for what happened", "Situation", "Only use if you joined late."),
                 savedLine("meeting-call-line-3", "Could you give me a quick recap?", "Ask for a short summary", "Situation", "A practical meeting phrase.")
-            ],
-            isCommunity: false
+            ]
         ),
         RoleplayScenario(
             id: "phone-call-audio",
-            topicID: "work",
             title: "Fix call audio",
             subtitle: "Say the connection is bad and ask for repetition",
             setting: "Client phone call",
@@ -238,12 +204,10 @@ enum PhaseOneContent {
                 savedLine("phone-line-1", "Hi, this is Alex speaking.", "Answer a call professionally", "Situation", "Use your own name."),
                 savedLine("phone-line-2", "Sorry, the connection is not very clear.", "Explain the audio issue", "Situation", "Name the problem."),
                 savedLine("phone-line-3", "Could you repeat the last part?", "Ask for part of the sentence again", "Situation", "Useful when you understood most of it.")
-            ],
-            isCommunity: true
+            ]
         ),
         RoleplayScenario(
             id: "support-problem",
-            topicID: "work",
             title: "Explain a support problem",
             subtitle: "Say what happened and what you need",
             setting: "Customer support chat",
@@ -253,12 +217,10 @@ enum PhaseOneContent {
                 savedLine("support-line-1", "I'm having a problem with my account.", "Open a problem explanation", "Situation", "Swap account for app, card, order, or booking."),
                 savedLine("support-line-2", "It says my password is incorrect, but I'm sure it's right.", "Report an error message", "Situation", "Use it says for app messages."),
                 savedLine("support-line-3", "Could you help me fix it?", "Ask for help solving it", "Situation", "Finish with what you need.")
-            ],
-            isCommunity: false
+            ]
         ),
         RoleplayScenario(
             id: "choose-option",
-            topicID: "opinions",
             title: "Choose an option",
             subtitle: "Give an opinion and one reason",
             setting: "Team discussion",
@@ -268,12 +230,10 @@ enum PhaseOneContent {
                 savedLine("opinion-line-1", "I think this option is better because it's simpler.", "Give an opinion with a reason", "Situation", "One reason is enough."),
                 savedLine("opinion-line-2", "I prefer the first idea because it's easier to understand.", "Choose between options", "Situation", "Use prefer for choices."),
                 savedLine("opinion-line-3", "What do you think?", "Ask for another opinion", "Situation", "Make it a conversation.")
-            ],
-            isCommunity: true
+            ]
         ),
         RoleplayScenario(
             id: "polite-disagreement",
-            topicID: "opinions",
             title: "Disagree politely",
             subtitle: "Acknowledge the idea and explain your concern",
             setting: "Planning meeting",
@@ -283,12 +243,10 @@ enum PhaseOneContent {
                 savedLine("disagree-line-1", "I see your point, but I'm not sure about the timing.", "Disagree softly", "Situation", "Acknowledge first."),
                 savedLine("disagree-line-2", "Maybe we could try a simpler version first.", "Suggest a change", "Situation", "Offer a path forward."),
                 savedLine("disagree-line-3", "Could we talk through the timeline once more?", "Ask for more discussion", "Situation", "Useful when plans feel rushed.")
-            ],
-            isCommunity: true
+            ]
         ),
         RoleplayScenario(
             id: "hotel-check-in",
-            topicID: "travel",
             title: "Check in at a hotel",
             subtitle: "Give your name and ask about useful details",
             setting: "Hotel front desk",
@@ -298,12 +256,10 @@ enum PhaseOneContent {
                 savedLine("hotel-line-1", "Hi, I have a reservation under Alex.", "Start check-in", "Situation", "Use the booking name."),
                 savedLine("hotel-line-2", "Could I check in, please?", "Ask to check in", "Situation", "Short and polite."),
                 savedLine("hotel-line-3", "Could I get the Wi-Fi password, please?", "Ask for hotel Wi-Fi", "Situation", "A useful follow-up.")
-            ],
-            isCommunity: false
+            ]
         ),
         RoleplayScenario(
             id: "airport-delay",
-            topicID: "travel",
             title: "Ask about a delayed flight",
             subtitle: "Find the gate and new time",
             setting: "Airport information desk",
@@ -313,12 +269,10 @@ enum PhaseOneContent {
                 savedLine("airport-line-1", "Which gate does this flight leave from?", "Ask for the gate", "Situation", "Use when the screen is confusing."),
                 savedLine("airport-line-2", "My flight is delayed. Do you know the new time?", "Ask about a delay", "Situation", "Say the problem, then ask for the update."),
                 savedLine("airport-line-3", "Where can I pick up my bag?", "Ask about baggage", "Situation", "Use after a flight or delay.")
-            ],
-            isCommunity: true
+            ]
         ),
         RoleplayScenario(
             id: "pharmacy-symptoms",
-            topicID: "travel",
             title: "Ask at a pharmacy",
             subtitle: "Describe symptoms and medicine timing",
             setting: "Pharmacy counter",
@@ -328,12 +282,10 @@ enum PhaseOneContent {
                 savedLine("pharmacy-line-1", "I have a headache and a sore throat.", "Describe symptoms", "Situation", "Add two symptoms if needed."),
                 savedLine("pharmacy-line-2", "I've felt like this since yesterday.", "Say when it started", "Situation", "Useful for health conversations."),
                 savedLine("pharmacy-line-3", "How often should I take this medicine?", "Ask medicine timing", "Situation", "Always ask before taking medicine.")
-            ],
-            isCommunity: false
+            ]
         ),
         RoleplayScenario(
             id: "lost-phone-help",
-            topicID: "travel",
             title: "Get urgent help",
             subtitle: "Say what happened and ask for immediate support",
             setting: "Train station help desk",
@@ -343,8 +295,7 @@ enum PhaseOneContent {
                 savedLine("emergency-line-1", "I need help. I lost my phone.", "Ask for urgent help", "Situation", "Short sentences are best."),
                 savedLine("emergency-line-2", "Could you call security, please?", "Ask someone to contact help", "Situation", "Change security if needed."),
                 savedLine("emergency-line-3", "Please stay with me for a moment.", "Ask someone not to leave", "Situation", "Use if you feel unsafe or confused.")
-            ],
-            isCommunity: true
+            ]
         )
     ]
 
@@ -397,9 +348,5 @@ enum PhaseOneContent {
 
     static func roleplay(id: String) -> RoleplayScenario? {
         roleplays.first { $0.id == id }
-    }
-
-    static func topic(id: String) -> RoleplayTopic? {
-        topics.first { $0.id == id }
     }
 }

@@ -221,7 +221,7 @@ export const tutorJsonSchema = {
       type: "string",
       minLength: 1,
       maxLength: 280,
-      description: "A corrected or more natural version of the learner's message."
+      description: "A corrected or more natural version of the learner's message, focused on one beginner fix."
     },
     naturalAlternative: {
       type: "string",
@@ -239,7 +239,7 @@ export const tutorJsonSchema = {
       type: "string",
       minLength: 1,
       maxLength: 180,
-      description: "A useful corrected phrase worth saving for future practice."
+      description: "A useful corrected phrase worth saving for future practice. It should target the same single fix as the mistake pattern."
     },
     reviewItem: {
       type: "object",

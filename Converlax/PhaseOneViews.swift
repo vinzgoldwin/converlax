@@ -30,24 +30,18 @@ struct PracticeHomeView: View {
                 FreeTalkSessionView(state: state)
             case .tutor:
                 TutorView(state: state)
-            case .topics:
+            case .situations:
                 SituationBrowserView(state: state)
-            case .topic(let topic):
-                TopicDetailView(topic: topic, state: state)
-            case .roleplay(let roleplay), .communityRoleplay(let roleplay):
+            case .roleplay(let roleplay):
                 RoleplayDetailView(roleplay: roleplay, state: state)
             case .history:
                 HistoryUsageView(state: state)
-            case .favorites:
-                SituationBrowserView(state: state, initialFilter: .favorites)
-            case .community:
-                SituationBrowserView(state: state, initialFilter: .community)
             }
         }
     }
 
     private var chooseSituationAction: some View {
-        NavigationLink(value: PracticeRoute.topics) {
+        NavigationLink(value: PracticeRoute.situations) {
             PracticeSecondaryRow(symbol: "person.2.wave.2.fill", title: "Choose a situation", subtitle: "Roleplay a real-world moment")
         }
         .buttonStyle(CalmPressButtonStyle(cornerRadius: 12, highlightColor: .primaryBlue))
@@ -129,8 +123,6 @@ struct ReviewHomeView: View {
                 SavedLinesReviewView(state: state)
             case .savedLineSearch:
                 SavedLinesView(state: state, searchable: true)
-            case .reviewInfo:
-                InfoDetailView(title: "How review works", subtitle: "Saved words, saved lines, and recent mistakes come back when they are ready to practice.")
             case .startLesson:
                 LessonPlayerView(lesson: state.currentLesson, state: state)
             }
@@ -168,32 +160,16 @@ struct SpeakProfileHomeView: View {
             switch route {
             case .savedLines:
                 SavedLinesView(state: state)
-            case .activities:
-                ActivitiesView(state: state)
             case .practiceHistory:
                 HistoryUsageView(state: state)
             case .startLesson:
                 LessonPlayerView(lesson: state.currentLesson, state: state)
             case .settings:
                 SettingsView(state: state)
-            case .membership:
-                InfoDetailView(title: "Membership", subtitle: "Review plan, billing, and renewal details.")
             case .editProfile:
                 EditLearnerProfileView(state: state)
-            case .referrals:
-                InfoDetailView(title: "Invite a friend", subtitle: "Share Converlax with someone who wants speaking practice.")
-            case .notifications:
-                NotificationPreferencesView(state: state)
-            case .support:
-                InfoDetailView(title: "Get support", subtitle: "Find help, report an issue, or send lesson feedback.")
-            case .appLanguage:
-                InfoDetailView(title: "App language", subtitle: "Choose the interface language for menus and settings.")
-            case .courseLanguage:
+            case .courseLevel:
                 LevelSelectionView(state: state)
-            case .login:
-                InfoDetailView(title: "Log in", subtitle: "Sign in to sync lessons, saved lines, and practice history.")
-            case .resetPassword:
-                InfoDetailView(title: "Reset password", subtitle: "Update the password for your Converlax account.")
             }
         }
     }
@@ -274,7 +250,12 @@ struct SpeakProfileHomeView: View {
             Divider().padding(.leading, 58)
 
             NavigationLink(value: ProfileRoute.settings) {
-                JourneyNavigationRow(asset: .settings, title: "Settings", detail: "Goal, voice, course")
+                JourneyNavigationRow(
+                    asset: .settings,
+                    title: "Settings",
+                    detail: "Course and profile",
+                    accessibilityIdentifier: "profile-settings-row"
+                )
             }
         }
         .buttonStyle(CalmPressButtonStyle(cornerRadius: 12, highlightColor: .primaryBlue))
@@ -493,6 +474,7 @@ private struct JourneyNavigationRow: View {
     let asset: ConverlaxAssetKind
     let title: String
     let detail: String
+    var accessibilityIdentifier: String?
 
     var body: some View {
         HStack(spacing: 12) {
@@ -517,31 +499,7 @@ private struct JourneyNavigationRow: View {
         .padding(.vertical, 10)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-    }
-}
-
-struct StreakDetailView: View {
-    @Environment(\.dismiss) private var dismiss
-    @ObservedObject var state: LearningState
-
-    var body: some View {
-        VStack(spacing: 22) {
-            ConverlaxAssetBadge(kind: .streak, size: 86)
-            Text(state.profile.streak == 0 ? "Start your streak" : "\(state.profile.streak)-day streak")
-                .font(.largeTitle.weight(.bold))
-            Text("Finish one lesson or speaking session each day to keep your record active.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-            LessonProgressBar(progress: Double(min(state.completedLessonCount, state.profile.dailyGoal)) / Double(max(state.profile.dailyGoal, 1)))
-            Text("Daily goal: \(state.profile.dailyGoal) lessons")
-                .font(.headline.weight(.semibold))
-            Spacer()
-            Button("Done") { dismiss() }
-                .buttonStyle(PrimaryButtonStyle())
-        }
-        .padding(24)
-        .background(Color.appBackground.ignoresSafeArea())
+        .accessibilityIdentifier(accessibilityIdentifier ?? "")
     }
 }
 
@@ -707,49 +665,6 @@ private struct LessonPracticePreviewItem: Identifiable {
     let color: Color
 }
 
-struct LessonToolsMenu: View {
-    let lesson: BeginnerLesson
-    var title = "More lesson tools"
-    var includesCourseModes = false
-
-    var body: some View {
-        Menu {
-            NavigationLink(value: HomeRoute.speakingDrill(lesson)) {
-                Label("Practice speaking", systemImage: "mic.fill")
-            }
-
-            if includesCourseModes {
-                NavigationLink(value: HomeRoute.videoLesson(lesson)) {
-                    Label("Watch and repeat", systemImage: "play.rectangle.fill")
-                }
-                NavigationLink(value: HomeRoute.qaLesson(lesson)) {
-                    Label("Speak answers", systemImage: "mic.circle.fill")
-                }
-            }
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: "ellipsis.circle")
-                    .font(.headline.weight(.semibold))
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                Spacer()
-                Image(systemName: "chevron.down")
-                    .font(.caption.weight(.bold))
-            }
-            .foregroundStyle(Color.primaryBlue)
-            .frame(maxWidth: .infinity)
-            .frame(minHeight: 48)
-            .padding(.horizontal, 16)
-            .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color.clayStroke, lineWidth: 1)
-            )
-        }
-        .accessibilityIdentifier("lesson-tools-menu")
-    }
-}
-
 private struct FreeTalkSessionView: View {
     @ObservedObject var state: LearningState
     @State private var finished = false
@@ -782,6 +697,7 @@ private struct FreeTalkSessionView: View {
                             transcript: transcript,
                             feedback: nil,
                             accent: .primaryBlue,
+                            readyInstruction: "Answer this prompt out loud.",
                             voiceLevel: speechRecognizer.voiceLevel,
                             errorMessage: speechErrorMessage,
                             onPrimary: handlePrimaryAction,
@@ -984,48 +900,12 @@ private struct PracticeSavedHint: View {
     }
 }
 
-private enum SituationFilter: String, CaseIterable, Identifiable {
-    case all = "Recommended"
-    case topics = "Topics"
-    case favorites = "Saved"
-    case community = "Community"
-
-    var id: String { rawValue }
-
-    var emptyTitle: String {
-        switch self {
-        case .all:
-            "No recommended situations"
-        case .topics:
-            "No topics"
-        case .favorites:
-            "No saved situations yet"
-        case .community:
-            "No community situations"
-        }
-    }
-
-    var emptyDescription: String {
-        switch self {
-        case .all:
-            "New situations will appear here."
-        case .topics:
-            "Situation topics will appear here."
-        case .favorites:
-            "Save a situation to keep it here."
-        case .community:
-            "Community situations will appear here."
-        }
-    }
-}
-
 private struct SituationBrowserView: View {
     @ObservedObject var state: LearningState
-    @State private var filter: SituationFilter
 
-    init(state: LearningState, initialFilter: SituationFilter = .all) {
-        self.state = state
-        _filter = State(initialValue: initialFilter)
+    private var suggestedRoleplays: [RoleplayScenario] {
+        let savedIDs = Set(state.favoriteRoleplays.map(\.id))
+        return state.roleplays.filter { !savedIDs.contains($0.id) }
     }
 
     var body: some View {
@@ -1034,12 +914,9 @@ private struct SituationBrowserView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    SectionHeader(title: "Choose a situation", subtitle: "Pick a recommended scenario or browse by topic.")
-
-                    SituationFilterBar(selection: $filter)
-                    .accessibilityIdentifier("situation-filter")
-
-                    situationContent
+                    SectionHeader(title: "Choose a situation", subtitle: nil)
+                    savedSituations
+                    suggestedSituations
                 }
                 .padding(20)
             }
@@ -1048,95 +925,46 @@ private struct SituationBrowserView: View {
             }
         }
         .navigationTitle("Situations")
+        .accessibilityIdentifier("situation-browser")
     }
 
     @ViewBuilder
-    private var situationContent: some View {
-        switch filter {
-        case .all:
-            roleplayList(state.roleplays, emptyTitle: filter.emptyTitle, emptyDescription: filter.emptyDescription)
-        case .topics:
-            topicList
-        case .favorites:
-            roleplayList(state.favoriteRoleplays, emptyTitle: filter.emptyTitle, emptyDescription: filter.emptyDescription)
-        case .community:
-            roleplayList(state.communityRoleplays, emptyTitle: filter.emptyTitle, emptyDescription: filter.emptyDescription)
-        }
-    }
-
-    private var topicList: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ForEach(state.roleplayTopics) { topic in
-                NavigationLink(value: PracticeRoute.topic(topic)) {
-                    TopicRow(topic: topic)
-                }
-                .buttonStyle(.plain)
-            }
+    private var savedSituations: some View {
+        if !state.favoriteRoleplays.isEmpty {
+            roleplaySection(title: "Saved situations", roleplays: state.favoriteRoleplays)
         }
     }
 
     @ViewBuilder
-    private func roleplayList(_ roleplays: [RoleplayScenario], emptyTitle: String, emptyDescription: String) -> some View {
+    private var suggestedSituations: some View {
+        if !suggestedRoleplays.isEmpty || state.favoriteRoleplays.isEmpty {
+            roleplaySection(title: state.favoriteRoleplays.isEmpty ? nil : "Suggested situations", roleplays: suggestedRoleplays)
+        }
+    }
+
+    @ViewBuilder
+    private func roleplaySection(title: String?, roleplays: [RoleplayScenario]) -> some View {
         if roleplays.isEmpty {
-            ContentUnavailableView(emptyTitle, systemImage: "person.2.wave.2.fill", description: Text(emptyDescription))
+            ContentUnavailableView("No situations yet", systemImage: "person.2.wave.2.fill", description: Text("New speaking situations will appear here."))
                 .frame(maxWidth: .infinity)
                 .padding(.top, 28)
         } else {
             VStack(alignment: .leading, spacing: 12) {
+                if let title {
+                    Text(title)
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(Color.converlaxInk)
+                }
+
                 ForEach(roleplays) { roleplay in
                     NavigationLink(value: PracticeRoute.roleplay(roleplay)) {
                         RoleplayRow(roleplay: roleplay, favorite: state.isFavorite(roleplay))
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("situation-row-\(roleplay.id)")
                 }
             }
         }
-    }
-}
-
-private struct SituationFilterBar: View {
-    @Binding var selection: SituationFilter
-
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(SituationFilter.allCases) { filter in
-                    Button {
-                        selection = filter
-                    } label: {
-                        Text(filter.rawValue)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(selection == filter ? Color.primaryBlue : Color.converlaxInk.opacity(0.72))
-                            .padding(.horizontal, 11)
-                            .frame(height: 32)
-                            .background(selection == filter ? Color.primaryBlue.opacity(0.1) : Color.claySurface.opacity(0.48), in: Capsule())
-                            .overlay(
-                                Capsule()
-                                    .stroke(selection == filter ? Color.primaryBlue.opacity(0.26) : Color.clayStroke.opacity(0.52), lineWidth: 1)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-    }
-}
-
-private struct TopicDetailView: View {
-    let topic: RoleplayTopic
-    @ObservedObject var state: LearningState
-
-    var body: some View {
-        List {
-            Section(topic.subtitle) {
-                ForEach(state.roleplays.filter { topic.scenarioIDs.contains($0.id) }) { roleplay in
-                    NavigationLink(value: PracticeRoute.roleplay(roleplay)) {
-                        RoleplayRow(roleplay: roleplay, favorite: state.isFavorite(roleplay))
-                    }
-                }
-            }
-        }
-        .navigationTitle(topic.title)
     }
 }
 
@@ -1171,6 +999,7 @@ private struct RoleplayDetailView: View {
                         transcript: transcript,
                         feedback: nil,
                         accent: .primaryBlue,
+                        readyInstruction: "Start the situation out loud.",
                         voiceLevel: speechRecognizer.voiceLevel,
                         errorMessage: speechErrorMessage,
                         onPrimary: handlePrimaryAction,
@@ -1439,53 +1268,8 @@ private struct HistoryUsageView: View {
                 }
             }
         }
-        .scrollContentBackground(.hidden)
-        .background(Color.appBackground.ignoresSafeArea())
+        .converlaxListSurface()
         .navigationTitle("Practice history")
-    }
-}
-
-private struct FavoritesView: View {
-    @ObservedObject var state: LearningState
-
-    var body: some View {
-        List {
-            Section("Saved situations") {
-                if state.favoriteRoleplays.isEmpty {
-                    Text("Saved situations will appear here.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(state.favoriteRoleplays) { roleplay in
-                        NavigationLink(value: PracticeRoute.roleplay(roleplay)) {
-                            RoleplayRow(roleplay: roleplay, favorite: true)
-                        }
-                        .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
-                    }
-                }
-            }
-        }
-        .scrollContentBackground(.hidden)
-        .background(Color.appBackground.ignoresSafeArea())
-        .navigationTitle("Saved situations")
-    }
-}
-
-private struct CommunityView: View {
-    @ObservedObject var state: LearningState
-    @State private var sortPopularFirst = true
-
-    var body: some View {
-        List {
-            Toggle("Popular first", isOn: $sortPopularFirst)
-            ForEach(state.communityRoleplays) { roleplay in
-                NavigationLink(value: PracticeRoute.communityRoleplay(roleplay)) {
-                    RoleplayRow(roleplay: roleplay, favorite: state.isFavorite(roleplay))
-                }
-            }
-        }
-        .navigationTitle("Community")
     }
 }
 
@@ -1533,6 +1317,17 @@ private struct SmartReviewView: View {
             return "Base phrase"
         case .relatedPrompt:
             return "Helpful answer"
+        }
+    }
+
+    private var reviewReadyInstruction: String {
+        switch reviewMode {
+        case .repeatPhrase:
+            return "Repeat the phrase out loud."
+        case .newSituation:
+            return "Make a new sentence with this phrase."
+        case .relatedPrompt:
+            return "Answer this prompt out loud."
         }
     }
 
@@ -1594,6 +1389,7 @@ private struct SmartReviewView: View {
                         transcript: transcript,
                         feedback: nil,
                         accent: .primaryBlue,
+                        readyInstruction: reviewReadyInstruction,
                         voiceLevel: speechRecognizer.voiceLevel,
                         errorMessage: speechErrorMessage,
                         primaryActionTitle: reviewVoiceActionTitle,
@@ -1851,6 +1647,7 @@ private struct SavedLinesReviewView: View {
                     transcript: transcript,
                     feedback: feedback,
                     accent: .primaryBlue,
+                    readyInstruction: "Say this saved line out loud.",
                     voiceLevel: speechRecognizer.voiceLevel,
                     errorMessage: speechErrorMessage,
                     primaryActionTitle: savedLineActionTitle,
@@ -2125,8 +1922,7 @@ private struct SavedLinesView: View {
                 }
             }
         }
-        .scrollContentBackground(.hidden)
-        .background(Color.appBackground.ignoresSafeArea())
+        .converlaxListSurface()
         .searchable(text: $query, prompt: "Search saved content")
         .navigationTitle(searchable ? "Find saved content" : "Saved content")
     }
@@ -2157,101 +1953,37 @@ private struct SavedLinesView: View {
     }
 }
 
-private struct ActivitiesView: View {
-    @ObservedObject var state: LearningState
-
-    var body: some View {
-        List {
-            Section {
-                ProfileRecordSummaryRow(
-                    symbol: "list.bullet.rectangle.fill",
-                    title: "\(state.activities.count) recent events",
-                    detail: "Lessons, saved lines, reviews, and speaking sessions."
-                )
-            }
-            .listRowBackground(Color.clear)
-
-            Section("Recent activity") {
-                if state.activities.isEmpty {
-                    Text("Recent activity will appear here.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(state.activities) { activity in
-                        HStack(spacing: 12) {
-                            AvatarBadge(symbol: activity.symbol, color: .primaryBlue)
-                                .frame(width: 42, height: 42)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(activity.title).font(.headline)
-                                Text(activity.detail).font(.caption).foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            Text(activity.dateLabel).font(.caption).foregroundStyle(.secondary)
-                        }
-                        .padding(.vertical, 5)
-                    }
-                }
-            }
-        }
-        .scrollContentBackground(.hidden)
-        .background(Color.appBackground.ignoresSafeArea())
-        .navigationTitle("Recent activity")
-    }
-}
-
 private struct SettingsView: View {
     @ObservedObject var state: LearningState
 
     var body: some View {
         List {
             Section("Learning") {
-                Stepper("Daily lesson goal: \(state.profile.dailyGoal)", value: Binding(get: { state.profile.dailyGoal }, set: state.setDailyGoal), in: 1...6)
-                NavigationLink(value: ProfileRoute.courseLanguage) {
+                NavigationLink(value: ProfileRoute.courseLevel) {
                     SettingsNavigationRow(
                         symbol: "globe",
                         title: "Change course or level",
-                        detail: "\(state.profile.targetLanguage.rawValue) · \(state.profile.currentLevel.rawValue)"
+                        detail: "\(state.profile.targetLanguage.rawValue) · \(state.profile.currentLevel.rawValue)",
+                        accessibilityIdentifier: "settings-course-level-row"
                     )
                 }
-                SettingsStatusRow(
-                    symbol: "textformat",
-                    title: "Change app language",
-                    detail: "Use Converlax in another language.",
-                    status: "Language"
-                )
             }
-            Section("Preferences") {
-                SettingsToggleNoteRow(
-                    symbol: "bell.fill",
-                    title: "Set reminders",
-                    note: "Get a nudge to practice.",
-                    isOn: Binding(get: { state.profile.notificationsEnabled }, set: state.setNotificationsEnabled)
-                )
-            }
-            Section("Account") {
-                SettingsStatusRow(
-                    symbol: "creditcard.fill",
-                    title: "Manage membership",
-                    detail: "Plan and billing details.",
-                    status: "Account"
-                )
+            .listRowBackground(Color.claySurface)
+            Section("Profile") {
                 NavigationLink(value: ProfileRoute.editProfile) {
                     SettingsNavigationRow(
                         symbol: "person.crop.circle.fill",
                         title: "Edit profile",
-                        detail: editProfileDetail
+                        detail: editProfileDetail,
+                        accessibilityIdentifier: "settings-edit-profile-row"
                     )
                 }
-                SettingsStatusRow(
-                    symbol: "person.badge.key.fill",
-                    title: "Sign in",
-                    detail: "Sync lessons, saved lines, and practice history.",
-                    status: "Sync"
-                )
             }
+            .listRowBackground(Color.claySurface)
         }
-        .scrollContentBackground(.hidden)
-        .background(Color.appBackground.ignoresSafeArea())
+        .converlaxListSurface()
         .navigationTitle("Settings")
+        .toolbar(.visible, for: .tabBar)
     }
 
     private var editProfileDetail: String {
@@ -2278,6 +2010,7 @@ private struct EditLearnerProfileView: View {
                 TextField("Display name", text: $draft.displayName)
                 TextField("Nickname", text: nicknameBinding)
             }
+            .listRowBackground(Color.claySurface)
 
             Section("Avatar") {
                 Picker("Mascot", selection: $draft.avatarChoice) {
@@ -2286,6 +2019,7 @@ private struct EditLearnerProfileView: View {
                     }
                 }
             }
+            .listRowBackground(Color.claySurface)
 
             Section("Background") {
                 TextField("Native language", text: $draft.nativeLanguage)
@@ -2296,6 +2030,7 @@ private struct EditLearnerProfileView: View {
                     }
                 }
             }
+            .listRowBackground(Color.claySurface)
 
             Section("Speaking") {
                 Picker("Confidence", selection: $draft.speakingConfidence) {
@@ -2310,9 +2045,9 @@ private struct EditLearnerProfileView: View {
                     }
                 }
             }
+            .listRowBackground(Color.claySurface)
         }
-        .scrollContentBackground(.hidden)
-        .background(Color.appBackground.ignoresSafeArea())
+        .converlaxListSurface()
         .navigationTitle("Edit profile")
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .tabBar)
@@ -2391,6 +2126,7 @@ private struct SettingsNavigationRow: View {
     let symbol: String
     let title: String
     let detail: String
+    var accessibilityIdentifier: String?
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
@@ -2402,101 +2138,11 @@ private struct SettingsNavigationRow: View {
                     .font(.subheadline.weight(.semibold))
                 Text(detail)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-}
-
-private struct SettingsStatusRow: View {
-    let symbol: String
-    let title: String
-    let detail: String
-    let status: String
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            AvatarBadge(symbol: symbol, color: .primaryBlue)
-                .frame(width: 34, height: 34)
-
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(title)
-                        .font(.subheadline.weight(.semibold))
-                    Spacer()
-                    Text(status)
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(Color.primaryBlue)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.primaryBlue.opacity(0.1), in: Capsule())
-                }
-
-                Text(detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .padding(.vertical, 2)
-    }
-}
-
-private struct SettingsToggleNoteRow: View {
-    let symbol: String
-    let title: String
-    let note: String
-    @Binding var isOn: Bool
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            AvatarBadge(symbol: symbol, color: .primaryBlue)
-                .frame(width: 34, height: 34)
-
-            VStack(alignment: .leading, spacing: 5) {
-                Toggle(isOn: $isOn) {
-                    Text(title)
-                        .font(.subheadline.weight(.semibold))
-                }
-                Text(note)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .padding(.vertical, 2)
-    }
-}
-
-private struct NotificationPreferencesView: View {
-    @ObservedObject var state: LearningState
-
-    var body: some View {
-        Form {
-            Toggle("Set reminders", isOn: Binding(get: { state.profile.notificationsEnabled }, set: state.setNotificationsEnabled))
-            Text("Choose whether Converlax should remind you to practice.")
                 .foregroundStyle(.secondary)
+            }
         }
-        .navigationTitle("Notifications")
-    }
-}
-
-private struct InfoDetailView: View {
-    let title: String
-    let subtitle: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(title)
-                .font(.largeTitle.weight(.bold))
-            Text(subtitle)
-                .font(.body)
-                .foregroundStyle(.secondary)
-            Spacer()
-        }
-        .padding(20)
-        .background(Color.appBackground.ignoresSafeArea())
-        .navigationTitle(title)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(accessibilityIdentifier ?? "")
     }
 }
 
@@ -2561,48 +2207,13 @@ struct HeroActionCard: View {
     }
 }
 
-private struct MiniFlowCard: View {
-    let title: String
-    let symbol: String
-    let color: Color
-    var asset: ConverlaxAssetKind? = nil
-
-    var body: some View {
-        HStack(spacing: 12) {
-            AvatarBadge(symbol: symbol, color: color)
-                .frame(width: 36, height: 36)
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            if asset != nil {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(color.opacity(0.8))
-                    .accessibilityHidden(true)
-            }
-        }
-        .padding(.horizontal, 14)
-        .frame(minHeight: 54)
-        .background(Color.claySurface.opacity(0.62), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-    }
-}
-
-private struct TopicRow: View {
-    let topic: RoleplayTopic
-
-    var body: some View {
-        SettingsLikeRow(symbol: topic.symbol, title: topic.title, subtitle: topic.subtitle, color: topic.colorName.color)
-    }
-}
-
 private struct RoleplayRow: View {
     let roleplay: RoleplayScenario
     let favorite: Bool
 
     var body: some View {
         HStack(spacing: 12) {
-            AvatarBadge(symbol: roleplay.isCommunity ? "person.3.fill" : "person.2.wave.2.fill", color: roleplay.isCommunity ? .violetAccent : .primaryBlue)
+            ConverlaxAssetBadge(kind: .roleplay, size: 42)
                 .frame(width: 38, height: 38)
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
@@ -2697,40 +2308,6 @@ private struct SavedLineRow: View {
     }
 }
 
-private struct SettingsLikeRow: View {
-    let symbol: String
-    let title: String
-    let subtitle: String
-    var asset: ConverlaxAssetKind? = nil
-    var color: Color = .primaryBlue
-
-    var body: some View {
-        HStack(spacing: 12) {
-            AvatarBadge(symbol: symbol, color: color)
-                .frame(width: 36, height: 36)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .contentTransition(.numericText())
-            }
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.secondary)
-        }
-        .frame(minHeight: 56)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .contentShape(Rectangle())
-    }
-}
-
 private struct PracticeSecondaryRow: View {
     let symbol: String
     let title: String
@@ -2764,33 +2341,5 @@ private struct PracticeSecondaryRow: View {
         .padding(.horizontal, 4)
         .padding(.vertical, 2)
         .contentShape(Rectangle())
-    }
-}
-
-private struct PracticeToolButton: View {
-    let title: String
-    let symbol: String
-    let color: Color
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: symbol)
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(color)
-                .frame(width: 30, height: 30)
-                .background(color.opacity(0.1), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-
-            Text(title)
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.primary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Spacer(minLength: 0)
-        }
-        .frame(maxWidth: .infinity, minHeight: 54, alignment: .leading)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }

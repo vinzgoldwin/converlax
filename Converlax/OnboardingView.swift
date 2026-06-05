@@ -82,7 +82,7 @@ struct OnboardingView: View {
         switch step {
         case 0: "Converlax gives you one useful line, then helps you say it out loud."
         case 1: "Your first lesson will open in this language."
-        default: "Beginner is best for a quick first speaking lesson."
+        default: "This sets your first lesson. You can change it later in Settings."
         }
     }
 
@@ -129,7 +129,7 @@ struct OnboardingView: View {
                     levelButton(level)
                 }
 
-                Text("You can switch levels later from Home.")
+                Text("You can change this later in Settings.")
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(.secondary)
                     .padding(.top, 2)
@@ -150,16 +150,7 @@ struct OnboardingView: View {
     }
 
     private func onboardingSubtitle(for level: Level) -> String {
-        switch level {
-        case .beginner:
-            "Short introductions and everyday lines"
-        case .elementary:
-            "Daily routines and simple places"
-        case .upperElementary:
-            "Appointments and longer small talk"
-        case .intermediate:
-            "Opinions, stories, and follow-up questions"
-        }
+        "\(level.levelSelectionSubtitle). \(level.courseStartNote)"
     }
 
     private func continueFlow() {
@@ -283,79 +274,132 @@ struct LevelSelectionView: View {
     @State private var pendingLevel: Level?
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    levelSection(title: "Part 1", subtitle: "Beginner foundations", levels: [.beginner, .elementary])
-                    levelSection(title: "Part 2", subtitle: "Confident everyday conversation", levels: [.upperElementary, .intermediate])
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Your next lesson updates right away.")
-                            .font(.headline.weight(.semibold))
-                        Text("Completed progress stays saved, but the Home path will move to lessons that match the selected level.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(16)
-                    .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                }
-                .padding(20)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                courseLanguageSection
+                levelSection(title: "Starting level", subtitle: nil, levels: Level.allCases)
+                levelNote
             }
-            .background(Color.appBackground.ignoresSafeArea())
-            .navigationTitle("Select your level")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                    }
-                    .accessibilityLabel("Close")
+            .padding(20)
+        }
+        .background(Color.appBackground.ignoresSafeArea())
+        .navigationTitle("Course and level")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
+        .accessibilityIdentifier("course-level-selection")
+        .confirmationDialog(
+            "Change level?",
+            isPresented: Binding(
+                get: { pendingLevel != nil },
+                set: { if !$0 { pendingLevel = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            if let pendingLevel {
+                Button("Switch to \(pendingLevel.rawValue)") {
+                    state.selectLevel(pendingLevel)
+                    self.pendingLevel = nil
+                    dismiss()
                 }
             }
-            .confirmationDialog(
-                "Change level?",
-                isPresented: Binding(
-                    get: { pendingLevel != nil },
-                    set: { if !$0 { pendingLevel = nil } }
-                ),
-                titleVisibility: .visible
-            ) {
-                if let pendingLevel {
-                    Button("Switch to \(pendingLevel.rawValue)") {
-                        state.selectLevel(pendingLevel)
-                        self.pendingLevel = nil
-                        dismiss()
-                    }
+            Button("Cancel", role: .cancel) {
+                pendingLevel = nil
+            }
+        } message: {
+            Text("Home will move to the first unfinished lesson for that level. Your saved content stays available.")
+        }
+    }
+
+    private var courseLanguageSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(title: "Course language", subtitle: "Choose the language for lessons and voice practice.")
+
+            ForEach(TargetLanguage.allCases.filter(\.isAvailable)) { language in
+                Button {
+                    state.selectTargetLanguage(language)
+                } label: {
+                    CourseLanguageCard(
+                        language: language,
+                        selected: state.profile.targetLanguage == language
+                    )
                 }
-                Button("Cancel", role: .cancel) {
-                    pendingLevel = nil
-                }
-            } message: {
-                Text("Your saved lines and completed lessons stay available.")
+                .buttonStyle(.plain)
             }
         }
     }
 
-    private func levelSection(title: String, subtitle: String, levels: [Level]) -> some View {
+    private func levelSection(title: String, subtitle: String?, levels: [Level]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Text(subtitle)
-                    .font(.title3.weight(.bold))
-            }
+            SectionHeader(title: title, subtitle: subtitle)
 
             ForEach(levels) { level in
                 Button {
-                    pendingLevel = level
+                    if state.profile.currentLevel != level {
+                        pendingLevel = level
+                    }
                 } label: {
                     LevelCard(level: level, selected: state.profile.currentLevel == level)
                 }
                 .buttonStyle(.plain)
             }
         }
+    }
+
+    private var levelNote: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("What changes")
+                .font(.headline.weight(.semibold))
+            Text(levelNoteText)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.clayStroke.opacity(0.72), lineWidth: 1)
+        )
+    }
+
+    private var levelNoteText: String {
+        if state.profile.targetLanguage == .english {
+            return "English levels choose different lesson ranges, so higher levels start with more complex speaking tasks."
+        }
+
+        return "French has one starter path for now. The selected level still guides Tutor feedback."
+    }
+}
+
+private struct CourseLanguageCard: View {
+    let language: TargetLanguage
+    let selected: Bool
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                .font(.title3.weight(.bold))
+                .foregroundStyle(selected ? Color.primaryBlue : Color.secondary)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(language.rawValue)
+                    .font(.headline.weight(.semibold))
+                Text(language.unitDescription)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(selected ? Color.primaryBlue : Color.clayStroke, lineWidth: selected ? 2 : 1)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 

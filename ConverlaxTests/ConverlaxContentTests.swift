@@ -45,6 +45,134 @@ final class ConverlaxContentTests: XCTestCase {
         }
     }
 
+    func testEnglishLevelSelectionStartsDistinctCourseRanges() {
+        XCTAssertEqual(BeginnerContent.lessons(for: .english, level: .beginner).first?.unit, 1)
+        XCTAssertEqual(BeginnerContent.lessons(for: .english, level: .elementary).first?.unit, 2)
+        XCTAssertEqual(BeginnerContent.lessons(for: .english, level: .upperElementary).first?.unit, 3)
+        XCTAssertEqual(BeginnerContent.lessons(for: .english, level: .intermediate).first?.unit, 4)
+    }
+
+    func testSelectingIntermediateMovesCurrentLessonToIntermediateRange() {
+        let state = makeState()
+
+        state.selectLevel(.intermediate)
+
+        XCTAssertEqual(state.profile.currentLevel, .intermediate)
+        XCTAssertEqual(state.currentLesson.unit, 4)
+        XCTAssertTrue(state.isUnlocked(state.currentLesson))
+        XCTAssertFalse(state.courseLessons.contains { $0.unit == 1 })
+    }
+
+    func testIntermediateProgressSurvivesProfileRestore() throws {
+        let suiteName = "ConverlaxContentTests-\(UUID().uuidString)"
+        let suite = UserDefaults(suiteName: suiteName)!
+        defer { suite.removePersistentDomain(forName: suiteName) }
+        let lessons = BeginnerContent.lessons(for: .english, level: .intermediate)
+        let first = try XCTUnwrap(lessons.first)
+        let second = try XCTUnwrap(lessons.dropFirst().first)
+        var profile = LearningProfile()
+        profile.targetLanguage = .english
+        profile.currentLevel = .intermediate
+        profile.completedLessonIDs = [first.id]
+        profile.currentLessonID = first.id
+        suite.set(try JSONEncoder().encode(profile), forKey: storageKey)
+
+        let state = LearningState(storage: suite, fileURL: nil)
+
+        XCTAssertTrue(state.profile.completedLessonIDs.contains(first.id))
+        XCTAssertEqual(state.currentLesson.id, second.id)
+        XCTAssertTrue(state.isUnlocked(second))
+    }
+
+    func testProfileDecodeDefaultsCurrentLessonToDecodedLevel() throws {
+        let firstIntermediateID = try XCTUnwrap(BeginnerContent.lessons(for: .english, level: .intermediate).first?.id)
+        let data = """
+        {
+          "schemaVersion": 4,
+          "targetLanguage": "English",
+          "currentLevel": "Intermediate",
+          "completedLessonIDs": [],
+          "hasCompletedOnboarding": true
+        }
+        """.data(using: .utf8)!
+
+        let profile = try JSONDecoder().decode(LearningProfile.self, from: data)
+
+        XCTAssertEqual(profile.currentLevel, .intermediate)
+        XCTAssertEqual(profile.currentLessonID, firstIntermediateID)
+    }
+
+    func testRestoredIntermediateProfileWithoutCurrentLessonOpensFirstUnfinishedLevelLesson() throws {
+        let suiteName = "ConverlaxContentTests-\(UUID().uuidString)"
+        let suite = UserDefaults(suiteName: suiteName)!
+        defer { suite.removePersistentDomain(forName: suiteName) }
+        let lessons = BeginnerContent.lessons(for: .english, level: .intermediate)
+        let first = try XCTUnwrap(lessons.first)
+        let second = try XCTUnwrap(lessons.dropFirst().first)
+        let data = """
+        {
+          "schemaVersion": 4,
+          "targetLanguage": "English",
+          "currentLevel": "Intermediate",
+          "completedLessonIDs": ["\(first.id)"],
+          "hasCompletedOnboarding": true
+        }
+        """.data(using: .utf8)!
+        suite.set(data, forKey: storageKey)
+
+        let state = LearningState(storage: suite, fileURL: nil)
+
+        XCTAssertEqual(state.profile.currentLevel, .intermediate)
+        XCTAssertEqual(state.currentLesson.id, second.id)
+        XCTAssertEqual(state.profile.currentLessonID, second.id)
+    }
+
+    func testEnglishLaunchPreservesRestoredIntermediateFirstUnfinishedLesson() throws {
+        let lessons = BeginnerContent.lessons(for: .english, level: .intermediate)
+        let first = try XCTUnwrap(lessons.first)
+        let second = try XCTUnwrap(lessons.dropFirst().first)
+        var profile = LearningProfile()
+        profile.targetLanguage = .english
+        profile.currentLevel = .intermediate
+        profile.completedLessonIDs = [first.id]
+        profile.currentLessonID = second.id
+
+        let adjusted = LearningState.launchAdjusted(profile, arguments: ["app", "-ConverlaxUseEnglishContent"])
+
+        XCTAssertEqual(adjusted.currentLevel, .intermediate)
+        XCTAssertEqual(adjusted.currentLessonID, second.id)
+    }
+
+    func testEnglishLaunchInitialLevelStartsThatLevelPath() throws {
+        let firstIntermediateID = try XCTUnwrap(BeginnerContent.lessons(for: .english, level: .intermediate).first?.id)
+        let adjusted = LearningState.launchAdjusted(LearningProfile(), arguments: [
+            "app",
+            "-ConverlaxUseEnglishContent",
+            "-ConverlaxInitialLevel",
+            "Intermediate"
+        ])
+
+        XCTAssertEqual(adjusted.currentLevel, .intermediate)
+        XCTAssertEqual(adjusted.currentLessonID, firstIntermediateID)
+    }
+
+    func testHomeLessonLaunchRouteDefaultsToInitialLevelPath() throws {
+        let path = HomeRoute.launchDefaultPath(arguments: [
+            "app",
+            "-ConverlaxUseEnglishContent",
+            "-ConverlaxInitialLevel",
+            "Intermediate",
+            "-ConverlaxInitialHomeRoute",
+            "lesson"
+        ])
+
+        guard case .lesson(let lesson) = try XCTUnwrap(path.first) else {
+            return XCTFail("Expected lesson launch route.")
+        }
+        XCTAssertEqual(lesson.id, BeginnerContent.firstLessonID(for: .english, level: .intermediate))
+        XCTAssertEqual(lesson.unit, 4)
+    }
+
     func testLessonCompletionUnlocksNextLesson() {
         let suiteName = "ConverlaxContentTests-\(UUID().uuidString)"
         let suite = UserDefaults(suiteName: suiteName)!
@@ -129,11 +257,32 @@ final class ConverlaxContentTests: XCTestCase {
         XCTAssertEqual(state.profile.currentLessonID, lessons[1].id)
     }
 
+    func testLegacyProfileWithoutLanguageRecoversToEnglishCourse() throws {
+        let suiteName = "ConverlaxContentTests-\(UUID().uuidString)"
+        let suite = UserDefaults(suiteName: suiteName)!
+        defer { suite.removePersistentDomain(forName: suiteName) }
+        let legacyProfile = """
+        {
+          "schemaVersion": 1,
+          "currentLevel": "Beginner",
+          "completedLessonIDs": [],
+          "currentLessonID": "removed-lesson-id",
+          "hasCompletedOnboarding": true
+        }
+        """.data(using: .utf8)!
+        suite.set(legacyProfile, forKey: storageKey)
+
+        let state = LearningState(storage: suite, fileURL: nil)
+
+        XCTAssertEqual(state.profile.targetLanguage, .english)
+        XCTAssertEqual(state.currentLesson.id, BeginnerContent.firstLessonID(for: .english))
+    }
+
     func testTutorMistakePatternRecordingCreatesMemoryAndReview() {
         let state = makeState()
 
         state.recordTutorCorrection(
-            for: "I go to work yesterday and I tired",
+            for: "I go to work yesterday",
             tutorResponse: sampleTutorResponse(),
             now: Date(timeIntervalSince1970: 1_700_000_000)
         )
@@ -141,7 +290,7 @@ final class ConverlaxContentTests: XCTestCase {
         let pattern = state.profile.mistakePatterns.first
         XCTAssertEqual(pattern?.id, "past-tense")
         XCTAssertEqual(pattern?.count, 1)
-        XCTAssertEqual(pattern?.correctedSentence, "I went to work yesterday, and I was tired.")
+        XCTAssertEqual(pattern?.correctedSentence, "I went to work yesterday.")
         XCTAssertTrue(state.profile.scheduledReviews.contains { $0.objectID == "mistake-past-tense" })
     }
 
@@ -168,7 +317,7 @@ final class ConverlaxContentTests: XCTestCase {
 
         XCTAssertEqual(state.dueReviewItems.first?.kind, .mistake)
         XCTAssertEqual(state.dueReviewItems.first?.source, "Tutor")
-        XCTAssertEqual(state.dueReviewItems.first?.prompt, "I went to work yesterday, and I was tired.")
+        XCTAssertEqual(state.dueReviewItems.first?.prompt, "I went to work yesterday.")
     }
 
     func testReviewGraduationLowersMistakePriority() throws {
@@ -191,13 +340,15 @@ final class ConverlaxContentTests: XCTestCase {
     func testTutorFallbackIncludesReviewableLearningObject() {
         let response = TutorAIService.fallbackResponse(for: "I go to work yesterday and I tired")
 
-        XCTAssertEqual(response.correction, "I went to work yesterday, and I was tired.")
-        XCTAssertEqual(response.naturalAlternative, "I had a long day at work yesterday.")
+        XCTAssertEqual(response.correction, "I went to work yesterday.")
+        XCTAssertEqual(response.naturalAlternative, "Yesterday, I went to work.")
         XCTAssertEqual(response.nextPrompt, "Say it one more time slowly.")
         XCTAssertFalse(response.nextPrompt.lowercased().contains(" then "))
-        XCTAssertEqual(response.savedPhrase, "I went to work yesterday, and I was tired.")
+        XCTAssertEqual(response.savedPhrase, "I went to work yesterday.")
         XCTAssertEqual(response.mistakePattern.id, "past-tense")
-        XCTAssertEqual(response.reviewItem.answer, "I went to work yesterday, and I was tired.")
+        XCTAssertEqual(response.mistakePattern.exampleLearnerSentence, "I go to work yesterday.")
+        XCTAssertEqual(response.reviewItem.prompt, "Say this in the past: I go to work yesterday.")
+        XCTAssertEqual(response.reviewItem.answer, "I went to work yesterday.")
         XCTAssertFalse(response.sessionSummary.savedReviewItem.isEmpty)
     }
 
@@ -250,9 +401,9 @@ final class ConverlaxContentTests: XCTestCase {
         let json = """
         {
           "tutorReply": "Good. Use past tense for yesterday.",
-          "correction": "I went to work yesterday, and I was tired.",
-          "naturalAlternative": "I had a long day at work yesterday.",
-          "nextPrompt": "Tell me why you were tired.",
+          "correction": "I went to work yesterday.",
+          "naturalAlternative": "Yesterday, I went to work.",
+          "nextPrompt": "Say it again in past tense.",
           "savedPhrase": "I went to work yesterday.",
           "reviewItem": {
             "prompt": "Say this in the past: I go to work yesterday.",
@@ -267,17 +418,17 @@ final class ConverlaxContentTests: XCTestCase {
             "confidence": 0.86
           },
           "sessionSummary": {
-            "improvedPhrase": "I had a long day at work yesterday.",
+            "improvedPhrase": "Yesterday, I went to work.",
             "mistakePattern": "Past tense",
             "savedReviewItem": "I went to work yesterday.",
-            "nextPrompt": "Tell me why you were tired."
+            "nextPrompt": "Say it again in past tense."
           }
         }
         """.data(using: .utf8)!
 
         let response = try JSONDecoder().decode(TutorAIResponse.self, from: json)
 
-        XCTAssertEqual(response.naturalAlternative, "I had a long day at work yesterday.")
+        XCTAssertEqual(response.naturalAlternative, "Yesterday, I went to work.")
         XCTAssertEqual(response.savedPhrase, "I went to work yesterday.")
         XCTAssertEqual(response.reviewItem.prompt, "Say this in the past: I go to work yesterday.")
         XCTAssertEqual(response.mistakePattern.title, "Past tense")
@@ -394,9 +545,9 @@ final class ConverlaxContentTests: XCTestCase {
     private func sampleTutorResponse() -> TutorAIResponse {
         TutorAIResponse(
             tutorReply: "Good. You're talking about yesterday, so use past tense.",
-            correction: "I went to work yesterday, and I was tired.",
-            naturalAlternative: "I had a long day at work yesterday.",
-            nextPrompt: "Tell me why you were tired.",
+            correction: "I went to work yesterday.",
+            naturalAlternative: "Yesterday, I went to work.",
+            nextPrompt: "Say it again in past tense.",
             savedPhrase: "I went to work yesterday.",
             reviewItem: TutorAIReviewItem(
                 prompt: "Say this in the past: I go to work yesterday.",
@@ -407,14 +558,14 @@ final class ConverlaxContentTests: XCTestCase {
                 title: "Past tense",
                 explanation: "Use a past verb when you talk about yesterday.",
                 exampleLearnerSentence: "I go to work yesterday.",
-                correctedSentence: "I went to work yesterday, and I was tired.",
+                correctedSentence: "I went to work yesterday.",
                 confidence: 0.86
             ),
             sessionSummary: TutorAISessionSummary(
-                improvedPhrase: "I had a long day at work yesterday.",
+                improvedPhrase: "Yesterday, I went to work.",
                 mistakePattern: "Past tense",
                 savedReviewItem: "I went to work yesterday.",
-                nextPrompt: "Tell me why you were tired."
+                nextPrompt: "Say it again in past tense."
             )
         )
     }

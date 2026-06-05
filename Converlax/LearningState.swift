@@ -17,6 +17,15 @@ final class LearningState: ObservableObject {
         self.calendar = calendar
         self.fileURL = fileURL
 
+        if Self.shouldResetStoredProfile {
+            storage.removeObject(forKey: storageKey)
+            storage.removeObject(forKey: legacyStorageKey)
+            storage.removeObject(forKey: oldestStorageKey)
+            if let fileURL {
+                try? FileManager.default.removeItem(at: fileURL)
+            }
+        }
+
         if let restored = Self.restore(from: storage, key: storageKey) ?? Self.restore(from: fileURL) ?? Self.restore(from: storage, key: legacyStorageKey) ?? Self.restore(from: storage, key: oldestStorageKey) {
             profile = Self.launchAdjusted(Self.sanitized(restored))
         } else {
@@ -47,7 +56,7 @@ final class LearningState: ObservableObject {
     }
 
     var courseLessons: [BeginnerLesson] {
-        BeginnerContent.lessons(for: profile.targetLanguage)
+        BeginnerContent.lessons(for: profile.targetLanguage, level: profile.currentLevel)
     }
 
     var courseSavedWords: [SavedWord] {
@@ -215,16 +224,8 @@ final class LearningState: ObservableObject {
         journeyProgress(for: profile)
     }
 
-    var roleplayTopics: [RoleplayTopic] {
-        PhaseOneContent.topics
-    }
-
     var roleplays: [RoleplayScenario] {
         PhaseOneContent.roleplays
-    }
-
-    var communityRoleplays: [RoleplayScenario] {
-        roleplays.filter(\.isCommunity)
     }
 
     var favoriteRoleplays: [RoleplayScenario] {
@@ -254,7 +255,7 @@ final class LearningState: ObservableObject {
     }
 
     var currentLesson: BeginnerLesson {
-        BeginnerContent.lesson(id: profile.currentLessonID) ?? courseLessons.first ?? BeginnerContent.lessons[0]
+        courseLessons.first { $0.id == profile.currentLessonID } ?? courseLessons.first ?? BeginnerContent.lessons[0]
     }
 
     var nextPlayableLesson: BeginnerLesson {
@@ -324,7 +325,11 @@ final class LearningState: ObservableObject {
         var next = profile
         next.targetLanguage = language.isAvailable ? language : .french
         next.currentLevel = level
-        next.currentLessonID = nextFirstLessonID(for: next.targetLanguage, completedLessonIDs: next.completedLessonIDs)
+        next.currentLessonID = nextFirstLessonID(
+            for: next.targetLanguage,
+            level: next.currentLevel,
+            completedLessonIDs: next.completedLessonIDs
+        )
         next.hasCompletedOnboarding = true
         profile = next
     }
@@ -333,49 +338,28 @@ final class LearningState: ObservableObject {
         guard language.isAvailable else { return }
         var next = profile
         next.targetLanguage = language
-        next.currentLessonID = nextFirstLessonID(for: language, completedLessonIDs: next.completedLessonIDs)
+        next.currentLessonID = nextFirstLessonID(
+            for: language,
+            level: next.currentLevel,
+            completedLessonIDs: next.completedLessonIDs
+        )
         profile = next
     }
 
     func selectLevel(_ level: Level) {
         var next = profile
         next.currentLevel = level
-        profile = next
-    }
-
-    func setDailyGoal(_ goal: Int) {
-        var next = profile
-        next.dailyGoal = min(max(goal, 1), 6)
+        next.currentLessonID = nextFirstLessonID(
+            for: next.targetLanguage,
+            level: level,
+            completedLessonIDs: next.completedLessonIDs
+        )
         profile = next
     }
 
     func updateLearnerProfile(_ learnerProfile: LearnerProfile) {
         var next = profile
         next.learnerProfile = learnerProfile.sanitized
-        profile = next
-    }
-
-    func setHapticsEnabled(_ enabled: Bool) {
-        var next = profile
-        next.hapticsEnabled = enabled
-        profile = next
-    }
-
-    func setSoundEnabled(_ enabled: Bool) {
-        var next = profile
-        next.soundEnabled = enabled
-        profile = next
-    }
-
-    func setTutorAudioEnabled(_ enabled: Bool) {
-        var next = profile
-        next.tutorAudioEnabled = enabled
-        profile = next
-    }
-
-    func setNotificationsEnabled(_ enabled: Bool) {
-        var next = profile
-        next.notificationsEnabled = enabled
         profile = next
     }
 
@@ -461,7 +445,7 @@ final class LearningState: ObservableObject {
             )
         }
 
-        if let upcoming = BeginnerContent.lessons(for: next.targetLanguage).first(where: { !next.completedLessonIDs.contains($0.id) }) {
+        if let upcoming = BeginnerContent.lessons(for: next.targetLanguage, level: next.currentLevel).first(where: { !next.completedLessonIDs.contains($0.id) }) {
             next.currentLessonID = upcoming.id
         } else {
             next.currentLessonID = lesson.id
@@ -942,7 +926,7 @@ final class LearningState: ObservableObject {
     func resetProgress() {
         var next = profile
         next.completedLessonIDs = []
-        next.currentLessonID = BeginnerContent.firstLessonID(for: next.targetLanguage)
+        next.currentLessonID = BeginnerContent.firstLessonID(for: next.targetLanguage, level: next.currentLevel)
         next.streak = 0
         next.savedWords = []
         next.savedLines = []
@@ -962,9 +946,6 @@ final class LearningState: ObservableObject {
     func restartOnboarding() {
         var next = LearningProfile()
         next.learnerProfile = profile.learnerProfile
-        next.dailyGoal = profile.dailyGoal
-        next.hapticsEnabled = profile.hapticsEnabled
-        next.soundEnabled = profile.soundEnabled
         profile = next
     }
 
@@ -1062,7 +1043,7 @@ final class LearningState: ObservableObject {
     }
 
     private func journeyProgress(for snapshot: LearningProfile) -> JourneyProgress {
-        let lessons = BeginnerContent.lessons(for: snapshot.targetLanguage)
+        let lessons = BeginnerContent.lessons(for: snapshot.targetLanguage, level: snapshot.currentLevel)
         let completedCount = lessons.filter { snapshot.completedLessonIDs.contains($0.id) }.count
         return JourneyProgress(
             profile: snapshot,
@@ -1170,7 +1151,7 @@ final class LearningState: ObservableObject {
         if reviewCount > 0 {
             return "Review \(reviewCount) new \(reviewCount == 1 ? "item" : "items"), then continue the course."
         }
-        if let upcoming = BeginnerContent.lessons(for: profile.targetLanguage).first(where: { !profile.completedLessonIDs.contains($0.id) }) {
+        if let upcoming = BeginnerContent.lessons(for: profile.targetLanguage, level: profile.currentLevel).first(where: { !profile.completedLessonIDs.contains($0.id) }) {
             return "Continue with \(upcoming.title)."
         }
         return "Practice saved lines to keep the unit active."
@@ -1762,9 +1743,11 @@ final class LearningState: ObservableObject {
         return String(collapsed.prefix(48)).isEmpty ? "item" : String(collapsed.prefix(48))
     }
 
-    private func nextFirstLessonID(for language: TargetLanguage, completedLessonIDs: Set<String>) -> String {
+    private func nextFirstLessonID(for language: TargetLanguage, level: Level, completedLessonIDs: Set<String>) -> String {
         let normalizedCompletedIDs = Self.normalizedCompletedLessonIDs(completedLessonIDs)
-        return BeginnerContent.lessons(for: language).first { !normalizedCompletedIDs.contains($0.id) }?.id ?? BeginnerContent.firstLessonID(for: language)
+        let nextLesson = BeginnerContent.lessons(for: language, level: level)
+            .first { !normalizedCompletedIDs.contains($0.id) }
+        return nextLesson?.id ?? BeginnerContent.firstLessonID(for: language, level: level)
     }
 
     private func inferredResumeStepIndex(for lesson: BeginnerLesson) -> Int {
@@ -1803,6 +1786,10 @@ final class LearningState: ObservableObject {
             .appendingPathComponent("learning-profile-v3.json")
     }
 
+    private static var shouldResetStoredProfile: Bool {
+        ProcessInfo.processInfo.arguments.contains("-ConverlaxResetStoredProfile")
+    }
+
     private static func sanitized(_ profile: LearningProfile) -> LearningProfile {
         var next = profile
         next.schemaVersion = LearningProfile.currentSchemaVersion
@@ -1820,7 +1807,6 @@ final class LearningState: ObservableObject {
 
             result[item.key] = min(max(item.value, 0), lesson.steps.count - 1)
         }
-        next.dailyGoal = min(max(next.dailyGoal, 1), 6)
         next.mistakePatterns = next.mistakePatterns.compactMap { pattern in
             let id = pattern.id.trimmingCharacters(in: .whitespacesAndNewlines)
             let title = pattern.title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1858,14 +1844,14 @@ final class LearningState: ObservableObject {
             next.savedLines = []
         }
         if !next.targetLanguage.isAvailable {
-            next.targetLanguage = .french
+            next.targetLanguage = .english
         }
-        let currentLessons = BeginnerContent.lessons(for: next.targetLanguage)
+        let currentLessons = BeginnerContent.lessons(for: next.targetLanguage, level: next.currentLevel)
         let currentLanguageIDs = Set(currentLessons.map(\.id))
         if let nextIncompleteLessonID = currentLessons.first(where: { !next.completedLessonIDs.contains($0.id) })?.id {
             next.currentLessonID = nextIncompleteLessonID
         } else if !currentLanguageIDs.contains(next.currentLessonID) {
-            next.currentLessonID = BeginnerContent.firstLessonID(for: next.targetLanguage)
+            next.currentLessonID = BeginnerContent.firstLessonID(for: next.targetLanguage, level: next.currentLevel)
         }
         return next
     }
@@ -1874,12 +1860,14 @@ final class LearningState: ObservableObject {
         var normalized: Set<String> = []
 
         for language in TargetLanguage.allCases {
-            let lessons = BeginnerContent.lessons(for: language)
-            guard !lessons.isEmpty else { continue }
+            for level in Level.allCases {
+                let lessons = BeginnerContent.lessons(for: language, level: level)
+                guard !lessons.isEmpty else { continue }
 
-            for lesson in lessons {
-                guard completedLessonIDs.contains(lesson.id) else { break }
-                normalized.insert(lesson.id)
+                for lesson in lessons {
+                    guard completedLessonIDs.contains(lesson.id) else { break }
+                    normalized.insert(lesson.id)
+                }
             }
         }
 
@@ -1888,29 +1876,41 @@ final class LearningState: ObservableObject {
 
     private static func isLessonUnlocked(_ lessonID: String, completedLessonIDs: Set<String>) -> Bool {
         for language in TargetLanguage.allCases {
-            let lessons = BeginnerContent.lessons(for: language)
-            guard let index = lessons.firstIndex(where: { $0.id == lessonID }) else { continue }
-            if index == 0 { return true }
-            return lessons[..<index].allSatisfy { completedLessonIDs.contains($0.id) }
+            for level in Level.allCases {
+                let lessons = BeginnerContent.lessons(for: language, level: level)
+                guard let index = lessons.firstIndex(where: { $0.id == lessonID }) else { continue }
+                if index == 0 { return true }
+                if lessons[..<index].allSatisfy({ completedLessonIDs.contains($0.id) }) {
+                    return true
+                }
+            }
         }
 
         return false
     }
 
-    private static func launchAdjusted(_ profile: LearningProfile) -> LearningProfile {
-        let arguments = ProcessInfo.processInfo.arguments
+    static func launchAdjusted(_ profile: LearningProfile, arguments: [String] = ProcessInfo.processInfo.arguments) -> LearningProfile {
         guard arguments.contains("-ConverlaxUseEnglishContent") else {
             return profile
         }
 
-        let launchLessonID = arguments.firstIndex(of: "-ConverlaxInitialLessonID").flatMap { idIndex in
-            arguments.indices.contains(idIndex + 1) ? arguments[idIndex + 1] : nil
-        }
+        let explicitLesson = ConverlaxLaunchArguments.lessonID(in: arguments).flatMap(BeginnerContent.lesson(id:))
 
         var next = profile
         next.targetLanguage = .english
-        next.currentLevel = .beginner
-        next.currentLessonID = launchLessonID.flatMap(BeginnerContent.lesson(id:))?.id ?? BeginnerContent.firstLessonID(for: .english)
+        if let explicitLevel = ConverlaxLaunchArguments.level(in: arguments) {
+            next.currentLevel = explicitLevel
+        } else if let explicitLesson, let lessonLevel = ConverlaxLaunchArguments.level(containing: explicitLesson, language: .english) {
+            next.currentLevel = lessonLevel
+        }
+
+        if let explicitLesson {
+            next.currentLessonID = explicitLesson.id
+        } else {
+            let currentLessons = BeginnerContent.lessons(for: .english, level: next.currentLevel)
+            next.currentLessonID = currentLessons.first { !next.completedLessonIDs.contains($0.id) }?.id
+                ?? BeginnerContent.firstLessonID(for: .english, level: next.currentLevel)
+        }
         next.hasCompletedOnboarding = true
         if arguments.contains("-ConverlaxSeedTutorReview") {
             let pattern = MistakePattern(

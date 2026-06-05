@@ -78,6 +78,23 @@ struct CalmPressButtonStyle: ButtonStyle {
     }
 }
 
+private struct ConverlaxListSurfaceModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .background(Color.appBackground.ignoresSafeArea())
+            .foregroundStyle(Color.converlaxInk)
+            .tint(Color.primaryBlue)
+    }
+}
+
+extension View {
+    func converlaxListSurface() -> some View {
+        modifier(ConverlaxListSurfaceModifier())
+    }
+}
+
 struct LessonProgressBar: View {
     let progress: Double
 
@@ -149,7 +166,6 @@ enum ConverlaxAssetKind {
     case bookAccommodation
     case askDirections
     case vocab
-    case verbs
     case customLesson
     case freeTalk
     case roleplay
@@ -165,7 +181,6 @@ enum ConverlaxAssetKind {
         case .bookAccommodation: "ClxAssetBookAccommodation"
         case .askDirections: "ClxAssetAskDirections"
         case .vocab: "ClxAssetVocab"
-        case .verbs: "ClxAssetVerbs"
         case .customLesson: "ClxAssetCustomLesson"
         case .freeTalk: "ClxAssetFreeTalk"
         case .roleplay: "ClxAssetRoleplay"
@@ -183,7 +198,6 @@ enum ConverlaxAssetKind {
         case .bookAccommodation: "Book accommodation illustration"
         case .askDirections: "Ask for directions illustration"
         case .vocab: "Vocab illustration"
-        case .verbs: "Verbs illustration"
         case .customLesson: "Custom situation illustration"
         case .freeTalk: "Free talk illustration"
         case .roleplay: "Situation illustration"
@@ -295,21 +309,6 @@ extension BeginnerLesson {
         if id.contains("help") || id.contains("problem") || id.contains("doctor") || id.contains("pharmacy") || id.contains("emergency") { return .askInfo }
         if id.contains("review") { return .review }
         return .customLesson
-    }
-}
-
-extension RoleplayTopic {
-    var visualAsset: ConverlaxAssetKind {
-        switch id {
-        case "travel":
-            return .bookAccommodation
-        case "food":
-            return .askInfo
-        case "work":
-            return .roleplay
-        default:
-            return .askDirections
-        }
     }
 }
 
@@ -442,78 +441,123 @@ struct LearningFeedbackCard: View {
     let feedback: LearningFeedback
     @State private var showsMoreFeedback = false
 
+    init(feedback: LearningFeedback, startsExpanded: Bool = false) {
+        self.feedback = feedback
+        _showsMoreFeedback = State(initialValue: startsExpanded)
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 10) {
-                Label(feedbackTitle, systemImage: isSpeechFeedback ? "bubble.left.and.text.bubble.right.fill" : "checkmark.seal.fill")
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(Color.primaryBlue)
-
-                Spacer(minLength: 10)
-            }
-
+        VStack(alignment: .leading, spacing: isSpeechFeedback ? 0 : 14) {
             if isSpeechFeedback {
                 speechFeedbackContent
             } else {
+                HStack(alignment: .top, spacing: 10) {
+                    Label(feedbackTitle, systemImage: "checkmark.seal.fill")
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(Color.primaryBlue)
+
+                    Spacer(minLength: 10)
+                }
+
                 standardFeedbackContent
             }
         }
-        .padding(16)
-        .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.clayStroke))
+        .padding(isSpeechFeedback ? 0 : 16)
+        .background {
+            if !isSpeechFeedback {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.claySurface)
+            }
+        }
+        .overlay {
+            if !isSpeechFeedback {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.clayStroke)
+            }
+        }
         .accessibilityIdentifier("learning-feedback-card")
     }
 
     @ViewBuilder
     private var speechFeedbackContent: some View {
-        if shouldShowConfidence {
-            FeedbackConfidenceSummary(confidence: feedback.confidence)
-        }
-
-        if let correctedPhrase, correctedPhrase != (naturalVersion ?? "") {
-            FeedbackCoachLine(title: "Correct phrase", text: correctedPhrase, symbol: "textformat", color: .primaryBlue)
-        }
-
-        if let naturalAlternative {
-            FeedbackPrimaryLine(title: "Natural version", text: naturalAlternative, symbol: "quote.bubble.fill")
-        } else if let naturalVersion {
-            FeedbackPrimaryLine(title: "Say it like this", text: naturalVersion, symbol: "quote.bubble.fill")
-        }
-
-        if let tryNext {
-            FeedbackActionLine(text: tryNext)
-        }
-
-        if hasMoreFeedback {
-            DisclosureGroup(isExpanded: $showsMoreFeedback) {
-                VStack(alignment: .leading, spacing: 12) {
-                    if let attemptText {
-                        FeedbackCoachLine(title: "You said", text: attemptText, symbol: attemptSymbol, color: .primaryBlue)
-                    }
-
-                    if let fixDetails {
-                        FeedbackCoachLine(title: "Fix", text: fixDetails, symbol: "textformat", color: .primaryBlue)
-                    }
-
-                    if let coachTip {
-                        FeedbackCoachLine(title: "Pronunciation", text: coachTip, symbol: "waveform", color: .warmAmber)
-                    }
-
-                    if let didWell {
-                        FeedbackCoachLine(title: "Did well", text: didWell, symbol: "checkmark.seal.fill", color: .mintSuccess)
-                    }
-
-                    if let reviewItem {
-                        FeedbackCoachLine(title: "Review later", text: reviewItem, symbol: "arrow.clockwise", color: .warmAmber)
-                    }
-                }
-                .padding(.top, 8)
-            } label: {
-                Text("More feedback")
-                    .font(.subheadline.weight(.semibold))
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("Best line")
+                    .font(.caption.weight(.bold))
                     .foregroundStyle(Color.primaryBlue)
+
+                Spacer(minLength: 10)
+
+                if shouldShowConfidence {
+                    FeedbackConfidenceSummary(confidence: feedback.confidence)
+                }
             }
-            .tint(Color.primaryBlue)
+            .padding(.bottom, 6)
+
+            if let primaryLine {
+                Text(primaryLine)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.bottom, compactRowPadding)
+            }
+
+            if let compactFix {
+                FeedbackCompactRow(title: "Small fix", text: compactFix, color: .primaryBlue)
+            }
+
+            if let tryNext {
+                FeedbackCompactRow(title: "Try again", text: tryNext, color: .primaryBlue)
+            }
+
+            if hasMoreFeedback {
+                HStack(spacing: 8) {
+                    Text("More detail")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.primaryBlue)
+
+                    Spacer(minLength: 8)
+
+                    Image(systemName: showsMoreFeedback ? "chevron.up" : "chevron.down")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Color.primaryBlue)
+                }
+                .padding(.top, compactRowPadding)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: toggleMoreFeedback)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("More detail")
+                .accessibilityValue(showsMoreFeedback ? "Expanded" : "Collapsed")
+                .accessibilityAddTraits(.isButton)
+                .accessibilityIdentifier("learning-feedback-more-detail")
+                .accessibilityAction {
+                    toggleMoreFeedback()
+                }
+
+                if showsMoreFeedback {
+                    VStack(alignment: .leading, spacing: 0) {
+                        if let attemptText {
+                            FeedbackCompactRow(title: "You said", text: attemptText, color: .secondary)
+                        }
+
+                        if let didWell {
+                            FeedbackCompactRow(title: "Did well", text: didWell, color: .mintSuccess)
+                        }
+
+                        if let coachTip {
+                            FeedbackCompactRow(title: "Pronunciation", text: coachTip, color: .warmAmber)
+                        }
+                    }
+                    .padding(.top, 4)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+        }
+    }
+
+    private func toggleMoreFeedback() {
+        withAnimation(.easeInOut(duration: 0.18)) {
+            showsMoreFeedback.toggle()
         }
     }
 
@@ -640,6 +684,26 @@ struct LearningFeedbackCard: View {
         return details.joined(separator: "\n")
     }
 
+    private var primaryLine: String? {
+        naturalAlternative ?? naturalVersion ?? correctedPhrase
+    }
+
+    private var compactFix: String? {
+        let details = [
+            correctedPhrase,
+            vocabularyImprovement
+        ].compactMap { $0 }
+
+        guard !details.isEmpty else { return nil }
+        let joined = details.joined(separator: " ")
+        guard joined != primaryLine else { return nil }
+        return joined
+    }
+
+    private var compactRowPadding: CGFloat {
+        10
+    }
+
     private var coachTip: String? {
         let rawTips = [
             clean(feedback.pronunciationNotes) ?? clean(feedback.pronunciationTip),
@@ -677,10 +741,8 @@ struct LearningFeedbackCard: View {
 
     private var hasMoreFeedback: Bool {
         attemptText != nil ||
-            fixDetails != nil ||
             coachTip != nil ||
-            didWell != nil ||
-            reviewItem != nil
+            didWell != nil
     }
 
     private func clean(_ text: String) -> String? {
@@ -857,17 +919,49 @@ private struct FeedbackCoachLine: View {
     }
 }
 
+private struct FeedbackCompactRow: View {
+    let title: String
+    let text: String
+    let color: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Divider()
+                .overlay(Color.clayStroke.opacity(0.7))
+
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(title)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(color)
+                    .frame(width: 86, alignment: .leading)
+
+                Text(text)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.top, 8)
+            .padding(.bottom, 10)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+    }
+}
+
 struct SpeechPracticePanel: View {
     let phase: SpeechPracticePhase
     let transcript: String
     let feedback: LearningFeedback?
     let accent: Color
     var prompt: String? = nil
+    var readyInstruction: String? = nil
     var voiceLevel: Double = 0
     var errorMessage: String?
     var primaryActionTitle: String? = nil
+    var secondaryActionTitle: String? = nil
     let onPrimary: () -> Void
     let onCancel: () -> Void
+    var onSecondary: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: panelSpacing) {
@@ -889,6 +983,18 @@ struct SpeechPracticePanel: View {
 
             if let feedback {
                 LearningFeedbackCard(feedback: feedback)
+            }
+
+            if let secondaryActionTitle, let onSecondary {
+                Button(action: onSecondary) {
+                    Label(secondaryActionTitle, systemImage: "arrow.clockwise")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.primaryBlue)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 2)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("speech-secondary-action")
             }
 
             primaryActionButton
@@ -998,7 +1104,9 @@ struct SpeechPracticePanel: View {
         switch phase {
         case .ready, .requestingPermission, .processing, .transcribing, .feedback, .accepted:
             false
-        case .permissionNeeded, .permissionDenied, .recording, .paused, .transcript, .noSpeech, .error:
+        case .permissionNeeded, .permissionDenied, .noSpeech, .error:
+            false
+        case .recording, .paused, .transcript:
             true
         }
     }
@@ -1177,9 +1285,9 @@ struct SpeechPracticePanel: View {
         case .permissionNeeded, .permissionDenied:
             "Enable access in Settings, then try again."
         case .ready:
-            "Record one clear answer."
+            readyInstructionText ?? "Answer the prompt out loud."
         case .recording:
-            "Speak naturally. Your words appear below."
+            readyInstructionText ?? "Speak naturally. Your words appear below."
         case .paused:
             "Resume when you are ready."
         case .processing, .transcribing:
@@ -1195,6 +1303,11 @@ struct SpeechPracticePanel: View {
         case .error:
             "Retry when you are ready."
         }
+    }
+
+    private var readyInstructionText: String? {
+        let trimmed = readyInstruction?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
     }
 }
 

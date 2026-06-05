@@ -39,9 +39,6 @@ struct TutorView: View {
                     Button("Chat history") {
                         showHistory = true
                     }
-                    Button(state.profile.tutorAudioEnabled ? "Turn off Tutor audio" : "Turn on Tutor audio") {
-                        state.setTutorAudioEnabled(!state.profile.tutorAudioEnabled)
-                    }
                     Button("Saved messages") {
                         showHistory = true
                     }
@@ -92,12 +89,12 @@ struct TutorView: View {
                         .accessibilityIdentifier("tutor-no-input-notice")
                 }
 
-                if let lastWord = state.courseSavedWords.last {
-                    TranslationCard(word: lastWord)
+                if let savedPhrase = tutorSavedPhrase {
+                    TranslationCard(phrase: savedPhrase.phrase, detail: savedPhrase.detail)
                 }
 
                 if let lastFeedback {
-                    LearningFeedbackCard(feedback: lastFeedback)
+                    LearningFeedbackCard(feedback: lastFeedback, startsExpanded: shouldStartFeedbackExpanded)
                         .accessibilityIdentifier("tutor-correction-card")
                     if lastFeedback.feedbackProvider.hasPrefix("local"), let feedbackNotice {
                         FeedbackFallbackNotice(text: feedbackNotice)
@@ -130,6 +127,7 @@ struct TutorView: View {
                     feedback: nil,
                     accent: .primaryBlue,
                     prompt: currentPrompt,
+                    readyInstruction: "Answer the Tutor prompt out loud.",
                     voiceLevel: speechRecognizer.voiceLevel,
                     errorMessage: voiceErrorMessage,
                     primaryActionTitle: tutorVoiceActionTitle,
@@ -139,7 +137,7 @@ struct TutorView: View {
             }
         }
         .padding(20)
-        .background(.regularMaterial)
+        .background(Color.claySurface.ignoresSafeArea(edges: .bottom))
     }
 
     private var tutorVoiceActionTitle: String? {
@@ -155,6 +153,19 @@ struct TutorView: View {
         default:
             return nil
         }
+    }
+
+    private var tutorSavedPhrase: (phrase: String, detail: String)? {
+        if let lastFeedback,
+           let savedTakeaway = nonEmpty(lastFeedback.savedTakeaway) {
+            return (savedTakeaway, "Saved from this Tutor reply.")
+        }
+
+        if let savedObject = state.savedLearningObjects.first(where: { $0.source == "Tutor" && $0.kind == .tutorMessage }) {
+            return (savedObject.text, savedObject.note)
+        }
+
+        return nil
     }
 
     private func handleVoicePrimaryAction() {
@@ -411,6 +422,10 @@ struct TutorView: View {
         nonEmpty(response.savedPhrase) ?? response.correction
     }
 
+    private var shouldStartFeedbackExpanded: Bool {
+        ProcessInfo.processInfo.arguments.contains("-ConverlaxStartFeedbackExpanded")
+    }
+
     private func savedArtifactNote(for learnerMessage: String) -> String {
         guard let learnerMessage = nonEmpty(learnerMessage) else {
             return "Tutor correction."
@@ -448,12 +463,12 @@ struct TutorView: View {
         case "recording":
             voicePhase = .recording
         case "transcript", "response":
-            voiceTranscript = "How do I ask for directions politely?"
+            voiceTranscript = "I go to work yesterday"
             voicePhase = .transcript
         case "finalTranscript":
             turnCount = maxTurns - 1
             currentPrompt = "Tell me one more detail."
-            voiceTranscript = "I went to work yesterday and I was tired"
+            voiceTranscript = "I went to work yesterday"
             voicePhase = .transcript
         case "permissionDenied", "permission":
             voiceErrorMessage = "Voice practice needs Microphone and Speech Recognition. Enable access in Settings, then try again."
@@ -489,7 +504,7 @@ struct TutorView: View {
             return transcript
         }
 
-        return "I went to work yesterday and I was tired"
+        return "I went to work yesterday"
     }
 }
 
@@ -597,7 +612,8 @@ private struct ChatBubble: View {
 }
 
 private struct TranslationCard: View {
-    let word: SavedWord
+    let phrase: String
+    let detail: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -609,10 +625,10 @@ private struct TranslationCard: View {
                 Image(systemName: "speaker.wave.2.fill")
                     .foregroundStyle(Color.primaryBlue)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(word.term)
+                    Text(phrase)
                         .font(.headline.weight(.bold))
                         .foregroundStyle(Color.primaryBlue)
-                    Text(word.translation)
+                    Text(detail)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -642,12 +658,15 @@ private struct TutorHistorySheet: View {
                         }
                     }
                 }
+                .listRowBackground(Color.claySurface)
                 Section("Saved lines") {
                     ForEach(state.savedLines.prefix(4)) { line in
                         Text(line.text)
                     }
                 }
+                .listRowBackground(Color.claySurface)
             }
+            .converlaxListSurface()
             .navigationTitle("Tutor menu")
         }
     }

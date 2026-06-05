@@ -38,7 +38,7 @@ private struct CourseHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text("Continue from here")
+            Text("Your next lesson")
                 .font(.title2.weight(.bold))
                 .foregroundStyle(.primary)
                 .lineLimit(2)
@@ -54,19 +54,36 @@ private struct CourseHeader: View {
 
 private struct CourseUnitIntro: View {
     let language: TargetLanguage
+    let level: Level
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Speaking course")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(Color.primaryBlue)
-            Text(language.unitTitle)
+            Text(title)
                 .font(.title2.weight(.bold))
-            Text(language.unitDescription)
+            Text(description)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    private var title: String {
+        guard language == .english else {
+            return language.unitTitle
+        }
+
+        return "\(level.rawValue) English path"
+    }
+
+    private var description: String {
+        guard language == .english else {
+            return language.unitDescription
+        }
+
+        return "\(level.courseStartNote) \(level.description)"
     }
 }
 
@@ -100,7 +117,12 @@ private struct HomeSecondaryActionRow: View {
 
     var body: some View {
         NavigationLink(value: HomeRoute.courseDetail) {
-            SecondaryLearningAction(title: "See course path", subtitle: "All lessons", symbol: "map.fill", color: .primaryBlue)
+            SecondaryLearningAction(
+                title: "See course path",
+                subtitle: "\(state.courseLessons.count) lessons",
+                symbol: "map.fill",
+                color: .primaryBlue
+            )
         }
         .buttonStyle(CalmPressButtonStyle(cornerRadius: 12, highlightColor: .primaryBlue))
         .accessibilityIdentifier("home-course-path-action")
@@ -237,38 +259,6 @@ private struct FeaturedLessonCard: View {
     }
 }
 
-private struct LessonPath: View {
-    @ObservedObject var state: LearningState
-    let lessons: [BeginnerLesson]
-
-    var body: some View {
-        VStack(spacing: 12) {
-            ForEach(lessons) { lesson in
-                LessonRowLink(state: state, lesson: lesson)
-            }
-        }
-    }
-}
-
-private struct LessonRowLink: View {
-    @ObservedObject var state: LearningState
-    let lesson: BeginnerLesson
-
-    var body: some View {
-        NavigationLink(value: HomeRoute.lessonDetail(lesson)) {
-            LessonRow(
-                lesson: lesson,
-                isCurrent: state.isCurrent(lesson),
-                isCompleted: state.isCompleted(lesson),
-                isUnlocked: state.isUnlocked(lesson)
-            )
-        }
-        .buttonStyle(.plain)
-        .disabled(!state.isUnlocked(lesson))
-        .opacity(state.isUnlocked(lesson) ? 1 : 0.5)
-    }
-}
-
 struct CourseDetailView: View {
     @ObservedObject var state: LearningState
 
@@ -278,11 +268,11 @@ struct CourseDetailView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    CourseUnitIntro(language: state.profile.targetLanguage)
+                    CourseUnitIntro(language: state.profile.targetLanguage, level: state.profile.currentLevel)
                     CurrentCourseLessonStart(state: state)
 
                     VStack(alignment: .leading, spacing: 12) {
-                        SectionHeader(title: "Course path", subtitle: "Short speaking lessons in order.")
+                        SectionHeader(title: "Course path", subtitle: "\(state.profile.currentLevel.rawValue) lessons in order.")
                         ForEach(groupedLessons) { group in
                             VStack(alignment: .leading, spacing: 10) {
                                 CourseUnitSectionHeader(unit: group.unit, title: group.title, summary: group.summary)
@@ -460,23 +450,5 @@ private struct LessonRow: View {
     private var trailingColor: Color {
         if isCompleted { return Color.mintSuccess }
         return Color.secondary.opacity(0.7)
-    }
-}
-
-private struct LockedUnitPreview: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Unit 2")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-            Text("Daily Life")
-                .font(.headline.weight(.semibold))
-                .foregroundStyle(.secondary)
-            Text("Unlocks after Unit 1.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .center)
-        .padding(.vertical, 8)
     }
 }

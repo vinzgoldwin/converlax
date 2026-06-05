@@ -2,15 +2,48 @@ import SwiftUI
 
 extension ProcessInfo {
     func converlaxArgumentValue(after flag: String) -> String? {
-        let arguments = arguments
+        ConverlaxLaunchArguments.value(after: flag, in: arguments)
+    }
+
+    var converlaxInitialHomeRoute: String? {
+        converlaxArgumentValue(after: "-ConverlaxInitialHomeRoute")
+    }
+}
+
+enum ConverlaxLaunchArguments {
+    static func value(after flag: String, in arguments: [String]) -> String? {
         guard let flagIndex = arguments.firstIndex(of: flag), arguments.indices.contains(flagIndex + 1) else {
             return nil
         }
         return arguments[flagIndex + 1]
     }
 
-    var converlaxInitialHomeRoute: String? {
-        converlaxArgumentValue(after: "-ConverlaxInitialHomeRoute")
+    static func language(in arguments: [String]) -> TargetLanguage {
+        arguments.contains("-ConverlaxUseEnglishContent") ? .english : .french
+    }
+
+    static func lessonID(in arguments: [String]) -> String? {
+        value(after: "-ConverlaxInitialLessonID", in: arguments)
+    }
+
+    static func level(in arguments: [String]) -> Level? {
+        guard let rawValue = value(after: "-ConverlaxInitialLevel", in: arguments) else {
+            return nil
+        }
+
+        let normalized = rawValue
+            .lowercased()
+            .filter { $0.isLetter || $0.isNumber }
+        return Level.allCases.first { level in
+            let rawLevel = level.rawValue.lowercased().filter { $0.isLetter || $0.isNumber }
+            let code = level.code.lowercased().filter { $0.isLetter || $0.isNumber }
+            return normalized == rawLevel || normalized == code
+        }
+    }
+
+    static func level(containing lesson: BeginnerLesson, language: TargetLanguage) -> Level? {
+        guard language == .english else { return nil }
+        return Level.allCases.first { $0.englishUnitRange.contains(lesson.unit) }
     }
 }
 
@@ -47,11 +80,6 @@ enum HomeRoute: Hashable {
     case tutor
     case lesson(BeginnerLesson)
     case lessonDetail(BeginnerLesson)
-    case videoLesson(BeginnerLesson)
-    case speakingDrill(BeginnerLesson)
-    case qaLesson(BeginnerLesson)
-    case vocab
-    case verbs
 
     static func == (lhs: HomeRoute, rhs: HomeRoute) -> Bool {
         lhs.navigationIdentity == rhs.navigationIdentity
@@ -71,26 +99,23 @@ enum HomeRoute: Hashable {
             return "lesson:\(lesson.id)"
         case .lessonDetail(let lesson):
             return "lessonDetail:\(lesson.id)"
-        case .videoLesson(let lesson):
-            return "videoLesson:\(lesson.id)"
-        case .speakingDrill(let lesson):
-            return "speakingDrill:\(lesson.id)"
-        case .qaLesson(let lesson):
-            return "qaLesson:\(lesson.id)"
-        case .vocab:
-            return "vocab"
-        case .verbs:
-            return "verbs"
         }
     }
 
     static var launchDefaultPath: [HomeRoute] {
-        let arguments = ProcessInfo.processInfo.arguments
-        let launchLanguage: TargetLanguage = arguments.contains("-ConverlaxUseEnglishContent") ? .english : .french
-        let launchLessonID = arguments.firstIndex(of: "-ConverlaxInitialLessonID").flatMap { idIndex in
-            arguments.indices.contains(idIndex + 1) ? arguments[idIndex + 1] : nil
-        }
-        let launchLesson = launchLessonID.flatMap(BeginnerContent.lesson(id:)) ?? BeginnerContent.lessons(for: launchLanguage).first ?? BeginnerContent.lessons[0]
+        launchDefaultPath(arguments: ProcessInfo.processInfo.arguments)
+    }
+
+    static func launchDefaultPath(arguments: [String]) -> [HomeRoute] {
+        let launchLanguage = ConverlaxLaunchArguments.language(in: arguments)
+        let explicitLesson = ConverlaxLaunchArguments.lessonID(in: arguments).flatMap(BeginnerContent.lesson(id:))
+        let launchLevel = ConverlaxLaunchArguments.level(in: arguments)
+            ?? explicitLesson.flatMap { ConverlaxLaunchArguments.level(containing: $0, language: launchLanguage) }
+            ?? .beginner
+        let launchLesson = explicitLesson
+            ?? BeginnerContent.lessons(for: launchLanguage, level: launchLevel).first
+            ?? BeginnerContent.lessons(for: launchLanguage).first
+            ?? BeginnerContent.lessons[0]
         guard
             let flagIndex = arguments.firstIndex(of: "-ConverlaxInitialHomeRoute"),
             arguments.indices.contains(flagIndex + 1)
@@ -107,16 +132,6 @@ enum HomeRoute: Hashable {
             return [.lesson(launchLesson)]
         case "lessonDetail":
             return [.lessonDetail(launchLesson)]
-        case "videoLesson":
-            return [.videoLesson(launchLesson)]
-        case "speakingDrill":
-            return [.speakingDrill(launchLesson)]
-        case "qaLesson":
-            return [.qaLesson(launchLesson)]
-        case "vocab":
-            return [.vocab]
-        case "verbs":
-            return [.verbs]
         default:
             return []
         }
@@ -126,13 +141,9 @@ enum HomeRoute: Hashable {
 enum PracticeRoute: Hashable {
     case session
     case tutor
-    case topics
-    case topic(RoleplayTopic)
+    case situations
     case roleplay(RoleplayScenario)
     case history
-    case favorites
-    case community
-    case communityRoleplay(RoleplayScenario)
 
     static func == (lhs: PracticeRoute, rhs: PracticeRoute) -> Bool {
         lhs.navigationIdentity == rhs.navigationIdentity
@@ -148,20 +159,12 @@ enum PracticeRoute: Hashable {
             return "session"
         case .tutor:
             return "tutor"
-        case .topics:
-            return "topics"
-        case .topic(let topic):
-            return "topic:\(topic.id)"
+        case .situations:
+            return "situations"
         case .roleplay(let roleplay):
             return "roleplay:\(roleplay.id)"
         case .history:
             return "history"
-        case .favorites:
-            return "favorites"
-        case .community:
-            return "community"
-        case .communityRoleplay(let roleplay):
-            return "communityRoleplay:\(roleplay.id)"
         }
     }
 
@@ -179,20 +182,12 @@ enum PracticeRoute: Hashable {
             return [.session]
         case "tutor":
             return [.tutor]
-        case "topics":
-            return [.topics]
-        case "topic":
-            return PhaseOneContent.topics.first.map { [.topic($0)] } ?? []
+        case "situations":
+            return [.situations]
         case "roleplay":
             return PhaseOneContent.roleplays.first.map { [.roleplay($0)] } ?? []
         case "history":
             return [.history]
-        case "favorites":
-            return [.favorites]
-        case "community":
-            return [.community]
-        case "communityRoleplay":
-            return PhaseOneContent.roleplays.first(where: \.isCommunity).map { [.communityRoleplay($0)] } ?? []
         default:
             return []
         }
@@ -203,7 +198,6 @@ enum ReviewRoute: Hashable {
     case smartReview
     case savedLinesReview
     case savedLineSearch
-    case reviewInfo
     case startLesson
 
     static var launchDefaultPath: [ReviewRoute] {
@@ -222,8 +216,6 @@ enum ReviewRoute: Hashable {
             return [.savedLinesReview]
         case "savedLineSearch":
             return [.savedLineSearch]
-        case "reviewInfo":
-            return [.reviewInfo]
         case "startLesson":
             return [.startLesson]
         default:
@@ -234,19 +226,11 @@ enum ReviewRoute: Hashable {
 
 enum ProfileRoute: Hashable {
     case savedLines
-    case activities
     case practiceHistory
     case startLesson
     case settings
-    case membership
     case editProfile
-    case referrals
-    case notifications
-    case support
-    case appLanguage
-    case courseLanguage
-    case login
-    case resetPassword
+    case courseLevel
 
     static var launchDefaultPath: [ProfileRoute] {
         let arguments = ProcessInfo.processInfo.arguments
@@ -260,43 +244,20 @@ enum ProfileRoute: Hashable {
         switch arguments[flagIndex + 1] {
         case "savedLines":
             return [.savedLines]
-        case "activities":
-            return [.activities]
         case "practiceHistory", "history":
             return [.practiceHistory]
         case "startLesson":
             return [.startLesson]
         case "settings":
             return [.settings]
-        case "membership":
-            return [.membership]
         case "editProfile":
             return [.editProfile]
-        case "referrals":
-            return [.referrals]
-        case "notifications":
-            return [.settings, .notifications]
-        case "support":
-            return [.settings, .support]
-        case "appLanguage":
-            return [.settings, .appLanguage]
-        case "courseLanguage":
-            return [.settings, .courseLanguage]
-        case "login":
-            return [.settings, .login]
-        case "resetPassword":
-            return [.settings, .resetPassword]
+        case "courseLanguage", "courseLevel":
+            return [.settings, .courseLevel]
         default:
             return []
         }
     }
-}
-
-enum LessonTrack: String, CaseIterable, Identifiable {
-    case course = "Course"
-    case practice = "Practice"
-
-    var id: String { rawValue }
 }
 
 enum TargetLanguage: String, CaseIterable, Codable, Identifiable {
@@ -388,6 +349,45 @@ enum Level: String, CaseIterable, Codable, Identifiable {
         case .elementary: 2
         case .upperElementary: 3
         case .intermediate: 4
+        }
+    }
+
+    var englishUnitRange: ClosedRange<Int> {
+        switch self {
+        case .beginner:
+            return 1...2
+        case .elementary:
+            return 2...3
+        case .upperElementary:
+            return 3...5
+        case .intermediate:
+            return 4...6
+        }
+    }
+
+    var levelSelectionSubtitle: String {
+        switch self {
+        case .beginner:
+            return "First chats and everyday help"
+        case .elementary:
+            return "Errands, plans, and social replies"
+        case .upperElementary:
+            return "Small talk, work, and travel moments"
+        case .intermediate:
+            return "Work, travel, opinions, and stories"
+        }
+    }
+
+    var courseStartNote: String {
+        switch self {
+        case .beginner:
+            return "Starts with introductions."
+        case .elementary:
+            return "Starts with everyday errands."
+        case .upperElementary:
+            return "Starts with social conversation."
+        case .intermediate:
+            return "Starts with work conversation."
         }
     }
 }
@@ -923,25 +923,14 @@ struct SavedLine: Codable, Hashable, Identifiable {
     let note: String
 }
 
-struct RoleplayTopic: Codable, Hashable, Identifiable {
-    let id: String
-    let title: String
-    let subtitle: String
-    let symbol: String
-    let colorName: LessonAccent
-    let scenarioIDs: [String]
-}
-
 struct RoleplayScenario: Codable, Hashable, Identifiable {
     let id: String
-    let topicID: String
     let title: String
     let subtitle: String
     let setting: String
     let difficulty: Level
     let minutes: Int
     let lines: [SavedLine]
-    let isCommunity: Bool
 }
 
 struct CourseUnit: Codable, Hashable, Identifiable {
@@ -1028,7 +1017,7 @@ enum MistakePatternDetector {
         let fallbackCorrection = corrected.isEmpty ? learner : corrected
         let wordCount = learner.split { !$0.isLetter && !$0.isNumber }.count
 
-        if containsAny(lower, [" yesterday ", " last ", " ago "]),
+        if containsAnyWholeWord(lower, ["yesterday", "last", "ago"]),
            containsAnyWholeWord(lower, ["go", "do", "eat", "take", "come", "see", "meet", "buy", "make", "feel", "is", "am", "are"]),
            containsAnyWholeWord(correctedLower, ["went", "did", "ate", "took", "came", "saw", "met", "bought", "made", "felt", "was", "were", "had"]) {
             return MistakePatternSeed(
@@ -1358,11 +1347,6 @@ struct LearningProfile: Codable, Equatable {
     var activities: [LearningActivity] = []
     var hasCompletedOnboarding = false
     var lastCompletionDay: String?
-    var dailyGoal: Int = 2
-    var hapticsEnabled = true
-    var soundEnabled = true
-    var tutorAudioEnabled = false
-    var notificationsEnabled = true
 
     init() {}
 
@@ -1370,10 +1354,10 @@ struct LearningProfile: Codable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
         learnerProfile = (try? container.decodeIfPresent(LearnerProfile.self, forKey: .learnerProfile)) ?? LearnerProfile()
-        targetLanguage = try container.decodeIfPresent(TargetLanguage.self, forKey: .targetLanguage) ?? .french
+        targetLanguage = try container.decodeIfPresent(TargetLanguage.self, forKey: .targetLanguage) ?? .english
         currentLevel = try container.decodeIfPresent(Level.self, forKey: .currentLevel) ?? .beginner
         completedLessonIDs = try container.decodeIfPresent(Set<String>.self, forKey: .completedLessonIDs) ?? []
-        currentLessonID = try container.decodeIfPresent(String.self, forKey: .currentLessonID) ?? BeginnerContent.firstLessonID(for: targetLanguage)
+        currentLessonID = try container.decodeIfPresent(String.self, forKey: .currentLessonID) ?? BeginnerContent.firstLessonID(for: targetLanguage, level: currentLevel)
         lessonResumeStepIndices = try container.decodeIfPresent([String: Int].self, forKey: .lessonResumeStepIndices) ?? [:]
         streak = try container.decodeIfPresent(Int.self, forKey: .streak) ?? 0
         savedWords = try container.decodeIfPresent([SavedWord].self, forKey: .savedWords) ?? []
@@ -1389,11 +1373,6 @@ struct LearningProfile: Codable, Equatable {
         activities = try container.decodeIfPresent([LearningActivity].self, forKey: .activities) ?? []
         hasCompletedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding) ?? false
         lastCompletionDay = try container.decodeIfPresent(String.self, forKey: .lastCompletionDay)
-        dailyGoal = try container.decodeIfPresent(Int.self, forKey: .dailyGoal) ?? 2
-        hapticsEnabled = try container.decodeIfPresent(Bool.self, forKey: .hapticsEnabled) ?? true
-        soundEnabled = try container.decodeIfPresent(Bool.self, forKey: .soundEnabled) ?? true
-        tutorAudioEnabled = try container.decodeIfPresent(Bool.self, forKey: .tutorAudioEnabled) ?? false
-        notificationsEnabled = try container.decodeIfPresent(Bool.self, forKey: .notificationsEnabled) ?? true
     }
 }
 
@@ -1404,9 +1383,4 @@ struct ChatMessage: Identifiable, Equatable {
     var canSave = false
     var savedArtifactText: String?
     var savedArtifactNote: String?
-}
-
-enum QuickPracticeRoute: Hashable {
-    case vocab
-    case verbs
 }

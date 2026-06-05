@@ -155,8 +155,9 @@ struct TutorAIService {
         let cleanMessage = message.trimmingCharacters(in: .whitespacesAndNewlines)
         let corrected = localCorrection(for: cleanMessage)
         let naturalAlternative = localNaturalAlternative(for: cleanMessage, correction: corrected)
-        let seed = MistakePatternDetector.detect(learnerSentence: cleanMessage, correctedSentence: corrected)
-        let mistakePattern = TutorAIMistakePattern(seed: seed, learnerSentence: cleanMessage, correctedSentence: corrected)
+        let learnerSentence = localFocusedLearnerSentence(for: cleanMessage, correction: corrected)
+        let seed = MistakePatternDetector.detect(learnerSentence: learnerSentence, correctedSentence: corrected)
+        let mistakePattern = TutorAIMistakePattern(seed: seed, learnerSentence: learnerSentence, correctedSentence: corrected)
         let reviewPrompt = reviewPrompt(for: seed, fallback: corrected)
 
         return TutorAIResponse(
@@ -181,31 +182,31 @@ struct TutorAIService {
     }
 
     private static func mockResponse(for message: String) -> TutorAIResponse {
-        let corrected = "I went to work yesterday, and I was tired."
-        let naturalAlternative = "I had a long day at work yesterday."
+        let corrected = "I went to work yesterday."
+        let naturalAlternative = "Yesterday, I went to work."
         return TutorAIResponse(
             tutorReply: "Good. You're talking about yesterday, so use past tense.",
             correction: corrected,
             naturalAlternative: naturalAlternative,
-            nextPrompt: "Tell me why you were tired.",
-            savedPhrase: "I went to work yesterday.",
+            nextPrompt: "Say it again in past tense.",
+            savedPhrase: corrected,
             reviewItem: TutorAIReviewItem(
                 prompt: "Say this in the past: I go to work yesterday.",
-                answer: "I went to work yesterday."
+                answer: corrected
             ),
             mistakePattern: TutorAIMistakePattern(
                 id: "past-tense",
                 title: "Past tense",
                 explanation: "Use a past verb when you talk about yesterday or another finished time.",
-                exampleLearnerSentence: message,
+                exampleLearnerSentence: "I go to work yesterday.",
                 correctedSentence: corrected,
                 confidence: 0.86
             ),
             sessionSummary: TutorAISessionSummary(
                 improvedPhrase: naturalAlternative,
                 mistakePattern: "Past tense",
-                savedReviewItem: "I went to work yesterday.",
-                nextPrompt: "Tell me why you were tired."
+                savedReviewItem: corrected,
+                nextPrompt: "Say it again in past tense."
             )
         )
     }
@@ -214,7 +215,7 @@ struct TutorAIService {
         let clean = message.trimmingCharacters(in: .whitespacesAndNewlines)
         let lower = clean.lowercased()
         if lower.contains("i go to work yesterday") && lower.contains("i tired") {
-            return "I went to work yesterday, and I was tired."
+            return "I went to work yesterday."
         }
         if lower.contains("i go ") && lower.contains("yesterday") {
             return clean
@@ -234,12 +235,20 @@ struct TutorAIService {
     private static func localNaturalAlternative(for message: String, correction: String) -> String {
         let lower = message.lowercased()
         if lower.contains("work yesterday") && lower.contains("tired") {
-            return "I had a long day at work yesterday."
+            return "Yesterday, I went to work."
         }
         if lower.contains("tired") {
             return "I was tired, so I took it slow."
         }
         return correction
+    }
+
+    private static func localFocusedLearnerSentence(for message: String, correction: String) -> String {
+        let lower = message.lowercased()
+        if lower.contains("i go to work yesterday") && correction == "I went to work yesterday." {
+            return "I go to work yesterday."
+        }
+        return message
     }
 
     private static func fallbackTutorReply(for seed: MistakePatternSeed?) -> String {

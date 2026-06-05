@@ -181,30 +181,25 @@ enum BeginnerContent {
         }
     }
 
+    static func lessons(for language: TargetLanguage, level: Level) -> [BeginnerLesson] {
+        let lessons = lessons(for: language)
+        guard language == .english else {
+            return lessons
+        }
+
+        return lessons.filter { level.englishUnitRange.contains($0.unit) }
+    }
+
     static func firstLessonID(for language: TargetLanguage) -> String {
         lessons(for: language).first?.id ?? englishLessons[0].id
     }
 
+    static func firstLessonID(for language: TargetLanguage, level: Level) -> String {
+        lessons(for: language, level: level).first?.id ?? firstLessonID(for: language)
+    }
+
     static func lesson(id: String) -> BeginnerLesson? {
         (frenchLessons + englishLessons).first { $0.id == id }
-    }
-
-    static func vocabPracticeLesson(for language: TargetLanguage) -> BeginnerLesson {
-        switch language {
-        case .english:
-            lesson(id: "english-small-talk") ?? englishLessons[1]
-        case .french, .spanish, .italian:
-            lesson(id: "beginner-greetings") ?? frenchLessons[1]
-        }
-    }
-
-    static func verbPracticeLesson(for language: TargetLanguage) -> BeginnerLesson {
-        switch language {
-        case .english:
-            lesson(id: "english-work-chat") ?? englishLessons[12]
-        case .french, .spanish, .italian:
-            lesson(id: "beginner-hotel") ?? frenchLessons[4]
-        }
     }
 
     private static func phrase(_ term: String, _ translation: String, _ example: String) -> SavedWord {

@@ -33,9 +33,9 @@ const sampleFeedback = {
 
 const sampleTutor = {
   tutorReply: "Good. You're talking about yesterday, so use past tense.",
-  correction: "I went to work yesterday, and I was tired.",
-  naturalAlternative: "I had a long day at work yesterday.",
-  nextPrompt: "Tell me why you were tired.",
+  correction: "I went to work yesterday.",
+  naturalAlternative: "Yesterday, I went to work.",
+  nextPrompt: "Say it again in past tense.",
   savedPhrase: "I went to work yesterday.",
   reviewItem: {
     prompt: "Say this in the past: I go to work yesterday.",
@@ -45,15 +45,15 @@ const sampleTutor = {
     id: "past-tense",
     title: "Past tense",
     explanation: "Use a past verb for yesterday or another finished time.",
-    exampleLearnerSentence: "I go to work yesterday and I tired",
-    correctedSentence: "I went to work yesterday, and I was tired.",
+    exampleLearnerSentence: "I go to work yesterday.",
+    correctedSentence: "I went to work yesterday.",
     confidence: 0.86
   },
   sessionSummary: {
-    improvedPhrase: "I had a long day at work yesterday.",
+    improvedPhrase: "Yesterday, I went to work.",
     mistakePattern: "Past tense",
     savedReviewItem: "I went to work yesterday.",
-    nextPrompt: "Tell me why you were tired."
+    nextPrompt: "Say it again in past tense."
   }
 };
 
@@ -181,11 +181,11 @@ test("tutor endpoint returns conversational tutor JSON", async () => {
     method: "POST",
     url: "/v1/tutor",
     payload: {
-      message: "I go to work yesterday and I tired",
+      message: "I go to work yesterday",
       context: {
         currentLessonTitle: "Talk about yesterday",
         nextRecommendation: "Practice past tense",
-        recentSavedPhrases: ["I was tired."],
+        recentSavedPhrases: ["I went yesterday."],
         recurringMistakes: [{
           id: "past-tense",
           title: "Past tense",
@@ -212,7 +212,7 @@ test("tutor endpoint returns conversational tutor JSON", async () => {
   assert.equal(response.statusCode, 200);
   assert.equal(body.ok, true);
   assert.deepEqual(body.tutor, sampleTutor);
-  assert.equal(capturedInput.message, "I go to work yesterday and I tired");
+  assert.equal(capturedInput.message, "I go to work yesterday");
   assert.equal(capturedInput.context.currentLessonTitle, "Talk about yesterday");
   assert.equal(capturedInput.context.recurringMistakes[0].id, "past-tense");
   assert.deepEqual(body.meta, {
