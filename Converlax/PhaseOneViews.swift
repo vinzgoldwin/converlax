@@ -1,4 +1,6 @@
+import AVFoundation
 import SwiftUI
+import UIKit
 
 struct PracticeHomeView: View {
     @ObservedObject var state: LearningState
@@ -71,7 +73,7 @@ struct ReviewHomeView: View {
 
     private var primaryReviewTitle: String {
         if reviewCount > 0 {
-            return "Speak due items"
+            return "Review due phrases"
         }
 
         return personalSavedLineCount > 0 ? "Speak saved lines" : "Start speaking"
@@ -82,7 +84,7 @@ struct ReviewHomeView: View {
             return "Start with the phrase that needs you most."
         }
 
-        return personalSavedLineCount > 0 ? "Nothing due. Keep one saved line warm." : "Speak once. Converlax will save what to review."
+        return personalSavedLineCount > 0 ? "Nothing due. Practice one saved line." : "Speak once. Converlax will save what to review."
     }
 
     var body: some View {
@@ -101,7 +103,9 @@ struct ReviewHomeView: View {
                             subtitle: primaryReviewSubtitle,
                             symbol: "bolt.circle.fill",
                             color: .primaryBlue,
-                            asset: .review
+                            asset: .review,
+                            mascotState: reviewCount == 0 ? .cleared : nil,
+                            mascotReactionTrigger: personalSavedLineCount + 1
                         )
                     }
                     .buttonStyle(CalmPressButtonStyle(cornerRadius: 14, highlightColor: .primaryBlue))
@@ -170,6 +174,8 @@ struct SpeakProfileHomeView: View {
                 EditLearnerProfileView(state: state)
             case .courseLevel:
                 LevelSelectionView(state: state)
+            case .lessonVoice:
+                LessonVoiceSettingsView(state: state)
             }
         }
     }
@@ -281,7 +287,8 @@ struct SpeakProfileHomeView: View {
         let savedLine = state.profile.savedLines.first
         let savedWord = state.profile.savedWords.first
         let speakingSummary = state.profile.sessionSummaries.first { summary in
-            summary.id.hasPrefix("summary-usage-session-") || summary.title.localizedCaseInsensitiveContains("Free Talk")
+            summary.id.hasPrefix("summary-usage-session-") ||
+                summary.title.localizedCaseInsensitiveContains("Open practice")
         }
         let speakingSession = state.profile.usageSessions.first
 
@@ -376,7 +383,11 @@ private struct JourneyProgressPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center, spacing: 14) {
-                ConverlaxMascotView(state: avatarState, size: 66, isAnimated: false)
+                ConverlaxMascotView(
+                    state: avatarState,
+                    size: 66,
+                    reactionTrigger: progressReactionTrigger
+                )
 
                 VStack(alignment: .leading, spacing: 5) {
                     Text("Level \(progress.levelNumber) · \(progress.currentTitle)")
@@ -417,6 +428,10 @@ private struct JourneyProgressPanel: View {
             }
         }
         .accessibilityElement(children: .combine)
+    }
+
+    private var progressReactionTrigger: Int {
+        progress.levelNumber * 1_000 + Int((progress.levelProgress * 100).rounded())
     }
 }
 
@@ -574,10 +589,7 @@ private struct LessonPracticePreview: View {
 
             ForEach(items) { item in
                 HStack(alignment: .top, spacing: 10) {
-                    Image(systemName: item.symbol)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(item.color)
-                        .frame(width: 24, height: 24)
+                    LessonPracticePreviewIcon(symbol: item.symbol, color: item.color)
 
                     VStack(alignment: .leading, spacing: 3) {
                         Text(item.title)
@@ -620,7 +632,7 @@ private struct LessonPracticePreview: View {
             preview.append(
                 LessonPracticePreviewItem(
                     id: "checks",
-                    symbol: "mic.circle.fill",
+                    symbol: "questionmark.bubble.fill",
                     title: "\(choiceCount) spoken \(choiceCount == 1 ? "answer" : "answers")",
                     detail: "Answer the prompt out loud.",
                     color: .primaryBlue
@@ -654,6 +666,21 @@ private struct LessonPracticePreview: View {
         }
 
         return Array(preview.prefix(3))
+    }
+}
+
+private struct LessonPracticePreviewIcon: View {
+    let symbol: String
+    let color: Color
+
+    var body: some View {
+        Image(systemName: symbol)
+            .resizable()
+            .scaledToFit()
+            .symbolRenderingMode(.monochrome)
+            .foregroundStyle(color)
+            .frame(width: 18, height: 18)
+            .frame(width: 24, height: 24)
     }
 }
 
@@ -734,7 +761,7 @@ private struct FreeTalkSessionView: View {
         }
         .padding(20)
         .background(Color.appBackground.ignoresSafeArea())
-        .navigationTitle("Free Talk")
+        .navigationTitle("Open practice")
         .toolbar(.hidden, for: .tabBar)
         .accessibilityIdentifier("free-talk-session")
         .onChange(of: speechRecognizer.transcript) { _, newValue in
@@ -808,7 +835,7 @@ private struct FreeTalkSessionView: View {
             aiFeedback = try await AIFeedbackService.shared.feedback(
                 transcript: cleanText,
                 context: AIFeedbackRequestContext(
-                    mode: "Free Talk",
+                    mode: "Open practice",
                     lessonTitle: nil,
                     prompt: prompt,
                     expectedPhrase: nil,
@@ -827,7 +854,7 @@ private struct FreeTalkSessionView: View {
 
         let previousProfile = state.profile
         let result = state.recordConversationSession(
-            title: "Free Talk",
+            title: "Open practice",
             detail: "Open speaking session",
             minutes: 5,
             transcript: cleanText,
@@ -840,7 +867,7 @@ private struct FreeTalkSessionView: View {
         feedback = result.feedback
         completionResult = state.completionCelebration(
             from: previousProfile,
-            title: "Free Talk complete",
+            title: "Open practice complete",
             subtitle: "You finished an open speaking session.",
             nextActionTitle: result.summary.nextRecommendation,
             nextActionDetail: ""
@@ -1558,13 +1585,13 @@ private struct ReviewCompletionResultView: View {
             Spacer(minLength: 0)
 
             VStack(alignment: .leading, spacing: 16) {
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.title.weight(.bold))
-                    .foregroundStyle(Color.mintSuccess)
+                HStack(alignment: .center, spacing: 14) {
+                    ConverlaxMascotView(state: .cleared, size: 72)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Review complete")
-                        .font(.title2.weight(.bold))
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Review complete")
+                            .font(.title2.weight(.bold))
+                    }
                 }
 
                 Text("Nothing else is due today.")
@@ -1970,6 +1997,14 @@ private struct SettingsView: View {
                         accessibilityIdentifier: "settings-course-level-row"
                     )
                 }
+                NavigationLink(value: ProfileRoute.lessonVoice) {
+                    SettingsNavigationRow(
+                        symbol: "speaker.wave.2.fill",
+                        title: "Lesson voice",
+                        detail: lessonVoiceDetail,
+                        accessibilityIdentifier: "settings-lesson-voice-row"
+                    )
+                }
             }
             .listRowBackground(Color.claySurface)
             Section("Profile") {
@@ -1993,6 +2028,179 @@ private struct SettingsView: View {
         let learnerProfile = state.profile.learnerProfile
         let name = learnerProfile.preferredName
         return name.isEmpty ? "Name, avatar, and speaking preferences." : "\(name) · \(learnerProfile.practiceFocus.title)"
+    }
+
+    private var lessonVoiceDetail: String {
+        guard
+            let identifier = state.selectedLessonVoiceIdentifier,
+            let voice = AVSpeechSynthesisVoice(identifier: identifier)
+        else {
+            return "Default \(state.profile.targetLanguage.rawValue) voice"
+        }
+
+        return voice.name
+    }
+}
+
+private struct LessonVoiceSettingsView: View {
+    @ObservedObject var state: LearningState
+    @StateObject private var previewPlayback = SpeechPlaybackService()
+
+    private var localeIdentifier: String {
+        state.profile.targetLanguage.speechRecognitionLocaleIdentifier
+    }
+
+    private var installedVoices: [AVSpeechSynthesisVoice] {
+        AVSpeechSynthesisVoice.speechVoices()
+            .filter { $0.language == localeIdentifier }
+            .sorted { lhs, rhs in
+                if lhs.quality.rank != rhs.quality.rank {
+                    return lhs.quality.rank > rhs.quality.rank
+                }
+                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+            }
+    }
+
+    private var selectedIdentifier: String? {
+        state.selectedLessonVoiceIdentifier
+    }
+
+    var body: some View {
+        List {
+            Section("Lesson voice") {
+                Button {
+                    state.updateLessonVoiceIdentifier(nil)
+                } label: {
+                    voiceRow(
+                        title: "System default",
+                        detail: "\(state.profile.targetLanguage.rawValue) voice chosen by \(platformName)",
+                        selected: selectedIdentifier == nil
+                    )
+                }
+                .buttonStyle(.plain)
+
+                ForEach(installedVoices, id: \.identifier) { voice in
+                    HStack(spacing: 12) {
+                        Button {
+                            state.updateLessonVoiceIdentifier(voice.identifier)
+                        } label: {
+                            voiceRow(
+                                title: voice.name,
+                                detail: voice.quality.lessonVoiceLabel,
+                                selected: selectedIdentifier == voice.identifier
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            previewPlayback.toggle(
+                                text: previewSentence,
+                                localeIdentifier: localeIdentifier,
+                                voiceIdentifier: voice.identifier
+                            )
+                        } label: {
+                            Image(systemName: "play.circle.fill")
+                                .font(.title3.weight(.semibold))
+                                .foregroundStyle(Color.primaryBlue)
+                                .frame(width: 36, height: 36)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Preview \(voice.name)")
+                    }
+                }
+            }
+            .listRowBackground(Color.claySurface)
+
+            Section("Add more voices") {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(installPath)
+                        .font(.subheadline.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("After downloading a voice there, return here and it will appear in this list.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.vertical, 4)
+            }
+            .listRowBackground(Color.claySurface)
+        }
+        .converlaxListSurface()
+        .navigationTitle("Lesson voice")
+        .onDisappear {
+            previewPlayback.stop()
+        }
+    }
+
+    private var previewSentence: String {
+        switch state.profile.targetLanguage {
+        case .english:
+            return "I'm going to visit my cousins this weekend."
+        case .french:
+            return "Bonjour. Je m'appelle Maya."
+        case .spanish:
+            return "Hola. Me llamo Maya."
+        case .italian:
+            return "Ciao. Mi chiamo Maya."
+        }
+    }
+
+    private var installPath: String {
+        "\(platformName) Settings > Accessibility > \(speechSettingsMenuName) > Voices > \(voiceSettingsLanguagePath)"
+    }
+
+    private var platformName: String {
+        UIDevice.current.userInterfaceIdiom == .pad ? "iPadOS" : "iOS"
+    }
+
+    private var speechSettingsMenuName: String {
+        ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 26 ? "Read & Speak" : "Spoken Content"
+    }
+
+    private var voiceSettingsLanguagePath: String {
+        switch state.profile.targetLanguage {
+        case .english: return "English > English (US)"
+        case .french: return "French > French (France)"
+        case .spanish: return "Spanish > Spanish (Spain)"
+        case .italian: return "Italian > Italian (Italy)"
+        }
+    }
+
+    private func voiceRow(title: String, detail: String, selected: Bool) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                .foregroundStyle(selected ? Color.primaryBlue : Color.secondary.opacity(0.55))
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .contentShape(Rectangle())
+    }
+}
+
+private extension AVSpeechSynthesisVoiceQuality {
+    var rank: Int {
+        switch self {
+        case .premium: return 4
+        case .enhanced: return 3
+        case .default: return 2
+        @unknown default: return 1
+        }
+    }
+
+    var lessonVoiceLabel: String {
+        switch self {
+        case .premium: return "Premium voice"
+        case .enhanced: return "Enhanced voice"
+        case .default: return "Installed voice"
+        @unknown default: return "Installed voice"
+        }
     }
 }
 
@@ -2174,10 +2382,18 @@ struct HeroActionCard: View {
     let symbol: String
     let color: Color
     var asset: ConverlaxAssetKind? = nil
+    var mascotState: ConverlaxMascotState? = nil
+    var mascotReactionTrigger = 0
 
     var body: some View {
         HStack(alignment: .center, spacing: 16) {
-            if let asset {
+            if let mascotState {
+                ConverlaxMascotView(
+                    state: mascotState,
+                    size: 58,
+                    reactionTrigger: mascotReactionTrigger
+                )
+            } else if let asset {
                 ConverlaxAssetBadge(kind: asset, size: 58)
             } else {
                 AvatarBadge(symbol: symbol, color: color)

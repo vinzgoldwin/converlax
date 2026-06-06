@@ -26,6 +26,10 @@ enum ConverlaxLaunchArguments {
         value(after: "-ConverlaxInitialLessonID", in: arguments)
     }
 
+    static func lessonStepIndex(in arguments: [String]) -> Int? {
+        value(after: "-ConverlaxInitialLessonStepIndex", in: arguments).flatMap(Int.init)
+    }
+
     static func level(in arguments: [String]) -> Level? {
         guard let rawValue = value(after: "-ConverlaxInitialLevel", in: arguments) else {
             return nil
@@ -231,6 +235,7 @@ enum ProfileRoute: Hashable {
     case settings
     case editProfile
     case courseLevel
+    case lessonVoice
 
     static var launchDefaultPath: [ProfileRoute] {
         let arguments = ProcessInfo.processInfo.arguments
@@ -252,6 +257,8 @@ enum ProfileRoute: Hashable {
             return [.settings]
         case "editProfile":
             return [.editProfile]
+        case "lessonVoice":
+            return [.settings, .lessonVoice]
         case "courseLanguage", "courseLevel":
             return [.settings, .courseLevel]
         default:
@@ -1333,6 +1340,7 @@ struct LearningProfile: Codable, Equatable {
     var completedLessonIDs: Set<String> = []
     var currentLessonID: String = BeginnerContent.firstLessonID(for: .english)
     var lessonResumeStepIndices: [String: Int] = [:]
+    var lessonVoiceIdentifierByLanguage: [String: String] = [:]
     var streak: Int = 0
     var savedWords: [SavedWord] = []
     var savedLines: [SavedLine] = []
@@ -1359,6 +1367,7 @@ struct LearningProfile: Codable, Equatable {
         completedLessonIDs = try container.decodeIfPresent(Set<String>.self, forKey: .completedLessonIDs) ?? []
         currentLessonID = try container.decodeIfPresent(String.self, forKey: .currentLessonID) ?? BeginnerContent.firstLessonID(for: targetLanguage, level: currentLevel)
         lessonResumeStepIndices = try container.decodeIfPresent([String: Int].self, forKey: .lessonResumeStepIndices) ?? [:]
+        lessonVoiceIdentifierByLanguage = try container.decodeIfPresent([String: String].self, forKey: .lessonVoiceIdentifierByLanguage) ?? [:]
         streak = try container.decodeIfPresent(Int.self, forKey: .streak) ?? 0
         savedWords = try container.decodeIfPresent([SavedWord].self, forKey: .savedWords) ?? []
         savedLines = try container.decodeIfPresent([SavedLine].self, forKey: .savedLines) ?? []

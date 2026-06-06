@@ -3,6 +3,7 @@ import SwiftUI
 struct OnboardingView: View {
     @ObservedObject var state: LearningState
     let onComplete: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var targetLanguage: TargetLanguage
     @State private var selectedLevel: Level
     @State private var step = 0
@@ -95,11 +96,15 @@ struct OnboardingView: View {
     }
 
     private var mascotState: ConverlaxMascotState {
+        if isAdvancing && step == 2 {
+            return .celebrating
+        }
+
         switch step {
-        case 0: .waving
-        case 1: .encouraging
-        case 2: .thinking
-        default: .idle
+        case 0: return .waving
+        case 1: return .encouraging
+        case 2: return .thinking
+        default: return .idle
         }
     }
 
@@ -158,15 +163,20 @@ struct OnboardingView: View {
         isAdvancing = true
 
         if step < 2 {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+            withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86)) {
                 step += 1
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
                 isAdvancing = false
             }
         } else {
-            state.completeOnboarding(language: state.profile.targetLanguage, level: state.profile.currentLevel)
-            onComplete()
+            withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.78)) {
+                isAdvancing = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0 : 0.34)) {
+                state.completeOnboarding(language: state.profile.targetLanguage, level: state.profile.currentLevel)
+                onComplete()
+            }
         }
     }
 

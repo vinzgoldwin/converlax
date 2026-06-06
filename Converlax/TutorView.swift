@@ -523,9 +523,13 @@ private struct TutorSessionSummary: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Practice complete")
-                .font(.headline.weight(.bold))
-                .foregroundStyle(Color.converlaxInk)
+            HStack(alignment: .center, spacing: 12) {
+                ConverlaxMascotView(state: .celebrating, size: 56)
+
+                Text("Practice complete")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(Color.converlaxInk)
+            }
 
             TutorSummaryRow(title: "Phrase improved", value: improvedPhrase)
             TutorSummaryRow(title: "Pattern noticed", value: mistakePattern)

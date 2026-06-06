@@ -22,6 +22,20 @@ final class ConverlaxContentTests: XCTestCase {
         XCTAssertEqual(Set(stepIDs).count, stepIDs.count)
     }
 
+    func testOnlyAudioBackedModelStepsUseListenTitle() {
+        let lessons = BeginnerContent.lessons(for: .english) + BeginnerContent.lessons(for: .french)
+
+        for lesson in lessons {
+            for step in lesson.steps {
+                if step.id.hasSuffix("-model") {
+                    XCTAssertEqual(step.title, "Listen and repeat", "\(lesson.id) \(step.id)")
+                } else {
+                    XCTAssertFalse(step.title.localizedCaseInsensitiveContains("listen"), "\(lesson.id) \(step.id)")
+                }
+            }
+        }
+    }
+
     func testHobbyDetailsLessonDoesNotRepeatTurnFourPromptOnTurnSeven() throws {
         let lesson = try XCTUnwrap(BeginnerContent.lesson(id: "english-hobbies-detail"))
         let turnFour = try XCTUnwrap(lesson.steps.first { $0.id == "english-hobbies-detail-alternative" })

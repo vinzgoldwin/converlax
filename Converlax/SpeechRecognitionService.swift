@@ -41,6 +41,7 @@ final class SpeechRecognitionService: ObservableObject {
         }
 
         recognitionRequest.shouldReportPartialResults = true
+        recognitionRequest.addsPunctuation = true
         if speechRecognizer.supportsOnDeviceRecognition {
             recognitionRequest.requiresOnDeviceRecognition = false
         }

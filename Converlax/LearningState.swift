@@ -64,6 +64,10 @@ final class LearningState: ObservableObject {
         return profile.savedWords.filter { courseWordIDs.contains($0.id) }
     }
 
+    var selectedLessonVoiceIdentifier: String? {
+        profile.lessonVoiceIdentifierByLanguage[profile.targetLanguage.speechRecognitionLocaleIdentifier]
+    }
+
     var savedLines: [SavedLine] {
         profile.savedLines
     }
@@ -360,6 +364,17 @@ final class LearningState: ObservableObject {
     func updateLearnerProfile(_ learnerProfile: LearnerProfile) {
         var next = profile
         next.learnerProfile = learnerProfile.sanitized
+        profile = next
+    }
+
+    func updateLessonVoiceIdentifier(_ identifier: String?) {
+        var next = profile
+        let languageKey = next.targetLanguage.speechRecognitionLocaleIdentifier
+        if let identifier {
+            next.lessonVoiceIdentifierByLanguage[languageKey] = identifier
+        } else {
+            next.lessonVoiceIdentifierByLanguage[languageKey] = nil
+        }
         profile = next
     }
 

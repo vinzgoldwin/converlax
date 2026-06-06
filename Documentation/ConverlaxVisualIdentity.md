@@ -40,6 +40,8 @@ Production assets live in `Converlax/Assets.xcassets` as transparent PNG image s
 - `encouraging`: calm float for tutor prompts.
 - `thinking`: subtle tilt.
 - `celebrating`: spring bounce.
-- `avatar`: static profile identity.
+- `saved`: one-shot saved-line acknowledgement using existing Melo art.
+- `cleared`: one-shot review-clear acknowledgement using existing Melo art.
+- `avatar`: static profile identity; animate only for explicit one-shot progress acknowledgement.
 
 Use `ConverlaxAssetBadge` for illustrated category cards and rows. Do not fall back to generic SF Symbol-only cards when a matching Converlax asset exists.

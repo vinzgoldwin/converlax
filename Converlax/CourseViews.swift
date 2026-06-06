@@ -201,10 +201,22 @@ private struct FeaturedLessonCard: View {
                     .contentTransition(.numericText())
             }
 
-            Text(supportingLine)
-                .font(.headline.weight(.semibold))
-                .foregroundStyle(.white)
-                .lineLimit(2)
+            HStack(alignment: .center, spacing: 12) {
+                Text(supportingLine)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+
+                if !completed {
+                    ConverlaxMascotView(
+                        state: .encouraging,
+                        size: 48,
+                        reactionTrigger: lesson.id.hashValue
+                    )
+                    .frame(width: 48, height: 48)
+                    .accessibilityHidden(true)
+                }
+            }
 
             HStack(spacing: 8) {
                 Image(systemName: completed ? "arrow.clockwise" : "play.fill")

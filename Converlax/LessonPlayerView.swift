@@ -1,8 +1,68 @@
+import AVFoundation
 import SwiftUI
 
 private let minimumLessonTurnScore = 70
 
+final class SpeechPlaybackService: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
+    @Published private(set) var isPlaying = false
+
+    private let synthesizer = AVSpeechSynthesizer()
+
+    override init() {
+        super.init()
+        synthesizer.delegate = self
+    }
+
+    func toggle(text: String, localeIdentifier: String, voiceIdentifier: String? = nil) {
+        if synthesizer.isSpeaking {
+            stop()
+            return
+        }
+
+        speak(text: text, localeIdentifier: localeIdentifier, voiceIdentifier: voiceIdentifier)
+    }
+
+    func speak(text: String, localeIdentifier: String, voiceIdentifier: String? = nil) {
+        stop()
+
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty else { return }
+
+        let utterance = AVSpeechUtterance(string: trimmedText)
+        utterance.voice = voiceIdentifier.flatMap(AVSpeechSynthesisVoice.init(identifier:)) ??
+            AVSpeechSynthesisVoice(language: localeIdentifier)
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 0.88
+        utterance.pitchMultiplier = 1.0
+        utterance.volume = 1.0
+
+        isPlaying = true
+        synthesizer.speak(utterance)
+    }
+
+    func stop() {
+        guard synthesizer.isSpeaking || synthesizer.isPaused || isPlaying else { return }
+        synthesizer.stopSpeaking(at: .immediate)
+        isPlaying = false
+    }
+
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        DispatchQueue.main.async { [weak self] in
+            self?.isPlaying = false
+        }
+    }
+
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
+        DispatchQueue.main.async { [weak self] in
+            self?.isPlaying = false
+        }
+    }
+}
+
 private extension LessonStep {
+    var isModelPhraseStep: Bool {
+        kind == .teach && id.hasSuffix("-model")
+    }
+
     var speakablePrompt: String {
         if prompt.contains("___"), let correctAnswer {
             return prompt.replacingOccurrences(of: "___", with: correctAnswer)
@@ -12,7 +72,10 @@ private extension LessonStep {
     }
 
     var voicePromptTitle: String {
-        kind == .choice && correctAnswer != nil ? "Clear answer" : title
+        if isModelPhraseStep {
+            return "Listen and repeat"
+        }
+        return kind == .choice && correctAnswer != nil ? "Clear answer" : title
     }
 
     var voicePromptContext: String? {
@@ -29,8 +92,8 @@ private extension LessonStep {
     var voiceReadyInstruction: String {
         switch kind {
         case .teach:
-            if title.localizedCaseInsensitiveContains("repeat") {
-                return "Repeat this sentence out loud."
+            if isModelPhraseStep {
+                return "Play the sentence, then say it out loud."
             }
             return "Say this goal out loud."
         case .choice:
@@ -62,13 +125,18 @@ struct LessonPlayerView: View {
     @State private var turnFeedbackByStepID: [String: LearningFeedback] = [:]
     @State private var speechErrorMessage: String?
     @StateObject private var speechRecognizer = SpeechRecognitionService()
+    @StateObject private var speechPlayback = SpeechPlaybackService()
     @State private var didApplyLaunchSpeechState = false
+    @State private var didApplyLaunchCompletionState = false
     @State private var completionResult: CompletionCelebrationResult?
     @State private var turnEntranceVisible = false
 
     init(lesson: BeginnerLesson, state: LearningState) {
         _lesson = State(initialValue: lesson)
-        _stepIndex = State(initialValue: state.resumeStepIndex(for: lesson))
+        let launchStepIndex = ConverlaxLaunchArguments.lessonStepIndex(in: ProcessInfo.processInfo.arguments)
+        let initialStepIndex = launchStepIndex.map { min(max($0, 0), max(lesson.steps.count - 1, 0)) }
+            ?? state.resumeStepIndex(for: lesson)
+        _stepIndex = State(initialValue: initialStepIndex)
         self.state = state
     }
 
@@ -104,7 +172,9 @@ struct LessonPlayerView: View {
                             isLastTurn: stepIndex == lesson.steps.count - 1,
                             canGoToPreviousTurn: stepIndex > 0,
                             canGoToNextTurn: stepIndex < furthestAvailableStepIndex,
+                            isModelPhrasePlaying: speechPlayback.isPlaying,
                             onSaveLine: saveCurrentLine,
+                            onPlayback: playCurrentModelPhrase,
                             onSpeechPrimary: advanceSpeechState,
                             onSpeechCancel: cancelSpeech,
                             onSpeechRetry: retryCurrentTurn,
@@ -129,6 +199,8 @@ struct LessonPlayerView: View {
             transcript = newValue
         }
         .onAppear {
+            applyLaunchCompletionStateIfNeeded()
+            guard !completed else { return }
             applyLaunchSpeechStateIfNeeded()
             syncSavedCurrentLine()
             withAnimation(reduceMotion ? nil : .easeOut(duration: 0.32).delay(0.04)) {
@@ -136,6 +208,7 @@ struct LessonPlayerView: View {
             }
         }
         .onDisappear {
+            speechPlayback.stop()
             speechRecognizer.cancelRecording()
         }
     }
@@ -203,6 +276,7 @@ struct LessonPlayerView: View {
     }
 
     private func cancelSpeech() {
+        speechPlayback.stop()
         speechRecognizer.cancelRecording()
         speechPhase = .ready
         transcript = ""
@@ -211,6 +285,7 @@ struct LessonPlayerView: View {
     }
 
     private func retryCurrentTurn() {
+        speechPlayback.stop()
         speechRecognizer.cancelRecording()
         withAnimation(.easeOut(duration: 0.2)) {
             speechPhase = .ready
@@ -222,6 +297,7 @@ struct LessonPlayerView: View {
 
     private func moveToTurn(_ targetIndex: Int) {
         guard lesson.steps.indices.contains(targetIndex) else { return }
+        speechPlayback.stop()
         speechRecognizer.cancelRecording()
         let targetStep = lesson.steps[targetIndex]
         let restoredFeedback = latestFeedback(for: targetStep)
@@ -236,6 +312,7 @@ struct LessonPlayerView: View {
     }
 
     private func startSpeechRecording() {
+        speechPlayback.stop()
         speechPhase = .requestingPermission
         transcript = ""
         speechFeedback = nil
@@ -264,6 +341,15 @@ struct LessonPlayerView: View {
         }
 
         speechPhase = .transcript
+    }
+
+    private func playCurrentModelPhrase() {
+        guard step.isModelPhraseStep else { return }
+        speechPlayback.toggle(
+            text: step.speakablePrompt,
+            localeIdentifier: state.profile.targetLanguage.speechRecognitionLocaleIdentifier,
+            voiceIdentifier: state.selectedLessonVoiceIdentifier
+        )
     }
 
     @MainActor
@@ -313,7 +399,26 @@ struct LessonPlayerView: View {
                 step.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         }
     }
+
+    private func applyLaunchCompletionStateIfNeeded() {
+        guard
+            !didApplyLaunchCompletionState,
+            ProcessInfo.processInfo.arguments.contains("-ConverlaxShowLessonCompletion")
+        else { return }
+
+        didApplyLaunchCompletionState = true
+        let previousProfile = state.profile
+        state.completeLesson(lesson)
+        completionResult = state.completionCelebration(
+            from: previousProfile,
+            title: "Lesson complete",
+            subtitle: "You finished \(lesson.title.lowercased())."
+        )
+        completed = true
+    }
+
     private func advanceAfterSpeechAcceptance() {
+        speechPlayback.stop()
         speechPhase = .accepted
 
         if stepIndex < lesson.steps.count - 1 {
@@ -428,7 +533,9 @@ private struct VoiceFirstLessonTurn: View {
     let isLastTurn: Bool
     let canGoToPreviousTurn: Bool
     let canGoToNextTurn: Bool
+    let isModelPhrasePlaying: Bool
     let onSaveLine: () -> Void
+    let onPlayback: () -> Void
     let onSpeechPrimary: () -> Void
     let onSpeechCancel: () -> Void
     let onSpeechRetry: () -> Void
@@ -452,7 +559,11 @@ private struct VoiceFirstLessonTurn: View {
                 step: step,
                 helperText: helperText,
                 savedCurrentLine: savedCurrentLine,
-                onSaveLine: onSaveLine
+                isPlaybackVisible: step.isModelPhraseStep,
+                isPlaying: isModelPhrasePlaying,
+                accent: accent,
+                onSaveLine: onSaveLine,
+                onPlayback: onPlayback
             )
 
             SpeechPracticePanel(
@@ -566,7 +677,11 @@ private struct VoicePromptBlock: View {
     let step: LessonStep
     let helperText: String?
     let savedCurrentLine: Bool
+    let isPlaybackVisible: Bool
+    let isPlaying: Bool
+    let accent: Color
     let onSaveLine: () -> Void
+    let onPlayback: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -587,16 +702,56 @@ private struct VoicePromptBlock: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                Button(action: onSaveLine) {
-                    Image(systemName: savedCurrentLine ? "bookmark.fill" : "bookmark")
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(savedCurrentLine ? Color.primaryBlue : Color.secondary)
-                        .symbolEffect(.bounce, value: savedCurrentLine)
-                        .frame(width: 36, height: 36)
-                        .background(Color.appBackground.opacity(0.76), in: Circle())
+                HStack(spacing: 8) {
+                    ConverlaxMascotView(
+                        state: .saved,
+                        size: 34,
+                        isAnimated: savedCurrentLine,
+                        reactionTrigger: savedCurrentLine ? 1 : 0
+                    )
+                    .opacity(savedCurrentLine ? 1 : 0)
+                    .frame(width: 34, height: 34)
+                    .accessibilityHidden(!savedCurrentLine)
+
+                    Button(action: onSaveLine) {
+                        Image(systemName: savedCurrentLine ? "bookmark.fill" : "bookmark")
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(savedCurrentLine ? Color.primaryBlue : Color.secondary)
+                            .symbolEffect(.bounce, value: savedCurrentLine)
+                            .frame(width: 36, height: 36)
+                            .background(Color.appBackground.opacity(0.76), in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(savedCurrentLine ? "Unsave line" : "Save line")
+                }
+                .frame(width: 78, alignment: .trailing)
+            }
+
+            if isPlaybackVisible {
+                Button(action: onPlayback) {
+                    HStack(spacing: 10) {
+                        Image(systemName: isPlaying ? "stop.fill" : "speaker.wave.2.fill")
+                            .font(.headline.weight(.bold))
+                            .frame(width: 28, height: 28)
+                            .background(Color.claySurface.opacity(0.75), in: Circle())
+
+                        Text(isPlaying ? "Stop audio" : "Play sentence")
+                            .font(.headline.weight(.bold))
+
+                        Spacer(minLength: 0)
+                    }
+                    .foregroundStyle(accent)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(accent.opacity(0.24), lineWidth: 1)
+                    }
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(savedCurrentLine ? "Unsave line" : "Save line")
+                .accessibilityLabel(isPlaying ? "Stop sentence audio" : "Play sentence audio")
             }
 
             if let helperText {

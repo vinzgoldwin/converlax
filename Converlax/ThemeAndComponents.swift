@@ -135,6 +135,8 @@ enum ConverlaxMascotState: String {
     case encouraging
     case thinking
     case celebrating
+    case saved
+    case cleared
     case waving
     case avatar
 
@@ -144,6 +146,8 @@ enum ConverlaxMascotState: String {
         case .encouraging: "ClxMascotEncouraging"
         case .thinking: "ClxMascotThinking"
         case .celebrating: "ClxMascotCelebrating"
+        case .saved: "ClxMascotCelebrating"
+        case .cleared: "ClxMascotEncouraging"
         case .waving: "ClxMascotWaving"
         case .avatar: "ClxMascotAvatar"
         }
@@ -155,8 +159,19 @@ enum ConverlaxMascotState: String {
         case .encouraging: "Melo encouraging practice"
         case .thinking: "Melo thinking"
         case .celebrating: "Melo celebrating"
+        case .saved: "Melo acknowledging a saved line"
+        case .cleared: "Melo acknowledging a clear review"
         case .waving: "Melo waving"
         case .avatar: "Melo profile avatar"
+        }
+    }
+
+    var playsContinuously: Bool {
+        switch self {
+        case .idle, .encouraging, .thinking, .waving:
+            true
+        case .celebrating, .saved, .cleared, .avatar:
+            false
         }
     }
 }
@@ -214,7 +229,10 @@ struct ConverlaxMascotView: View {
     let state: ConverlaxMascotState
     var size: CGFloat = 112
     var isAnimated = true
-    @State private var animate = false
+    var reactionTrigger = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var loopPhase = false
+    @State private var reactionPhase = false
 
     var body: some View {
         Image(state.assetName)
@@ -225,64 +243,109 @@ struct ConverlaxMascotView: View {
             .rotationEffect(rotation)
             .offset(y: verticalOffset)
             .shadow(color: shadowColor, radius: size * 0.08, y: size * 0.04)
-            .animation(animation, value: animate)
-            .onAppear { animate = isAnimated }
+            .animation(loopAnimation, value: loopPhase)
+            .onAppear(perform: startMotion)
             .onChange(of: state) { _, _ in
-                animate = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.04) {
-                    animate = isAnimated
-                }
+                restartMotion()
+            }
+            .onChange(of: reactionTrigger) { _, _ in
+                playReaction()
+            }
+            .onChange(of: reduceMotion) { _, _ in
+                restartMotion()
             }
             .accessibilityLabel(state.accessibilityLabel)
     }
 
     private var scale: CGFloat {
-        guard isAnimated else { return 1 }
-        switch state {
-        case .celebrating:
-            return animate ? 1.08 : 0.96
-        default:
-            return 1
-        }
+        guard shouldAnimate else { return 1 }
+        return reactionPhase ? 1.06 : 1
     }
 
     private var rotation: Angle {
-        guard isAnimated else { return .zero }
+        guard shouldAnimate else { return .zero }
         switch state {
         case .waving:
-            return .degrees(animate ? 4 : -4)
+            return .degrees(loopPhase ? 4 : -4)
         case .thinking:
-            return .degrees(animate ? -2 : 2)
+            return .degrees(loopPhase ? -2 : 2)
+        case .saved:
+            return .degrees(reactionPhase ? 2 : 0)
         default:
             return .zero
         }
     }
 
     private var verticalOffset: CGFloat {
-        guard isAnimated else { return 0 }
+        guard shouldAnimate else { return 0 }
+        let reactionOffset: CGFloat = reactionPhase ? -6 : 0
+
         switch state {
-        case .idle, .encouraging, .avatar:
-            return animate ? -4 : 2
-        case .celebrating:
-            return animate ? -8 : 0
+        case .idle, .encouraging:
+            return (loopPhase ? -4 : 2) + reactionOffset
+        case .celebrating, .saved, .cleared, .avatar:
+            return reactionOffset
         default:
             return 0
         }
     }
 
-    private var animation: Animation {
+    private var loopAnimation: Animation? {
+        guard shouldAnimate, state.playsContinuously else { return nil }
+
         switch state {
-        case .celebrating:
-            .spring(response: 0.34, dampingFraction: 0.48).repeatCount(2, autoreverses: true)
         case .waving, .thinking:
-            .easeInOut(duration: 0.52).repeatForever(autoreverses: true)
+            return Animation.easeInOut(duration: 0.52).repeatForever(autoreverses: true)
         default:
-            .easeInOut(duration: 2.6).repeatForever(autoreverses: true)
+            return Animation.easeInOut(duration: 2.8).repeatForever(autoreverses: true)
         }
     }
 
     private var shadowColor: Color {
         state == .avatar ? .clear : Color.converlaxInk.opacity(0.12)
+    }
+
+    private var shouldAnimate: Bool {
+        isAnimated && !reduceMotion
+    }
+
+    private func startMotion() {
+        guard shouldAnimate else {
+            loopPhase = false
+            reactionPhase = false
+            return
+        }
+
+        if state.playsContinuously {
+            loopPhase = true
+        } else {
+            playReaction()
+        }
+    }
+
+    private func restartMotion() {
+        loopPhase = false
+        reactionPhase = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.04) {
+            startMotion()
+        }
+    }
+
+    private func playReaction() {
+        guard shouldAnimate else {
+            reactionPhase = false
+            return
+        }
+
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.62)) {
+            reactionPhase = true
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
+            withAnimation(.easeOut(duration: 0.22)) {
+                reactionPhase = false
+            }
+        }
     }
 }
 
@@ -742,7 +805,11 @@ struct SpeechPracticePanel: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 12) {
-            SpeechStatusBadge(symbol: statusSymbol, color: statusColor)
+            if let headerMascotState {
+                ConverlaxMascotView(state: headerMascotState, size: 44)
+            } else {
+                SpeechStatusBadge(symbol: statusSymbol, color: statusColor)
+            }
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(phase.title)
@@ -938,6 +1005,10 @@ struct SpeechPracticePanel: View {
         case .error:
             "exclamationmark.triangle.fill"
         }
+    }
+
+    private var headerMascotState: ConverlaxMascotState? {
+        phase == .processing ? .thinking : nil
     }
 
     private var primarySymbol: String {
@@ -1248,6 +1319,7 @@ private struct VoiceInputOrb: View {
 private struct VoiceActivityRing: View {
     let color: Color
     let phase: SpeechPracticePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var rotate = false
 
     var body: some View {
@@ -1257,10 +1329,13 @@ private struct VoiceActivityRing: View {
                 color.opacity(0.68),
                 style: StrokeStyle(lineWidth: 4, lineCap: .round)
             )
-            .rotationEffect(.degrees(rotate ? 360 : 0))
+            .rotationEffect(.degrees(reduceMotion ? 0 : (rotate ? 360 : 0)))
             .opacity(phase == .recording ? 1 : 0.62)
-            .onAppear { rotate = true }
-            .animation(.linear(duration: phase == .recording ? 1.35 : 2.4).repeatForever(autoreverses: false), value: rotate)
+            .onAppear { rotate = !reduceMotion }
+            .onChange(of: reduceMotion) { _, newValue in
+                rotate = !newValue
+            }
+            .animation(reduceMotion ? nil : .linear(duration: phase == .recording ? 1.35 : 2.4).repeatForever(autoreverses: false), value: rotate)
     }
 }
 
@@ -1408,7 +1483,11 @@ struct CompletionCelebrationView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .center, spacing: 14) {
-                ConverlaxMascotView(state: mascotState, size: 86)
+                ConverlaxMascotView(
+                    state: mascotState,
+                    size: 86,
+                    reactionTrigger: completionReactionTrigger
+                )
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(result.title)
@@ -1441,6 +1520,10 @@ struct CompletionCelebrationView: View {
             }
         }
         .accessibilityIdentifier("completion-celebration")
+    }
+
+    private var completionReactionTrigger: Int {
+        result.levelAfter * 1_000 + Int((result.levelProgressAfter * 100).rounded())
     }
 }
 
