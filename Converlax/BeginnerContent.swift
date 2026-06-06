@@ -44,7 +44,7 @@ enum BeginnerContent {
             modelHelper: seed.helper,
             speak: seed.speak,
             speakHelper: seed.swap,
-            alternative: seed.followUp,
+            alternative: naturalAlternative(for: seed),
             alternativeHelper: "Use this as the next natural line after your answer.",
             mistakePrompt: seed.check,
             correctAnswer: seed.answer,
@@ -106,6 +106,15 @@ enum BeginnerContent {
             return "Make the request specific enough for a stranger to answer."
         default:
             return "Add one reason, repair, or follow-up so the answer feels complete."
+        }
+    }
+
+    private static func naturalAlternative(for seed: EnglishLessonSeed) -> String {
+        switch seed.id {
+        case "english-hobbies-detail":
+            return "It helps me relax after work."
+        default:
+            return seed.followUp
         }
     }
 

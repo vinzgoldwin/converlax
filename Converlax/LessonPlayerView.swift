@@ -1,5 +1,7 @@
 import SwiftUI
 
+private let minimumLessonTurnScore = 70
+
 private extension LessonStep {
     var speakablePrompt: String {
         if prompt.contains("___"), let correctAnswer {
@@ -187,6 +189,10 @@ struct LessonPlayerView: View {
         case .transcript:
             Task { await generateSpeechFeedback() }
         case .feedback:
+            guard speechFeedback?.confidence ?? 0 >= minimumLessonTurnScore else {
+                retryCurrentTurn()
+                return
+            }
             advanceAfterSpeechAcceptance()
         case .accepted:
             speechPhase = .ready
@@ -272,15 +278,16 @@ struct LessonPlayerView: View {
         speechPhase = .processing
         speechErrorMessage = nil
 
-        let aiFeedback: AIFeedback?
+        let aiFeedback: AIFeedback
         do {
             aiFeedback = try await AIFeedbackService.shared.feedback(
                 transcript: cleanTranscript,
                 context: speechFeedbackContext(mode: "Speaking practice", step: step)
             )
         } catch {
-            aiFeedback = nil
             speechErrorMessage = AIFeedbackService.fallbackMessage(for: error)
+            speechPhase = .error
+            return
         }
 
         let feedback = state.acceptSpeechPractice(
@@ -468,15 +475,23 @@ private struct VoiceFirstLessonTurn: View {
 
     private var voiceActionTitle: String? {
         switch speechPhase {
-        case .feedback, .accepted:
-            isLastTurn ? "Finish lesson" : "Next prompt"
+        case .feedback:
+            guard speechFeedback?.confidence ?? 0 >= minimumLessonTurnScore else {
+                return "Try again"
+            }
+            return isLastTurn ? "Finish lesson" : "Next prompt"
+        case .accepted:
+            return isLastTurn ? "Finish lesson" : "Next prompt"
         default:
-            nil
+            return nil
         }
     }
 
     private var retryActionTitle: String? {
-        speechPhase == .feedback ? "Try again" : nil
+        guard speechPhase == .feedback, speechFeedback?.confidence ?? 0 >= minimumLessonTurnScore else {
+            return nil
+        }
+        return "Try again"
     }
 
     private var helperText: String? {

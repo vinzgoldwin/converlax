@@ -477,20 +477,19 @@ struct LearningFeedbackCard: View {
     @ViewBuilder
     private var feedbackContent: some View {
         if let attemptText {
-            FeedbackCompactRow(title: "You said", text: attemptText, color: .secondary)
+            FeedbackCompactRow(title: "You said", text: attemptText, symbol: "mic.fill", color: .secondary)
         }
 
         if let betterLine {
-            FeedbackCompactRow(title: "Better", text: betterLine, color: .mintSuccess)
+            FeedbackCompactRow(title: "Better", text: betterLine, symbol: "quote.bubble.fill", color: .mintSuccess)
         }
 
-        if let tryNext {
-            FeedbackCompactRow(title: "Try next", text: tryNext, color: .primaryBlue)
+        FeedbackCompactRow(title: "Fix", text: fixDetails ?? "No fix needed.", symbol: "textformat", color: .primaryBlue)
+
+        if let pronunciationDetails {
+            FeedbackCompactRow(title: "Pronunciation", text: pronunciationDetails, symbol: "waveform", color: .warmAmber)
         }
 
-        if let savedPhrase {
-            FeedbackSavedPhraseRow(text: savedPhrase)
-        }
     }
 
     private var isSpeechFeedback: Bool {
@@ -527,19 +526,40 @@ struct LearningFeedbackCard: View {
         naturalAlternative ?? naturalVersion ?? correctedPhrase
     }
 
-    private var tryNext: String? {
-        clean(feedback.tryNext.isEmpty ? feedback.nextAction : feedback.tryNext)
+    private var fixDetails: String? {
+        let details = [
+            cleanedFixText(feedback.grammarCorrection),
+            cleanedFixText(feedback.vocabularyImprovement)
+        ].compactMap { $0 }
+
+        guard !details.isEmpty else { return nil }
+        let joined = details.joined(separator: " ")
+        guard !isDuplicate(joined, of: [betterLine]) else { return nil }
+        return joined
     }
 
-    private var savedPhrase: String? {
-        guard let saved = cleanCoachText(feedback.savedTakeaway) else { return nil }
-        let visibleLines = [
-            attemptText,
-            betterLine,
-            tryNext
+    private var pronunciationDetails: String? {
+        let details = [
+            clean(feedback.pronunciationNotes),
+            clean(feedback.pronunciationTip),
+            clean(feedback.fluencyTip)
         ].compactMap { $0 }
-        guard !visibleLines.contains(where: { isSameLine($0, saved) }) else { return nil }
-        return saved
+
+        var uniqueDetails: [String] = []
+        for detail in details where !uniqueDetails.contains(where: { isSameLine($0, detail) }) {
+            uniqueDetails.append(detail)
+        }
+
+        guard !uniqueDetails.isEmpty else { return nil }
+        let joined = uniqueDetails.joined(separator: " ")
+        guard !isDuplicate(joined, of: [betterLine, fixDetails]) else { return nil }
+        return joined
+    }
+
+    private func cleanedFixText(_ text: String) -> String? {
+        guard let cleaned = cleanCoachText(text) else { return nil }
+        guard !isDuplicate(cleaned, of: [betterLine]) else { return nil }
+        return cleaned
     }
 
     private func clean(_ text: String) -> String? {
@@ -580,6 +600,10 @@ struct LearningFeedbackCard: View {
         normalizeLine(lhs) == normalizeLine(rhs)
     }
 
+    private func isDuplicate(_ text: String, of candidates: [String?]) -> Bool {
+        candidates.compactMap { $0 }.contains { isSameLine($0, text) }
+    }
+
     private func normalizeLine(_ text: String) -> String {
         text
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -587,32 +611,6 @@ struct LearningFeedbackCard: View {
             .filter { $0.isLetter || $0.isNumber || $0.isWhitespace }
             .split(separator: " ")
             .joined(separator: " ")
-    }
-}
-
-private struct FeedbackSavedPhraseRow: View {
-    let text: String
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "bookmark.fill")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(Color.primaryBlue)
-                .padding(.top, 2)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Saved phrase")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(Color.primaryBlue)
-                Text(text)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.primaryBlue.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -631,26 +629,33 @@ struct FeedbackFallbackNotice: View {
 private struct FeedbackCompactRow: View {
     let title: String
     let text: String
+    let symbol: String
     let color: Color
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Divider()
-                .overlay(Color.clayStroke.opacity(0.7))
-
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text(title)
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: symbol)
                     .font(.caption.weight(.bold))
                     .foregroundStyle(color)
-                    .frame(width: 86, alignment: .leading)
+                    .frame(width: 18, height: 18)
+                    .padding(.top, 1)
+                    .accessibilityHidden(true)
 
-                Text(text)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(color)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+
+                    Text(text)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
-            .padding(.top, 8)
-            .padding(.bottom, 10)
+            .padding(.vertical, 6)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
@@ -658,6 +663,8 @@ private struct FeedbackCompactRow: View {
 }
 
 struct SpeechPracticePanel: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     let phase: SpeechPracticePhase
     let transcript: String
     let feedback: LearningFeedback?
@@ -691,22 +698,13 @@ struct SpeechPracticePanel: View {
             }
 
             if let feedback {
+                Divider()
+                    .overlay(Color.clayStroke.opacity(0.7))
+
                 LearningFeedbackCard(feedback: feedback)
             }
 
-            if let secondaryActionTitle, let onSecondary {
-                Button(action: onSecondary) {
-                    Label(secondaryActionTitle, systemImage: "arrow.clockwise")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.primaryBlue)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 2)
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("speech-secondary-action")
-            }
-
-            primaryActionButton
+            actionArea
         }
         .padding(16)
         .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -750,15 +748,25 @@ struct SpeechPracticePanel: View {
                 Text(phase.title)
                     .font(.title3.weight(.bold))
                     .foregroundStyle(Color.converlaxInk)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.82)
-                Text(statusDetail)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                if phase != .feedback {
+                    Text(statusDetail)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if let feedback, phase == .feedback, horizontalSizeClass == .compact {
+                    FeedbackScorePill(confidence: feedback.confidence)
+                        .padding(.top, 3)
+                }
             }
 
             Spacer(minLength: 8)
+
+            if let feedback, phase == .feedback, horizontalSizeClass != .compact {
+                FeedbackScorePill(confidence: feedback.confidence)
+            }
 
             if showsCancel {
                 Button(action: onCancel) {
@@ -771,6 +779,33 @@ struct SpeechPracticePanel: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Cancel voice input")
             }
+        }
+    }
+
+    @ViewBuilder
+    private var actionArea: some View {
+        if phase == .feedback,
+           let secondaryActionTitle,
+           let onSecondary {
+            if horizontalSizeClass == .regular {
+                HStack(spacing: 12) {
+                    SpeechSecondaryButton(title: secondaryActionTitle, action: onSecondary)
+                        .frame(maxWidth: .infinity)
+                        .accessibilityIdentifier("speech-secondary-action")
+
+                    primaryActionButton
+                        .frame(maxWidth: .infinity)
+                }
+            } else {
+                VStack(spacing: 10) {
+                    SpeechSecondaryButton(title: secondaryActionTitle, action: onSecondary)
+                        .accessibilityIdentifier("speech-secondary-action")
+
+                    primaryActionButton
+                }
+            }
+        } else {
+            primaryActionButton
         }
     }
 
@@ -1017,6 +1052,68 @@ struct SpeechPracticePanel: View {
     private var readyInstructionText: String? {
         let trimmed = readyInstruction?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
+private struct FeedbackScorePill: View {
+    let confidence: Int
+
+    private var boundedConfidence: Int {
+        min(100, max(0, confidence))
+    }
+
+    private var summary: String {
+        switch boundedConfidence {
+        case 85...100:
+            "Strong attempt"
+        case 70..<85:
+            "Clear attempt"
+        case 55..<70:
+            "Good start"
+        default:
+            "Keep practicing"
+        }
+    }
+
+    var body: some View {
+        Text("\(summary) · \(boundedConfidence)%")
+            .font(.caption.weight(.bold))
+            .foregroundStyle(Color.primaryBlue)
+            .lineLimit(1)
+            .minimumScaleFactor(0.78)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(Color.primaryBlue.opacity(0.08), in: Capsule())
+            .accessibilityLabel("\(summary), \(boundedConfidence) percent")
+    }
+}
+
+private struct SpeechSecondaryButton: View {
+    let title: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.clockwise")
+                    .font(.headline.weight(.semibold))
+                Text(title)
+                    .font(.headline.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+            }
+            .foregroundStyle(Color.primaryBlue)
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: 56)
+            .padding(.horizontal, 18)
+            .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.primaryBlue.opacity(0.24), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(.isButton)
     }
 }
 

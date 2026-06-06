@@ -803,7 +803,7 @@ private struct FreeTalkSessionView: View {
         speechPhase = .processing
         speechErrorMessage = nil
 
-        let aiFeedback: AIFeedback?
+        let aiFeedback: AIFeedback
         do {
             aiFeedback = try await AIFeedbackService.shared.feedback(
                 transcript: cleanText,
@@ -820,8 +820,9 @@ private struct FreeTalkSessionView: View {
                 )
             )
         } catch {
-            aiFeedback = nil
             speechErrorMessage = AIFeedbackService.fallbackMessage(for: error)
+            speechPhase = .error
+            return
         }
 
         let previousProfile = state.profile
@@ -1111,7 +1112,7 @@ private struct RoleplayDetailView: View {
         speechErrorMessage = nil
 
         let promptText = "Roleplay at \(roleplay.setting): \(roleplay.subtitle)"
-        let aiFeedback: AIFeedback?
+        let aiFeedback: AIFeedback
         do {
             aiFeedback = try await AIFeedbackService.shared.feedback(
                 transcript: cleanText,
@@ -1128,8 +1129,9 @@ private struct RoleplayDetailView: View {
                 )
             )
         } catch {
-            aiFeedback = nil
             speechErrorMessage = AIFeedbackService.fallbackMessage(for: error)
+            speechPhase = .error
+            return
         }
 
         let previousProfile = state.profile
@@ -1761,7 +1763,7 @@ private struct SavedLinesReviewView: View {
         speechPhase = .processing
         speechErrorMessage = nil
 
-        let aiFeedback: AIFeedback?
+        let aiFeedback: AIFeedback
         do {
             aiFeedback = try await AIFeedbackService.shared.feedback(
                 transcript: cleanText,
@@ -1778,8 +1780,9 @@ private struct SavedLinesReviewView: View {
                 )
             )
         } catch {
-            aiFeedback = nil
             speechErrorMessage = AIFeedbackService.fallbackMessage(for: error)
+            speechPhase = .error
+            return
         }
 
         let result = state.recordConversationSession(
