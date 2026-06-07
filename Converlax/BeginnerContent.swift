@@ -249,13 +249,13 @@ enum BeginnerContent {
             accent: accent,
             minutes: minutes,
             steps: [
-                LessonStep(id: "\(id)-goal", kind: .teach, title: "Speaking goal", prompt: goal, helper: "Say the goal first so your brain knows the job.", choices: [], correctAnswer: nil),
+                LessonStep(id: "\(id)-goal", kind: .teach, title: LessonTurnIntent.sayThisSentence.rawValue, prompt: goal, helper: "Read this once to set the focus.", choices: [], correctAnswer: nil),
                 LessonStep(id: "\(id)-model", kind: .teach, title: "Listen and repeat", prompt: model, helper: modelHelper, choices: [], correctAnswer: nil),
-                LessonStep(id: "\(id)-speak", kind: .speak, title: "Say it your way", prompt: speak, helper: speakHelper, choices: [], correctAnswer: nil),
-                LessonStep(id: "\(id)-alternative", kind: .speak, title: "Natural alternative", prompt: alternative, helper: alternativeHelper, choices: [], correctAnswer: nil),
-                LessonStep(id: "\(id)-mistake", kind: .choice, title: "Common mistake", prompt: mistakePrompt, helper: "Say the clear line out loud.", choices: [], correctAnswer: correctAnswer),
-                LessonStep(id: "\(id)-roleplay", kind: .roleplay, title: "Roleplay", prompt: roleplay, helper: roleplayHelper, choices: [], correctAnswer: nil),
-                LessonStep(id: "\(id)-follow-up", kind: .freeResponse, title: "Follow-up practice", prompt: followUp, helper: followUpHelper, choices: [], correctAnswer: nil)
+                LessonStep(id: "\(id)-speak", kind: .speak, title: LessonTurnIntent.sayThisSentence.rawValue, prompt: speak, helper: "Read the line as shown.", choices: [], correctAnswer: nil),
+                LessonStep(id: "\(id)-alternative", kind: .speak, title: LessonTurnIntent.sayThisSentence.rawValue, prompt: alternative, helper: "Read the line as shown.", choices: [], correctAnswer: nil),
+                LessonStep(id: "\(id)-mistake", kind: .choice, title: LessonTurnIntent.answerOutLoud.rawValue, prompt: mistakePrompt, helper: "Use a complete sentence.", choices: [], correctAnswer: correctAnswer),
+                LessonStep(id: "\(id)-roleplay", kind: .roleplay, title: LessonTurnIntent.answerOutLoud.rawValue, prompt: roleplay, helper: roleplayHelper, choices: [], correctAnswer: nil),
+                LessonStep(id: "\(id)-follow-up", kind: .freeResponse, title: LessonTurnIntent.answerOutLoud.rawValue, prompt: followUp, helper: followUpHelper, choices: [], correctAnswer: nil)
             ],
             savedWords: savedWords,
             visualAssetKind: icon,
@@ -350,13 +350,13 @@ enum BeginnerContent {
             accent: accent,
             minutes: minutes,
             steps: [
-                LessonStep(id: "\(id)-goal", kind: .teach, title: "Speaking goal", prompt: goal, helper: "Keep the line short so it is easy to say.", choices: [], correctAnswer: nil),
+                LessonStep(id: "\(id)-goal", kind: .teach, title: LessonTurnIntent.sayThisSentence.rawValue, prompt: goal, helper: "Read this once to set the focus.", choices: [], correctAnswer: nil),
                 LessonStep(id: "\(id)-model", kind: .teach, title: "Listen and repeat", prompt: model, helper: modelHelper, choices: [], correctAnswer: nil),
-                LessonStep(id: "\(id)-speak", kind: .speak, title: "Say it your way", prompt: speak, helper: speakHelper, choices: [], correctAnswer: nil),
-                LessonStep(id: "\(id)-next-line", kind: .speak, title: "Natural next line", prompt: nextLine, helper: nextLineHelper, choices: [], correctAnswer: nil),
-                LessonStep(id: "\(id)-check", kind: .choice, title: "Clear answer", prompt: checkPrompt, helper: "Say the natural French line out loud.", choices: [], correctAnswer: correctAnswer),
-                LessonStep(id: "\(id)-roleplay", kind: .speak, title: "Roleplay", prompt: roleplay, helper: roleplayHelper, choices: [], correctAnswer: nil),
-                LessonStep(id: "\(id)-follow-up", kind: .speak, title: "Follow-up practice", prompt: followUp, helper: followUpHelper, choices: [], correctAnswer: nil)
+                LessonStep(id: "\(id)-speak", kind: .speak, title: LessonTurnIntent.sayThisSentence.rawValue, prompt: speak, helper: "Read the line as shown.", choices: [], correctAnswer: nil),
+                LessonStep(id: "\(id)-next-line", kind: .speak, title: LessonTurnIntent.sayThisSentence.rawValue, prompt: nextLine, helper: "Read the line as shown.", choices: [], correctAnswer: nil),
+                LessonStep(id: "\(id)-check", kind: .choice, title: LessonTurnIntent.answerOutLoud.rawValue, prompt: checkPrompt, helper: "Use a complete sentence.", choices: [], correctAnswer: correctAnswer),
+                LessonStep(id: "\(id)-roleplay", kind: .roleplay, title: LessonTurnIntent.answerOutLoud.rawValue, prompt: roleplay, helper: roleplayHelper, choices: [], correctAnswer: nil),
+                LessonStep(id: "\(id)-follow-up", kind: .freeResponse, title: LessonTurnIntent.answerOutLoud.rawValue, prompt: followUp, helper: followUpHelper, choices: [], correctAnswer: nil)
             ],
             savedWords: savedWords
         )

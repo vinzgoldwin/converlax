@@ -60,53 +60,58 @@ final class SpeechPlaybackService: NSObject, ObservableObject, AVSpeechSynthesiz
 
 private extension LessonStep {
     var isModelPhraseStep: Bool {
-        kind == .teach && id.hasSuffix("-model")
+        showsPreSpeechPlayback
     }
 
-    var speakablePrompt: String {
-        if prompt.contains("___"), let correctAnswer {
-            return prompt.replacingOccurrences(of: "___", with: correctAnswer)
+    func speechTarget(selectedChoice: String? = nil) -> String {
+        if turnIntent == .chooseAndSay,
+           let selectedChoice,
+           !selectedChoice.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return selectedChoice
         }
 
-        return correctAnswer ?? prompt
+        return expectedSpeechText
     }
 
     var voicePromptTitle: String {
-        if isModelPhraseStep {
-            return "Listen and repeat"
-        }
-        return kind == .choice && correctAnswer != nil ? "Clear answer" : title
+        turnIntent.rawValue
     }
 
     var voicePromptContext: String? {
-        guard kind == .choice, correctAnswer != nil else { return nil }
-        let trimmedPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedPrompt.isEmpty else { return nil }
-        return "Situation: \(trimmedPrompt)"
+        nil
     }
 
     var speakableContext: String {
-        kind == .choice && correctAnswer != nil ? prompt : helper
+        helper.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? visiblePromptText : helper
     }
 
-    var voiceReadyInstruction: String {
-        switch kind {
-        case .teach:
-            if isModelPhraseStep {
-                return "Play the sentence, then say it out loud."
+    func voiceReadyInstruction(selectedChoice: String? = nil) -> String {
+        switch turnIntent {
+        case .listenAndRepeat:
+            return "Listen first, then repeat it."
+        case .sayThisSentence:
+            return "Read it aloud when you are ready."
+        case .answerOutLoud:
+            return "Answer out loud when you are ready."
+        case .chooseAndSay:
+            if let selectedChoice,
+               !selectedChoice.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return "Say your selected answer out loud."
             }
-            return "Say this goal out loud."
-        case .choice:
-            if correctAnswer != nil {
-                return "Say the clear answer out loud."
-            }
-            return "Answer this prompt out loud."
-        case .speak:
-            return "Say this line out loud. Change the details if needed."
-        case .roleplay:
-            return "Answer the situation out loud."
-        case .freeResponse:
-            return "Answer this prompt in your own words."
+            return "Choose an option first."
+        }
+    }
+
+    var feedbackMode: String {
+        switch turnIntent {
+        case .listenAndRepeat:
+            return "Listen and repeat"
+        case .sayThisSentence:
+            return "Read aloud"
+        case .answerOutLoud:
+            return "Answer out loud"
+        case .chooseAndSay:
+            return "Choose and say"
         }
     }
 }
@@ -123,9 +128,11 @@ struct LessonPlayerView: View {
     @State private var transcript = ""
     @State private var speechFeedback: LearningFeedback?
     @State private var turnFeedbackByStepID: [String: LearningFeedback] = [:]
+    @State private var selectedChoicesByStepID: [String: String] = [:]
     @State private var speechErrorMessage: String?
     @StateObject private var speechRecognizer = SpeechRecognitionService()
     @StateObject private var speechPlayback = SpeechPlaybackService()
+    @State private var savedLineReactionTrigger = 0
     @State private var didApplyLaunchSpeechState = false
     @State private var didApplyLaunchCompletionState = false
     @State private var completionResult: CompletionCelebrationResult?
@@ -164,6 +171,7 @@ struct LessonPlayerView: View {
                             progress: progress,
                             accent: lesson.accent.color,
                             savedCurrentLine: savedCurrentLine,
+                            savedLineReactionTrigger: savedLineReactionTrigger,
                             speechPhase: speechPhase,
                             transcript: transcript,
                             voiceLevel: speechRecognizer.voiceLevel,
@@ -173,7 +181,9 @@ struct LessonPlayerView: View {
                             canGoToPreviousTurn: stepIndex > 0,
                             canGoToNextTurn: stepIndex < furthestAvailableStepIndex,
                             isModelPhrasePlaying: speechPlayback.isPlaying,
+                            selectedChoice: selectedChoice,
                             onSaveLine: saveCurrentLine,
+                            onSelectChoice: { selectedChoicesByStepID[step.id] = $0 },
                             onPlayback: playCurrentModelPhrase,
                             onSpeechPrimary: advanceSpeechState,
                             onSpeechCancel: cancelSpeech,
@@ -217,6 +227,10 @@ struct LessonPlayerView: View {
         lesson.steps[stepIndex]
     }
 
+    private var selectedChoice: String? {
+        selectedChoicesByStepID[step.id]
+    }
+
     private var progress: Double {
         Double(stepIndex + 1) / Double(lesson.steps.count)
     }
@@ -225,10 +239,14 @@ struct LessonPlayerView: View {
         min(max(state.resumeStepIndex(for: lesson), stepIndex), max(lesson.steps.count - 1, 0))
     }
 
+    private var isCurrentTurnReadyForSpeech: Bool {
+        step.turnIntent != .chooseAndSay || selectedChoice != nil
+    }
+
     private var currentSavedLine: SavedLine {
         SavedLine(
             id: "lesson-\(step.id)",
-            text: step.speakablePrompt,
+            text: step.speechTarget(selectedChoice: selectedChoice),
             translation: step.speakableContext,
             source: lesson.title,
             note: "Saved from a \(lesson.title.lowercased()) step."
@@ -245,6 +263,7 @@ struct LessonPlayerView: View {
 
         state.saveLine(line)
         savedCurrentLine = true
+        savedLineReactionTrigger += 1
     }
 
     private func syncSavedCurrentLine() {
@@ -287,7 +306,7 @@ struct LessonPlayerView: View {
     private func retryCurrentTurn() {
         speechPlayback.stop()
         speechRecognizer.cancelRecording()
-        withAnimation(.easeOut(duration: 0.2)) {
+        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) {
             speechPhase = .ready
             transcript = ""
             speechFeedback = nil
@@ -301,7 +320,7 @@ struct LessonPlayerView: View {
         speechRecognizer.cancelRecording()
         let targetStep = lesson.steps[targetIndex]
         let restoredFeedback = latestFeedback(for: targetStep)
-        withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+        withAnimation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.86)) {
             stepIndex = targetIndex
             savedCurrentLine = state.savedLines.contains { $0.id == "lesson-\(targetStep.id)" }
             speechPhase = restoredFeedback == nil ? .ready : .feedback
@@ -312,6 +331,8 @@ struct LessonPlayerView: View {
     }
 
     private func startSpeechRecording() {
+        guard isCurrentTurnReadyForSpeech else { return }
+
         speechPlayback.stop()
         speechPhase = .requestingPermission
         transcript = ""
@@ -346,7 +367,7 @@ struct LessonPlayerView: View {
     private func playCurrentModelPhrase() {
         guard step.isModelPhraseStep else { return }
         speechPlayback.toggle(
-            text: step.speakablePrompt,
+            text: step.speechTarget(selectedChoice: selectedChoice),
             localeIdentifier: state.profile.targetLanguage.speechRecognitionLocaleIdentifier,
             voiceIdentifier: state.selectedLessonVoiceIdentifier
         )
@@ -368,7 +389,7 @@ struct LessonPlayerView: View {
         do {
             aiFeedback = try await AIFeedbackService.shared.feedback(
                 transcript: cleanTranscript,
-                context: speechFeedbackContext(mode: "Speaking practice", step: step)
+                context: speechFeedbackContext(mode: step.feedbackMode, step: step)
             )
         } catch {
             speechErrorMessage = AIFeedbackService.fallbackMessage(for: error)
@@ -380,12 +401,13 @@ struct LessonPlayerView: View {
             lesson: lesson,
             step: step,
             transcript: cleanTranscript,
-            mode: "Speaking practice",
+            mode: step.feedbackMode,
             aiFeedback: aiFeedback
         )
         turnFeedbackByStepID[step.id] = feedback
         speechFeedback = feedback
         speechPhase = .feedback
+        speakMascotMoment(for: .lessonStrongAttempt(lessonID: lesson.id, confidence: feedback.confidence))
     }
 
     private func latestFeedback(for step: LessonStep) -> LearningFeedback? {
@@ -425,7 +447,7 @@ struct LessonPlayerView: View {
             let nextStepIndex = stepIndex + 1
             let nextStep = lesson.steps[nextStepIndex]
             state.saveLessonResume(lesson: lesson, stepIndex: nextStepIndex)
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+            withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86)) {
                 stepIndex = nextStepIndex
                 savedCurrentLine = state.savedLines.contains { $0.id == "lesson-\(nextStep.id)" }
                 speechPhase = .ready
@@ -441,10 +463,26 @@ struct LessonPlayerView: View {
                 title: "Lesson complete",
                 subtitle: "You finished \(lesson.title.lowercased())."
             )
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+            withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86)) {
                 completed = true
             }
+            speakMascotMoment(for: .lessonCompletion(lessonID: lesson.id))
         }
+    }
+
+    private func speakMascotMoment(for event: MascotVoiceCelebrationEvent) {
+        guard
+            let moment = state.mascotVoiceMoment(
+                for: event,
+                isRecording: speechPhase == .requestingPermission || speechPhase == .recording
+            )
+        else { return }
+
+        speechPlayback.speak(
+            text: moment.text,
+            localeIdentifier: state.profile.targetLanguage.speechRecognitionLocaleIdentifier,
+            voiceIdentifier: state.selectedLessonVoiceIdentifier
+        )
     }
 
     private func applyLaunchSpeechStateIfNeeded() {
@@ -476,7 +514,7 @@ struct LessonPlayerView: View {
                 lesson: lesson,
                 step: targetStep,
                 transcript: transcript,
-                mode: "Speaking practice"
+                mode: targetStep.feedbackMode
             )
             turnFeedbackByStepID[targetStep.id] = feedback
             speechFeedback = feedback
@@ -491,7 +529,7 @@ struct LessonPlayerView: View {
     }
 
     private func sampleTranscript(for step: LessonStep) -> String {
-        let filledBlank = step.speakablePrompt.replacingOccurrences(of: "___", with: step.correctAnswer ?? "coffee")
+        let filledBlank = step.expectedSpeechText.replacingOccurrences(of: "___", with: step.correctAnswer ?? "coffee")
         return filledBlank.replacingOccurrences(of: "...", with: "Alex")
     }
 
@@ -499,7 +537,7 @@ struct LessonPlayerView: View {
         AIFeedbackRequestContext(
             mode: mode,
             lessonTitle: lesson.title,
-            prompt: step.speakablePrompt,
+            prompt: step.visiblePromptText,
             expectedPhrase: expectedPhrase(for: step),
             targetLanguage: state.profile.targetLanguage.rawValue,
             proficiencyLevel: state.profile.currentLevel.code,
@@ -510,10 +548,11 @@ struct LessonPlayerView: View {
     }
 
     private func expectedPhrase(for step: LessonStep) -> String {
-        if step.prompt.contains("___"), let answer = step.correctAnswer {
-            return step.prompt.replacingOccurrences(of: "___", with: answer)
+        if step.id == self.step.id {
+            return step.speechTarget(selectedChoice: selectedChoice)
         }
-        return step.speakablePrompt
+
+        return step.expectedSpeechText
     }
 }
 
@@ -525,6 +564,7 @@ private struct VoiceFirstLessonTurn: View {
     let progress: Double
     let accent: Color
     let savedCurrentLine: Bool
+    let savedLineReactionTrigger: Int
     let speechPhase: SpeechPracticePhase
     let transcript: String
     let voiceLevel: Double
@@ -534,7 +574,9 @@ private struct VoiceFirstLessonTurn: View {
     let canGoToPreviousTurn: Bool
     let canGoToNextTurn: Bool
     let isModelPhrasePlaying: Bool
+    let selectedChoice: String?
     let onSaveLine: () -> Void
+    let onSelectChoice: (String) -> Void
     let onPlayback: () -> Void
     let onSpeechPrimary: () -> Void
     let onSpeechCancel: () -> Void
@@ -559,10 +601,14 @@ private struct VoiceFirstLessonTurn: View {
                 step: step,
                 helperText: helperText,
                 savedCurrentLine: savedCurrentLine,
-                isPlaybackVisible: step.isModelPhraseStep,
+                savedLineReactionTrigger: savedLineReactionTrigger,
+                isSaveVisible: !step.hidesExpectedAnswerBeforeSpeech,
+                isPlaybackVisible: step.showsPreSpeechPlayback,
                 isPlaying: isModelPhrasePlaying,
+                selectedChoice: selectedChoice,
                 accent: accent,
                 onSaveLine: onSaveLine,
+                onSelectChoice: onSelectChoice,
                 onPlayback: onPlayback
             )
 
@@ -571,11 +617,13 @@ private struct VoiceFirstLessonTurn: View {
                 transcript: transcript,
                 feedback: speechFeedback,
                 accent: accent,
-                readyInstruction: step.voiceReadyInstruction,
+                readyInstruction: step.voiceReadyInstruction(selectedChoice: selectedChoice),
                 voiceLevel: voiceLevel,
                 errorMessage: speechErrorMessage,
                 primaryActionTitle: voiceActionTitle,
                 secondaryActionTitle: retryActionTitle,
+                isPrimaryAvailable: isSpeechPrimaryAvailable,
+                disabledInstruction: disabledInstruction,
                 onPrimary: onSpeechPrimary,
                 onCancel: onSpeechCancel,
                 onSecondary: onSpeechRetry
@@ -603,6 +651,14 @@ private struct VoiceFirstLessonTurn: View {
             return nil
         }
         return "Try again"
+    }
+
+    private var isSpeechPrimaryAvailable: Bool {
+        step.turnIntent != .chooseAndSay || selectedChoice != nil
+    }
+
+    private var disabledInstruction: String? {
+        isSpeechPrimaryAvailable ? nil : "Choose an option first."
     }
 
     private var helperText: String? {
@@ -677,10 +733,14 @@ private struct VoicePromptBlock: View {
     let step: LessonStep
     let helperText: String?
     let savedCurrentLine: Bool
+    let savedLineReactionTrigger: Int
+    let isSaveVisible: Bool
     let isPlaybackVisible: Bool
     let isPlaying: Bool
+    let selectedChoice: String?
     let accent: Color
     let onSaveLine: () -> Void
+    let onSelectChoice: (String) -> Void
     let onPlayback: () -> Void
 
     var body: some View {
@@ -690,9 +750,11 @@ private struct VoicePromptBlock: View {
                     Text(step.voicePromptTitle)
                         .font(.caption.weight(.bold))
                         .foregroundStyle(.secondary)
-                    Text(step.speakablePrompt)
+                        .accessibilityIdentifier("lesson-prompt-title")
+                    Text(step.visiblePromptText)
                         .font(.title2.weight(.semibold))
                         .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("lesson-prompt-text")
                     if let context = step.voicePromptContext {
                         Text(context)
                             .font(.subheadline.weight(.semibold))
@@ -702,29 +764,44 @@ private struct VoicePromptBlock: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                HStack(spacing: 8) {
-                    ConverlaxMascotView(
-                        state: .saved,
-                        size: 34,
-                        isAnimated: savedCurrentLine,
-                        reactionTrigger: savedCurrentLine ? 1 : 0
-                    )
-                    .opacity(savedCurrentLine ? 1 : 0)
-                    .frame(width: 34, height: 34)
-                    .accessibilityHidden(!savedCurrentLine)
+                if isSaveVisible {
+                    HStack(spacing: 8) {
+                        ConverlaxMascotView(
+                            state: .saved,
+                            size: 34,
+                            isAnimated: savedCurrentLine,
+                            reactionTrigger: savedLineReactionTrigger
+                        )
+                        .opacity(savedCurrentLine ? 1 : 0)
+                        .frame(width: 34, height: 34)
+                        .accessibilityHidden(!savedCurrentLine)
+                        .accessibilityIdentifier("saved-line-reaction-mascot")
 
-                    Button(action: onSaveLine) {
-                        Image(systemName: savedCurrentLine ? "bookmark.fill" : "bookmark")
-                            .font(.headline.weight(.semibold))
-                            .foregroundStyle(savedCurrentLine ? Color.primaryBlue : Color.secondary)
-                            .symbolEffect(.bounce, value: savedCurrentLine)
-                            .frame(width: 36, height: 36)
-                            .background(Color.appBackground.opacity(0.76), in: Circle())
+                        Button(action: onSaveLine) {
+                            Image(systemName: savedCurrentLine ? "bookmark.fill" : "bookmark")
+                                .font(.headline.weight(.semibold))
+                                .foregroundStyle(savedCurrentLine ? Color.primaryBlue : Color.secondary)
+                                .frame(width: 36, height: 36)
+                                .background(Color.appBackground.opacity(0.76), in: Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(savedCurrentLine ? "Unsave line" : "Save line")
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(savedCurrentLine ? "Unsave line" : "Save line")
+                    .frame(width: 78, alignment: .trailing)
                 }
-                .frame(width: 78, alignment: .trailing)
+            }
+
+            if !step.choices.isEmpty {
+                VStack(spacing: 8) {
+                    ForEach(step.choices, id: \.self) { choice in
+                        ChoiceLineButton(
+                            title: choice,
+                            isSelected: selectedChoice == choice,
+                            accent: accent,
+                            action: { onSelectChoice(choice) }
+                        )
+                    }
+                }
             }
 
             if isPlaybackVisible {
@@ -752,6 +829,7 @@ private struct VoicePromptBlock: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(isPlaying ? "Stop sentence audio" : "Play sentence audio")
+                .accessibilityIdentifier("lesson-audio-playback")
             }
 
             if let helperText {
@@ -763,5 +841,40 @@ private struct VoicePromptBlock: View {
         }
         .padding(16)
         .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+private struct ChoiceLineButton: View {
+    let title: String
+    let isSelected: Bool
+    let accent: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(isSelected ? accent : Color.secondary)
+                    .frame(width: 24, height: 24)
+
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.converlaxInk)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 11)
+            .background(Color.appBackground.opacity(isSelected ? 0.92 : 0.58), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(isSelected ? accent.opacity(0.55) : Color.clayStroke.opacity(0.75), lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 }

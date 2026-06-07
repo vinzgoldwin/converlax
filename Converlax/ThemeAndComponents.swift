@@ -24,6 +24,7 @@ extension Color {
 struct PrimaryButtonStyle: ButtonStyle {
     var isEnabled = true
     @Environment(\.isEnabled) private var controlIsEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
         let active = isEnabled && controlIsEnabled
@@ -38,12 +39,13 @@ struct PrimaryButtonStyle: ButtonStyle {
             .shadow(color: active ? Color.primaryBlue.opacity(0.10) : .clear, radius: 8, y: 4)
             .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: configuration.isPressed)
     }
 }
 
 struct SecondaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -59,13 +61,14 @@ struct SecondaryButtonStyle: ButtonStyle {
             )
             .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: configuration.isPressed)
     }
 }
 
 struct CalmPressButtonStyle: ButtonStyle {
     var cornerRadius: CGFloat = 14
     var highlightColor: Color = .primaryBlue
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -74,7 +77,7 @@ struct CalmPressButtonStyle: ButtonStyle {
                     .fill(highlightColor.opacity(configuration.isPressed ? 0.08 : 0))
             )
             .scaleEffect(configuration.isPressed ? 0.985 : 1)
-            .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: configuration.isPressed)
     }
 }
 
@@ -97,6 +100,7 @@ extension View {
 
 struct LessonProgressBar: View {
     let progress: Double
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { proxy in
@@ -108,7 +112,7 @@ struct LessonProgressBar: View {
             }
         }
         .frame(height: 6)
-        .animation(.easeOut(duration: 0.36), value: progress)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.36), value: progress)
         .accessibilityLabel("Progress")
         .accessibilityValue("\(Int(min(max(progress, 0), 1) * 100)) percent")
     }
@@ -412,7 +416,7 @@ struct ConverlaxWaveform: View {
             .frame(height: 40)
         }
         .frame(height: 40)
-        .animation(.easeOut(duration: 0.18), value: normalizedLevel)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: normalizedLevel)
         .accessibilityHidden(true)
     }
 
@@ -738,6 +742,8 @@ struct SpeechPracticePanel: View {
     var errorMessage: String?
     var primaryActionTitle: String? = nil
     var secondaryActionTitle: String? = nil
+    var isPrimaryAvailable = true
+    var disabledInstruction: String? = nil
     let onPrimary: () -> Void
     let onCancel: () -> Void
     var onSecondary: (() -> Void)? = nil
@@ -923,7 +929,7 @@ struct SpeechPracticePanel: View {
     }
 
     private var isPrimaryEnabled: Bool {
-        phase != .requestingPermission && phase != .processing && phase != .transcribing
+        isPrimaryAvailable && phase != .requestingPermission && phase != .processing && phase != .transcribing
     }
 
     private var isListeningOrWorking: Bool {
@@ -1100,7 +1106,7 @@ struct SpeechPracticePanel: View {
         case .permissionNeeded, .permissionDenied:
             "Fix access and retry this turn."
         case .ready:
-            readyInstructionText ?? "Answer the prompt out loud."
+            disabledInstructionText ?? readyInstructionText ?? "Answer the prompt out loud."
         case .recording:
             readyInstructionText ?? "Speak naturally. Your words appear below."
         case .paused:
@@ -1122,6 +1128,12 @@ struct SpeechPracticePanel: View {
 
     private var readyInstructionText: String? {
         let trimmed = readyInstruction?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private var disabledInstructionText: String? {
+        guard !isPrimaryAvailable else { return nil }
+        let trimmed = disabledInstruction?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return trimmed.isEmpty ? nil : trimmed
     }
 }

@@ -111,11 +111,16 @@ final class ConverlaxRootTabsUITests: XCTestCase {
     func testLessonVoiceTurnShowsConcreteSpeakingTask() throws {
         let app = launchApp(initialTab: "home", extraArguments: [
             "-ConverlaxInitialHomeRoute",
-            "lesson"
+            "lesson",
+            "-ConverlaxInitialLessonStepIndex",
+            "0"
         ])
 
         XCTAssertTrue(element("speech-practice-panel", in: app).waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Say this goal out loud."].exists)
+        XCTAssertTrue(app.staticTexts["Say this sentence"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["My goal is to introduce myself in two calm sentences."].exists)
+        XCTAssertTrue(app.staticTexts["Read it aloud when you are ready."].exists)
+        XCTAssertFalse(app.buttons["Play sentence audio"].exists)
         XCTAssertFalse(app.staticTexts["Record one clear answer."].exists)
     }
 
@@ -131,7 +136,95 @@ final class ConverlaxRootTabsUITests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["Listen and repeat"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.buttons["Play sentence audio"].exists)
-        XCTAssertTrue(app.staticTexts["Play the sentence, then say it out loud."].exists)
+        XCTAssertTrue(app.staticTexts["Listen first, then repeat it."].exists)
+    }
+
+    func testLessonSaySentenceTurnHasNoPlaybackControl() throws {
+        let app = launchApp(initialTab: "home", extraArguments: [
+            "-ConverlaxInitialHomeRoute",
+            "lesson",
+            "-ConverlaxInitialLessonStepIndex",
+            "2"
+        ])
+
+        XCTAssertTrue(element("speech-practice-panel", in: app).waitForExistence(timeout: 5))
+
+        XCTAssertTrue(app.staticTexts["Say this sentence"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Hi, I'm Alex. I'm from Indonesia."].exists)
+        XCTAssertTrue(app.staticTexts["Read it aloud when you are ready."].exists)
+        XCTAssertFalse(app.buttons["Play sentence audio"].exists)
+    }
+
+    func testLessonAnswerOutLoudDoesNotRevealAnswerBeforeAttempt() throws {
+        let app = launchApp(initialTab: "home", extraArguments: [
+            "-ConverlaxInitialHomeRoute",
+            "lesson",
+            "-ConverlaxInitialLessonStepIndex",
+            "4"
+        ])
+
+        XCTAssertTrue(element("speech-practice-panel", in: app).waitForExistence(timeout: 5))
+
+        XCTAssertTrue(app.staticTexts["Answer out loud"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["You want to say where you live."].exists)
+        XCTAssertTrue(app.staticTexts["Answer out loud when you are ready."].exists)
+        XCTAssertFalse(app.staticTexts["I live in Jakarta."].exists)
+        XCTAssertFalse(app.buttons["Play sentence audio"].exists)
+        XCTAssertFalse(app.buttons["Save line"].exists)
+    }
+
+    func testLessonCompletionLaunchPathShowsStableCelebration() throws {
+        let app = launchApp(initialTab: "home", extraArguments: [
+            "-ConverlaxInitialHomeRoute",
+            "lesson",
+            "-ConverlaxShowLessonCompletion"
+        ])
+
+        XCTAssertTrue(element("completion-celebration", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Lesson complete"].exists)
+        XCTAssertTrue(app.buttons["Back to course"].exists)
+    }
+
+    func testSavedLineReactionAppearsAfterSavingVisibleTurn() throws {
+        let app = launchApp(initialTab: "home", extraArguments: [
+            "-ConverlaxInitialHomeRoute",
+            "lesson",
+            "-ConverlaxInitialLessonStepIndex",
+            "0"
+        ])
+
+        XCTAssertTrue(app.buttons["Save line"].waitForExistence(timeout: 5))
+        app.buttons["Save line"].tap()
+
+        XCTAssertTrue(app.buttons["Unsave line"].waitForExistence(timeout: 3))
+        XCTAssertTrue(element("saved-line-reaction-mascot", in: app).exists)
+    }
+
+    func testReviewCompletionLaunchPathShowsClearedState() throws {
+        let app = launchApp(initialTab: "review", extraArguments: [
+            "-ConverlaxSeedTutorReview",
+            "-ConverlaxInitialReviewRoute",
+            "smartReview",
+            "-ConverlaxShowReviewCompletion"
+        ])
+
+        XCTAssertTrue(app.staticTexts["Review complete"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Nothing else is due today."].exists)
+        XCTAssertTrue(app.buttons["Continue speaking"].exists)
+    }
+
+    func testForcedOnboardingCompletionLandsOnHome() throws {
+        let app = launchApp(initialTab: "home", extraArguments: ["-ConverlaxForceOnboarding"])
+
+        XCTAssertTrue(element("screen-onboarding", in: app).waitForExistence(timeout: 5))
+        app.buttons["Set up first lesson"].tap()
+        XCTAssertTrue(app.buttons["Choose level"].waitForExistence(timeout: 5))
+        app.buttons["Choose level"].tap()
+        XCTAssertTrue(app.buttons["Show my first lesson"].waitForExistence(timeout: 5))
+        app.buttons["Show my first lesson"].tap()
+
+        XCTAssertTrue(element("screen-home", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(element("home-primary-lesson-action", in: app).exists)
     }
 
     func testVoiceTutorUsesAIReplyNotCannedLessonText() throws {

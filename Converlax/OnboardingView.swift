@@ -47,6 +47,7 @@ struct OnboardingView: View {
             }
             .padding(22)
         }
+        .accessibilityIdentifier("screen-onboarding")
     }
 
     private var header: some View {
@@ -166,7 +167,7 @@ struct OnboardingView: View {
             withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86)) {
                 step += 1
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0 : 0.45)) {
                 isAdvancing = false
             }
         } else {
@@ -174,7 +175,7 @@ struct OnboardingView: View {
                 isAdvancing = true
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0 : 0.34)) {
-                state.completeOnboarding(language: state.profile.targetLanguage, level: state.profile.currentLevel)
+                state.completeOnboarding(language: targetLanguage, level: selectedLevel)
                 onComplete()
             }
         }

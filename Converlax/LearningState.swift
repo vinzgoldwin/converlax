@@ -11,6 +11,7 @@ final class LearningState: ObservableObject {
     private let storageKey = "converlax.learningProfile.v3"
     private let legacyStorageKey = "converlax.learningProfile.v2"
     private let oldestStorageKey = "converlax.learningProfile.v1"
+    private var mascotVoicePolicy = MascotVoiceCelebrationPolicy()
 
     init(storage: UserDefaults = .standard, calendar: Calendar = .current, fileURL: URL? = LearningState.defaultProfileFileURL()) {
         self.storage = storage
@@ -376,6 +377,14 @@ final class LearningState: ObservableObject {
             next.lessonVoiceIdentifierByLanguage[languageKey] = nil
         }
         profile = next
+    }
+
+    func mascotVoiceMoment(
+        for event: MascotVoiceCelebrationEvent,
+        isRecording: Bool,
+        now: Date = Date()
+    ) -> MascotVoiceMoment? {
+        mascotVoicePolicy.moment(for: event, isRecording: isRecording, now: now)
     }
 
     func completeLesson(_ lesson: BeginnerLesson, now: Date = Date()) {

@@ -22,18 +22,140 @@ final class ConverlaxContentTests: XCTestCase {
         XCTAssertEqual(Set(stepIDs).count, stepIDs.count)
     }
 
-    func testOnlyAudioBackedModelStepsUseListenTitle() {
+    func testLessonTurnIntentsMatchTitlesAndPlaybackRules() {
         let lessons = BeginnerContent.lessons(for: .english) + BeginnerContent.lessons(for: .french)
 
         for lesson in lessons {
             for step in lesson.steps {
-                if step.id.hasSuffix("-model") {
-                    XCTAssertEqual(step.title, "Listen and repeat", "\(lesson.id) \(step.id)")
-                } else {
-                    XCTAssertFalse(step.title.localizedCaseInsensitiveContains("listen"), "\(lesson.id) \(step.id)")
+                XCTAssertEqual(step.title, step.turnIntent.rawValue, "\(lesson.id) \(step.id)")
+                XCTAssertEqual(step.showsPreSpeechPlayback, step.turnIntent == .listenAndRepeat, "\(lesson.id) \(step.id)")
+
+                switch step.turnIntent {
+                case .listenAndRepeat:
+                    XCTAssertTrue(step.id.hasSuffix("-model"), "\(lesson.id) \(step.id)")
+                    XCTAssertEqual(step.visiblePromptText, step.expectedSpeechText, "\(lesson.id) \(step.id)")
+                case .sayThisSentence:
+                    XCTAssertFalse(step.id.hasSuffix("-model"), "\(lesson.id) \(step.id)")
+                    XCTAssertEqual(step.visiblePromptText, step.expectedSpeechText, "\(lesson.id) \(step.id)")
+                    XCTAssertNil(step.correctAnswer, "\(lesson.id) \(step.id)")
+                case .answerOutLoud:
+                    XCTAssertFalse(step.id.hasSuffix("-model"), "\(lesson.id) \(step.id)")
+                    if let correctAnswer = step.correctAnswer {
+                        XCTAssertNotEqual(step.visiblePromptText, step.expectedSpeechText, "\(lesson.id) \(step.id)")
+                        XCTAssertFalse(
+                            step.visiblePromptText.localizedCaseInsensitiveContains(correctAnswer),
+                            "\(lesson.id) \(step.id) reveals its answer before speech"
+                        )
+                    }
+                case .chooseAndSay:
+                    XCTAssertFalse(step.choices.isEmpty, "\(lesson.id) \(step.id)")
                 }
             }
         }
+    }
+
+    func testLessonCopyAvoidsMismatchedPrimaryTurnLabels() {
+        let lessons = BeginnerContent.lessons(for: .english) + BeginnerContent.lessons(for: .french)
+        let bannedPrimaryCopy = [
+            "Clear answer",
+            "Natural alternative",
+            "Natural next line",
+            "Say it your way",
+            "Speaking goal",
+            "Say the clear",
+            "clear line",
+            "natural French line"
+        ]
+
+        for lesson in lessons {
+            for step in lesson.steps {
+                let primaryCopy = "\(step.title) \(step.helper)"
+                for bannedCopy in bannedPrimaryCopy {
+                    XCTAssertFalse(
+                        primaryCopy.localizedCaseInsensitiveContains(bannedCopy),
+                        "\(lesson.id) \(step.id) contains mismatched copy: \(bannedCopy)"
+                    )
+                }
+            }
+        }
+    }
+
+    func testMascotVoiceMomentRequiresStrongLessonAttempt() {
+        var policy = MascotVoiceCelebrationPolicy(minimumInterval: 60)
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+
+        XCTAssertNil(policy.moment(
+            for: .lessonStrongAttempt(lessonID: "english-introduce-yourself", confidence: 87),
+            isRecording: false,
+            now: now
+        ))
+
+        let moment = policy.moment(
+            for: .lessonStrongAttempt(lessonID: "english-introduce-yourself", confidence: 88),
+            isRecording: false,
+            now: now
+        )
+
+        XCTAssertTrue(["Nice work.", "Good rhythm.", "That sounded clear."].contains(moment?.text ?? ""))
+    }
+
+    func testMascotVoiceMomentDoesNotPlayWhileRecordingOrConsumeEvent() {
+        var policy = MascotVoiceCelebrationPolicy(minimumInterval: 60)
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+
+        XCTAssertNil(policy.moment(
+            for: .lessonCompletion(lessonID: "english-introduce-yourself"),
+            isRecording: true,
+            now: now
+        ))
+
+        XCTAssertEqual(
+            policy.moment(
+                for: .lessonCompletion(lessonID: "english-introduce-yourself"),
+                isRecording: false,
+                now: now
+            )?.text,
+            "Lesson complete."
+        )
+    }
+
+    func testMascotVoiceMomentThrottlesDifferentEvents() {
+        var policy = MascotVoiceCelebrationPolicy(minimumInterval: 60)
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+
+        XCTAssertNotNil(policy.moment(
+            for: .lessonStrongAttempt(lessonID: "english-introduce-yourself", confidence: 95),
+            isRecording: false,
+            now: now
+        ))
+        XCTAssertNil(policy.moment(
+            for: .lessonCompletion(lessonID: "english-introduce-yourself"),
+            isRecording: false,
+            now: now.addingTimeInterval(30)
+        ))
+        XCTAssertEqual(
+            policy.moment(
+                for: .lessonCompletion(lessonID: "english-introduce-yourself"),
+                isRecording: false,
+                now: now.addingTimeInterval(61)
+            )?.text,
+            "Lesson complete."
+        )
+    }
+
+    func testMascotVoiceReviewCompletionOnlySpeaksOnce() {
+        var policy = MascotVoiceCelebrationPolicy(minimumInterval: 0)
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+
+        XCTAssertEqual(
+            policy.moment(for: .reviewCompletion, isRecording: false, now: now)?.text,
+            "Review complete."
+        )
+        XCTAssertNil(policy.moment(
+            for: .reviewCompletion,
+            isRecording: false,
+            now: now.addingTimeInterval(600)
+        ))
     }
 
     func testHobbyDetailsLessonDoesNotRepeatTurnFourPromptOnTurnSeven() throws {

@@ -693,6 +693,7 @@ private struct LessonPracticePreviewItem: Identifiable {
 }
 
 private struct FreeTalkSessionView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject var state: LearningState
     @State private var finished = false
     @State private var summary: LearningSessionSummary?
@@ -873,7 +874,7 @@ private struct FreeTalkSessionView: View {
             nextActionDetail: ""
         )
         speechPhase = .accepted
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {
+        withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.88)) {
             finished = true
         }
     }
@@ -997,6 +998,7 @@ private struct SituationBrowserView: View {
 }
 
 private struct RoleplayDetailView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let roleplay: RoleplayScenario
     @ObservedObject var state: LearningState
     @State private var completed = false
@@ -1182,7 +1184,7 @@ private struct RoleplayDetailView: View {
             nextActionDetail: ""
         )
         speechPhase = .accepted
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {
+        withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.88)) {
             completed = true
         }
     }
@@ -1304,14 +1306,17 @@ private struct HistoryUsageView: View {
 
 private struct SmartReviewView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject var state: LearningState
     @State private var index = 0
     @State private var showAnswer = false
     @State private var didCompleteReview = false
+    @State private var didApplyLaunchCompletionState = false
     @State private var speechPhase: SpeechPracticePhase = .ready
     @State private var transcript = ""
     @State private var speechErrorMessage: String?
     @StateObject private var speechRecognizer = SpeechRecognitionService()
+    @StateObject private var reviewPlayback = SpeechPlaybackService()
 
     var items: [ScheduledReviewItem] {
         state.dueReviewItems
@@ -1452,12 +1457,16 @@ private struct SmartReviewView: View {
         .background(Color.appBackground.ignoresSafeArea())
         .navigationTitle("Review due items")
         .toolbar(.hidden, for: .tabBar)
-        .animation(.spring(response: 0.34, dampingFraction: 0.86), value: currentItemAnimationID)
-        .animation(.easeOut(duration: 0.24), value: showAnswer)
+        .animation(reduceMotion ? nil : .spring(response: 0.34, dampingFraction: 0.86), value: currentItemAnimationID)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.24), value: showAnswer)
         .onChange(of: speechRecognizer.transcript) { _, newValue in
             transcript = newValue
         }
+        .onAppear {
+            applyLaunchCompletionStateIfNeeded()
+        }
         .onDisappear {
+            reviewPlayback.stop()
             speechRecognizer.cancelRecording()
         }
     }
@@ -1490,6 +1499,7 @@ private struct SmartReviewView: View {
     }
 
     private func startSpeechRecording() {
+        reviewPlayback.stop()
         speechPhase = .requestingPermission
         transcript = ""
         speechErrorMessage = nil
@@ -1520,6 +1530,7 @@ private struct SmartReviewView: View {
         speechPhase = .transcript
     }
     private func resetSpeech() {
+        reviewPlayback.stop()
         speechRecognizer.cancelRecording()
         speechPhase = .ready
         transcript = ""
@@ -1528,24 +1539,52 @@ private struct SmartReviewView: View {
     }
     private func recordCurrentReview(remembered: Bool) {
         let reviewedItem = item
-        withAnimation(.easeInOut(duration: 0.28)) {
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.28)) {
             state.recordReview(reviewedItem, remembered: remembered)
         }
 
         if state.dueReviewItems.isEmpty {
-            withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
+            let wasRecording = speechPhase == .requestingPermission || speechPhase == .recording
+            withAnimation(reduceMotion ? nil : .spring(response: 0.34, dampingFraction: 0.88)) {
                 didCompleteReview = true
             }
             resetSpeech()
+            speakMascotMoment(for: .reviewCompletion, isRecording: wasRecording)
         } else {
-            withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
+            withAnimation(reduceMotion ? nil : .spring(response: 0.34, dampingFraction: 0.88)) {
                 advanceReview()
             }
         }
     }
 
+    private func speakMascotMoment(for event: MascotVoiceCelebrationEvent, isRecording: Bool? = nil) {
+        guard
+            let moment = state.mascotVoiceMoment(
+                for: event,
+                isRecording: isRecording ?? (speechPhase == .requestingPermission || speechPhase == .recording)
+            )
+        else { return }
+
+        reviewPlayback.speak(
+            text: moment.text,
+            localeIdentifier: state.profile.targetLanguage.speechRecognitionLocaleIdentifier,
+            voiceIdentifier: state.selectedLessonVoiceIdentifier
+        )
+    }
+
     private func advanceReview() {
         index = min(index, max(items.count - 1, 0))
+        resetSpeech()
+    }
+
+    private func applyLaunchCompletionStateIfNeeded() {
+        guard
+            !didApplyLaunchCompletionState,
+            ProcessInfo.processInfo.arguments.contains("-ConverlaxShowReviewCompletion")
+        else { return }
+
+        didApplyLaunchCompletionState = true
+        didCompleteReview = true
         resetSpeech()
     }
 

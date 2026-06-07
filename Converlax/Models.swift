@@ -597,6 +597,13 @@ enum LessonStepKind: String, Codable, Hashable {
     case freeResponse
 }
 
+enum LessonTurnIntent: String, Codable, Hashable, CaseIterable {
+    case listenAndRepeat = "Listen and repeat"
+    case sayThisSentence = "Say this sentence"
+    case answerOutLoud = "Answer out loud"
+    case chooseAndSay = "Choose and say"
+}
+
 enum SavedLearningKind: String, Codable, Hashable {
     case line = "Line"
     case word = "Word"
@@ -650,6 +657,84 @@ enum SpeechPracticePhase: String, Codable, Hashable {
         case .accepted: "Practice again"
         case .noSpeech, .error: "Try again"
         }
+    }
+}
+
+enum MascotVoiceCelebrationEvent: Hashable {
+    case lessonStrongAttempt(lessonID: String, confidence: Int)
+    case lessonCompletion(lessonID: String)
+    case reviewCompletion
+
+    var key: String {
+        switch self {
+        case .lessonStrongAttempt(let lessonID, _):
+            return "lesson:\(lessonID):strong-attempt"
+        case .lessonCompletion(let lessonID):
+            return "lesson:\(lessonID):completion"
+        case .reviewCompletion:
+            return "review:completion"
+        }
+    }
+
+    var isEligible: Bool {
+        switch self {
+        case .lessonStrongAttempt(_, let confidence):
+            return confidence >= MascotVoiceCelebrationPolicy.minimumStrongAttemptConfidence
+        case .lessonCompletion, .reviewCompletion:
+            return true
+        }
+    }
+
+    var message: String {
+        switch self {
+        case .lessonStrongAttempt:
+            return ["Nice work.", "Good rhythm.", "That sounded clear."][Self.stableIndex(for: key, count: 3)]
+        case .lessonCompletion:
+            return "Lesson complete."
+        case .reviewCompletion:
+            return "Review complete."
+        }
+    }
+
+    private static func stableIndex(for key: String, count: Int) -> Int {
+        guard count > 0 else { return 0 }
+        let value = key.unicodeScalars.reduce(UInt64(5381)) { partial, scalar in
+            ((partial << 5) &+ partial) &+ UInt64(scalar.value)
+        }
+        return Int(value % UInt64(count))
+    }
+}
+
+struct MascotVoiceMoment: Equatable {
+    let text: String
+}
+
+struct MascotVoiceCelebrationPolicy {
+    static let minimumStrongAttemptConfidence = 88
+    static let defaultMinimumInterval: TimeInterval = 10 * 60
+
+    private let minimumInterval: TimeInterval
+    private var spokenEventKeys: Set<String> = []
+    private var lastSpokenAt: Date?
+
+    init(minimumInterval: TimeInterval = Self.defaultMinimumInterval) {
+        self.minimumInterval = minimumInterval
+    }
+
+    mutating func moment(
+        for event: MascotVoiceCelebrationEvent,
+        isRecording: Bool,
+        now: Date = Date()
+    ) -> MascotVoiceMoment? {
+        guard event.isEligible, !isRecording else { return nil }
+        guard !spokenEventKeys.contains(event.key) else { return nil }
+        if let lastSpokenAt, now.timeIntervalSince(lastSpokenAt) < minimumInterval {
+            return nil
+        }
+
+        spokenEventKeys.insert(event.key)
+        lastSpokenAt = now
+        return MascotVoiceMoment(text: event.message)
     }
 }
 
@@ -1306,6 +1391,57 @@ struct LessonStep: Codable, Hashable, Identifiable {
     let helper: String
     let choices: [String]
     let correctAnswer: String?
+}
+
+extension LessonStep {
+    var turnIntent: LessonTurnIntent {
+        if kind == .teach && id.hasSuffix("-model") {
+            return .listenAndRepeat
+        }
+
+        if !choices.isEmpty {
+            return .chooseAndSay
+        }
+
+        switch kind {
+        case .teach, .speak:
+            return .sayThisSentence
+        case .choice, .roleplay, .freeResponse:
+            return .answerOutLoud
+        }
+    }
+
+    var expectedSpeechText: String {
+        if prompt.contains("___"), let correctAnswer {
+            return prompt.replacingOccurrences(of: "___", with: correctAnswer)
+        }
+
+        return correctAnswer ?? prompt
+    }
+
+    var visiblePromptText: String {
+        switch turnIntent {
+        case .answerOutLoud, .chooseAndSay:
+            return prompt
+        case .listenAndRepeat, .sayThisSentence:
+            return expectedSpeechText
+        }
+    }
+
+    var hidesExpectedAnswerBeforeSpeech: Bool {
+        guard let correctAnswer else { return false }
+        let visible = visiblePromptText
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        let expected = correctAnswer
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        return !expected.isEmpty && visible != expected && !visible.contains(expected)
+    }
+
+    var showsPreSpeechPlayback: Bool {
+        turnIntent == .listenAndRepeat
+    }
 }
 
 struct BeginnerLesson: Hashable, Identifiable {
