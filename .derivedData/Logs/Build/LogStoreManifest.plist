@@ -6,6 +6,48 @@
 	<integer>12</integer>
 	<key>logs</key>
 	<dict>
+		<key>992EF888-5174-460C-9CBE-4D0A0F11F2E9</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>992EF888-5174-460C-9CBE-4D0A0F11F2E9.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>S</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>Converlax project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>Converlax</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Testing project Converlax with scheme Converlax</string>
+			<key>timeStartedRecording</key>
+			<real>802510345.68588305</real>
+			<key>timeStoppedRecording</key>
+			<real>802510349.54455996</real>
+			<key>title</key>
+			<string>Testing project Converlax with scheme Converlax</string>
+			<key>uniqueIdentifier</key>
+			<string>992EF888-5174-460C-9CBE-4D0A0F11F2E9</string>
+		</dict>
 		<key>BEE4EEF6-7A54-40AF-ADA9-CAE4DDC04AEA</key>
 		<dict>
 			<key>className</key>
@@ -47,48 +89,6 @@
 			<string>Testing project Converlax with scheme Converlax</string>
 			<key>uniqueIdentifier</key>
 			<string>BEE4EEF6-7A54-40AF-ADA9-CAE4DDC04AEA</string>
-		</dict>
-		<key>F424B232-7292-4C2B-9C74-9E99F4BC8B4B</key>
-		<dict>
-			<key>className</key>
-			<string>IDECommandLineBuildLog</string>
-			<key>documentTypeString</key>
-			<string>&lt;nil&gt;</string>
-			<key>domainType</key>
-			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
-			<key>fileName</key>
-			<string>F424B232-7292-4C2B-9C74-9E99F4BC8B4B.xcactivitylog</string>
-			<key>hasPrimaryLog</key>
-			<true/>
-			<key>primaryObservable</key>
-			<dict>
-				<key>highLevelStatus</key>
-				<string>S</string>
-				<key>totalNumberOfAnalyzerIssues</key>
-				<integer>0</integer>
-				<key>totalNumberOfErrors</key>
-				<integer>0</integer>
-				<key>totalNumberOfTestFailures</key>
-				<integer>0</integer>
-				<key>totalNumberOfWarnings</key>
-				<integer>0</integer>
-			</dict>
-			<key>schemeIdentifier-containerName</key>
-			<string>Converlax project</string>
-			<key>schemeIdentifier-schemeName</key>
-			<string>Converlax</string>
-			<key>schemeIdentifier-sharedScheme</key>
-			<integer>1</integer>
-			<key>signature</key>
-			<string>Testing project Converlax with scheme Converlax</string>
-			<key>timeStartedRecording</key>
-			<real>802508069.27907205</real>
-			<key>timeStoppedRecording</key>
-			<real>802508077.19564199</real>
-			<key>title</key>
-			<string>Testing project Converlax with scheme Converlax</string>
-			<key>uniqueIdentifier</key>
-			<string>F424B232-7292-4C2B-9C74-9E99F4BC8B4B</string>
 		</dict>
 	</dict>
 </dict>

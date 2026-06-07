@@ -34,7 +34,7 @@
 				<key>testCompletedLessonTurnsShowPreviousFeedbackAndRetry</key>
 				<dict>
 					<key>mrnet</key>
-					<real>13.366432070732117</real>
+					<real>13.056166052818298</real>
 				</dict>
 				<key>testLessonAnswerOutLoudDoesNotRevealAnswerBeforeAttempt</key>
 				<dict>
@@ -44,7 +44,7 @@
 				<key>testNextPromptStartsNormallyWhenNextTurnHasNoFeedback</key>
 				<dict>
 					<key>mrnet</key>
-					<real>11.017323017120361</real>
+					<real>10.103940010070801</real>
 				</dict>
 			</dict>
 		</dict>

@@ -484,7 +484,6 @@ struct LessonPlayerView: View {
 
     private func advanceAfterSpeechAcceptance() {
         speechPlayback.stop()
-        speechPhase = .accepted
 
         if stepIndex < lesson.steps.count - 1 {
             let nextStepIndex = stepIndex + 1

@@ -6,65 +6,6 @@
 	<integer>12</integer>
 	<key>logs</key>
 	<dict>
-		<key>C1BACF9D-7EBB-45CD-88DE-FC1E760B99BF</key>
-		<dict>
-			<key>auxiliaryLogUniqueIdentifier</key>
-			<string>F424B232-7292-4C2B-9C74-9E99F4BC8B4B</string>
-			<key>auxiliaryObservable</key>
-			<dict>
-				<key>highLevelStatus</key>
-				<string>S</string>
-				<key>totalNumberOfAnalyzerIssues</key>
-				<integer>0</integer>
-				<key>totalNumberOfErrors</key>
-				<integer>0</integer>
-				<key>totalNumberOfTestFailures</key>
-				<integer>0</integer>
-				<key>totalNumberOfWarnings</key>
-				<integer>0</integer>
-			</dict>
-			<key>className</key>
-			<string>IDESchemeActionsInvocationRecord</string>
-			<key>documentTypeString</key>
-			<string>&lt;nil&gt;</string>
-			<key>domainType</key>
-			<string>com.apple.dt.unit.cocoaUnitTest</string>
-			<key>fileName</key>
-			<string>Test-Converlax-2026.06.07_13-54-29-+0700.xcresult</string>
-			<key>hasAuxiliaryLog</key>
-			<true/>
-			<key>hasPrimaryLog</key>
-			<true/>
-			<key>primaryObservable</key>
-			<dict>
-				<key>highLevelStatus</key>
-				<string>S</string>
-				<key>totalNumberOfAnalyzerIssues</key>
-				<integer>0</integer>
-				<key>totalNumberOfErrors</key>
-				<integer>0</integer>
-				<key>totalNumberOfTestFailures</key>
-				<integer>0</integer>
-				<key>totalNumberOfWarnings</key>
-				<integer>0</integer>
-			</dict>
-			<key>schemeIdentifier-containerName</key>
-			<string>Converlax project</string>
-			<key>schemeIdentifier-schemeName</key>
-			<string>Converlax</string>
-			<key>schemeIdentifier-sharedScheme</key>
-			<integer>1</integer>
-			<key>signature</key>
-			<string>Test Converlax</string>
-			<key>timeStartedRecording</key>
-			<real>802508069.28062403</real>
-			<key>timeStoppedRecording</key>
-			<real>802508131.03628194</real>
-			<key>title</key>
-			<string>Test Converlax</string>
-			<key>uniqueIdentifier</key>
-			<string>C1BACF9D-7EBB-45CD-88DE-FC1E760B99BF</string>
-		</dict>
 		<key>C5809BF2-4E8D-447C-A0DB-F8AC032280BB</key>
 		<dict>
 			<key>auxiliaryLogUniqueIdentifier</key>
@@ -123,6 +64,65 @@
 			<string>Test Converlax</string>
 			<key>uniqueIdentifier</key>
 			<string>C5809BF2-4E8D-447C-A0DB-F8AC032280BB</string>
+		</dict>
+		<key>CE98AA96-0CA1-4DB8-8B1C-1C519449D1F3</key>
+		<dict>
+			<key>auxiliaryLogUniqueIdentifier</key>
+			<string>992EF888-5174-460C-9CBE-4D0A0F11F2E9</string>
+			<key>auxiliaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>S</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>className</key>
+			<string>IDESchemeActionsInvocationRecord</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>com.apple.dt.unit.cocoaUnitTest</string>
+			<key>fileName</key>
+			<string>Test-Converlax-2026.06.07_14-32-25-+0700.xcresult</string>
+			<key>hasAuxiliaryLog</key>
+			<true/>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>S</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>Converlax project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>Converlax</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Test Converlax</string>
+			<key>timeStartedRecording</key>
+			<real>802510345.68639302</real>
+			<key>timeStoppedRecording</key>
+			<real>802510402.58301198</real>
+			<key>title</key>
+			<string>Test Converlax</string>
+			<key>uniqueIdentifier</key>
+			<string>CE98AA96-0CA1-4DB8-8B1C-1C519449D1F3</string>
 		</dict>
 	</dict>
 </dict>
