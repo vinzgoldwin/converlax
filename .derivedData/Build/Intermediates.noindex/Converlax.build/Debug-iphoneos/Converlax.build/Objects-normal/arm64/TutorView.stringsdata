@@ -1,0 +1,120 @@
+{
+  "source": "/Users/kego/Projects/converlax/Converlax/TutorView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Tutor",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 34
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tutor menu",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 48
+        }
+      },
+      {
+        "comment": "",
+        "key": "Chat history",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 39
+        }
+      },
+      {
+        "comment": "",
+        "key": "Saved messages",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 42
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reset conversation",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 54
+        }
+      },
+      {
+        "comment": "",
+        "key": "Finish practice",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 116
+        }
+      },
+      {
+        "comment": "",
+        "key": "Practice complete",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 529
+        }
+      },
+      {
+        "comment": "",
+        "key": "Saved",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 585
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save phrase",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 585
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tutor menu",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 627
+        }
+      },
+      {
+        "comment": "",
+        "key": "Chat history",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 608
+        }
+      },
+      {
+        "comment": "",
+        "key": "Saved lines",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 619
+        }
+      },
+      {
+        "comment": "",
+        "key": "You",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 611
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tutor",
+        "location": {
+          "startingColumn": 59,
+          "startingLine": 611
+        }
+      }
+    ]
+  },
+  "version": 1
+}

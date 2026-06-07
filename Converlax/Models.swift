@@ -600,7 +600,7 @@ enum LessonStepKind: String, Codable, Hashable {
 enum LessonTurnIntent: String, Codable, Hashable, CaseIterable {
     case listenAndRepeat = "Listen and repeat"
     case sayThisSentence = "Say this sentence"
-    case answerOutLoud = "Answer out loud"
+    case answerOutLoud = "Say it in your own words"
     case chooseAndSay = "Choose and say"
 }
 

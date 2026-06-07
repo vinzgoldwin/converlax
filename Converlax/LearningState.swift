@@ -280,6 +280,22 @@ final class LearningState: ObservableObject {
         return inferredResumeStepIndex(for: lesson)
     }
 
+    func feedbackEvents(for lesson: BeginnerLesson) -> [LearningFeedback] {
+        let lessonPrompts = Set(lesson.steps.map { normalizedPromptKey($0.prompt) })
+        guard !lessonPrompts.isEmpty else { return [] }
+
+        return profile.feedbackEvents.filter { feedback in
+            feedback.source.localizedCaseInsensitiveContains("speaking") &&
+                lessonPrompts.contains(normalizedPromptKey(feedback.promptText))
+        }
+    }
+
+    func latestFeedback(for step: LessonStep, in lesson: BeginnerLesson) -> LearningFeedback? {
+        feedbackEvents(for: lesson).first {
+            normalizedPromptKey($0.promptText) == normalizedPromptKey(step.prompt)
+        }
+    }
+
     func isCompleted(_ lesson: BeginnerLesson) -> Bool {
         profile.completedLessonIDs.contains(lesson.id)
     }
@@ -1976,6 +1992,45 @@ final class LearningState: ObservableObject {
             next.savedLearningObjects.insert(object, at: 0)
             next.scheduledReviews.removeAll { $0.id == review.id }
             next.scheduledReviews.insert(review, at: 0)
+        }
+        if arguments.contains("-ConverlaxSeedCompletedLessonFeedback") {
+            let lesson = explicitLesson
+                ?? BeginnerContent.lessons(for: .english, level: next.currentLevel).first
+                ?? BeginnerContent.lessons(for: .english).first
+            if let lesson {
+                next.completedLessonIDs.insert(lesson.id)
+                let seededSteps = arguments.contains("-ConverlaxSeedFirstTurnFeedbackOnly")
+                    ? Array(lesson.steps.prefix(1))
+                    : lesson.steps
+                for step in seededSteps.reversed() {
+                    let feedback = LearningFeedback(
+                        id: "feedback-seeded-\(step.id)",
+                        source: "Speaking practice",
+                        pronunciation: 82,
+                        grammar: 84,
+                        vocabulary: 86,
+                        fluency: 80,
+                        meaning: 88,
+                        confidence: 84,
+                        promptText: step.prompt,
+                        attemptedText: step.expectedSpeechText,
+                        correction: step.expectedSpeechText,
+                        betterPhrase: step.expectedSpeechText,
+                        pronunciationTip: "Say it in one smooth breath.",
+                        claritySignal: "Clear",
+                        savedTakeaway: step.expectedSpeechText,
+                        nextAction: "Say the better line once more.",
+                        didWell: "Your meaning was clear.",
+                        tryNext: "Keep the final word clear.",
+                        createdDay: "2026-05-18"
+                    )
+                    next.feedbackEvents.removeAll { $0.id == feedback.id }
+                    next.feedbackEvents.insert(feedback, at: 0)
+                }
+                next.currentLessonID = BeginnerContent.lessons(for: .english, level: next.currentLevel)
+                    .first { !next.completedLessonIDs.contains($0.id) }?.id
+                    ?? lesson.id
+            }
         }
         return next
     }

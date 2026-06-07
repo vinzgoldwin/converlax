@@ -377,6 +377,24 @@ final class ConverlaxContentTests: XCTestCase {
         }
     }
 
+    func testCompletedLessonTurnFeedbackStaysAvailable() throws {
+        let state = makeState()
+        let lesson = try XCTUnwrap(BeginnerContent.lessons(for: .english).first)
+        let step = try XCTUnwrap(lesson.steps.first { $0.kind == .speak })
+        let transcript = try XCTUnwrap(step.correctAnswer ?? step.prompt.components(separatedBy: ".").first)
+
+        let feedback = state.acceptSpeechPractice(
+            lesson: lesson,
+            step: step,
+            transcript: transcript,
+            mode: "Speaking practice"
+        )
+        state.completeLesson(lesson)
+
+        XCTAssertEqual(state.feedbackEvents(for: lesson).first?.id, feedback.id)
+        XCTAssertEqual(state.latestFeedback(for: step, in: lesson)?.id, feedback.id)
+    }
+
     func testEnglishLessonsUnlockInCourseOrderOnly() {
         let suiteName = "ConverlaxContentTests-\(UUID().uuidString)"
         let suite = UserDefaults(suiteName: suiteName)!

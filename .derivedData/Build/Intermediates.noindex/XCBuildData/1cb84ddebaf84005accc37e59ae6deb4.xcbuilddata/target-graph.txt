@@ -1,0 +1,6 @@
+Target dependency graph (3 targets)
+Target 'ConverlaxUITests' in project 'Converlax'
+➜ Explicit dependency on target 'Converlax' in project 'Converlax'
+Target 'ConverlaxTests' in project 'Converlax'
+➜ Explicit dependency on target 'Converlax' in project 'Converlax'
+Target 'Converlax' in project 'Converlax' (no dependencies)

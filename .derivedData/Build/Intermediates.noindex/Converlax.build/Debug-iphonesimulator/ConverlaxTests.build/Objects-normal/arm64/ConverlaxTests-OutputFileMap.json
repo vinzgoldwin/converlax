@@ -1,0 +1,19 @@
+{
+  "" : {
+    "diagnostics" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphonesimulator/ConverlaxTests.build/Objects-normal/arm64/ConverlaxTests-primary.dia",
+    "emit-module-dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphonesimulator/ConverlaxTests.build/Objects-normal/arm64/ConverlaxTests-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphonesimulator/ConverlaxTests.build/Objects-normal/arm64/ConverlaxTests-primary-emit-module.dia",
+    "pch" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphonesimulator/ConverlaxTests.build/Objects-normal/arm64/ConverlaxTests-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphonesimulator/ConverlaxTests.build/Objects-normal/arm64/ConverlaxTests-primary.swiftdeps"
+  },
+  "/Users/kego/Projects/converlax/ConverlaxTests/ConverlaxContentTests.swift" : {
+    "const-values" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphonesimulator/ConverlaxTests.build/Objects-normal/arm64/ConverlaxContentTests.swiftconstvalues",
+    "dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphonesimulator/ConverlaxTests.build/Objects-normal/arm64/ConverlaxContentTests.d",
+    "diagnostics" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphonesimulator/ConverlaxTests.build/Objects-normal/arm64/ConverlaxContentTests.dia",
+    "index-unit-output-path" : "/Converlax.build/Debug-iphonesimulator/ConverlaxTests.build/Objects-normal/arm64/ConverlaxContentTests.o",
+    "llvm-bc" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphonesimulator/ConverlaxTests.build/Objects-normal/arm64/ConverlaxContentTests.bc",
+    "object" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphonesimulator/ConverlaxTests.build/Objects-normal/arm64/ConverlaxContentTests.o",
+    "swift-dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphonesimulator/ConverlaxTests.build/Objects-normal/arm64/ConverlaxContentTests.swiftdeps",
+    "swiftmodule" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphonesimulator/ConverlaxTests.build/Objects-normal/arm64/ConverlaxContentTests~partial.swiftmodule"
+  }
+}

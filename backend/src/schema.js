@@ -139,13 +139,13 @@ export const feedbackJsonSchema = {
       type: "string",
       minLength: 1,
       maxLength: 360,
-      description: "One corrected phrase or sentence. Keep it suitable for the Better row."
+      description: "One corrected phrase or sentence. Keep it suitable for a compact correction or polish row."
     },
     naturalVersion: {
       type: "string",
       minLength: 1,
       maxLength: 360,
-      description: "One short natural spoken version for the Better row."
+      description: "One short natural spoken version for the Natural version row."
     },
     vocabularyImprovement: {
       type: "string",
@@ -227,7 +227,7 @@ export const tutorJsonSchema = {
       type: "string",
       minLength: 1,
       maxLength: 220,
-      description: "One short natural beginner-friendly Better phrase."
+      description: "One short natural beginner-friendly alternative phrase."
     },
     nextPrompt: {
       type: "string",

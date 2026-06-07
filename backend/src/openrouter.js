@@ -21,8 +21,8 @@ const SYSTEM_PROMPT = [
   "If the target language is not English, write feedback in simple English and correct the learner's target-language phrase.",
   "The input is a speech-recognition transcript, not audio. Do not claim you heard sounds, accent, volume, or exact pronunciation.",
   "Pronunciation notes must be based on transcript limitations: rhythm, word endings, stress, pauses, and likely clarity.",
-  "Learner-facing feedback must fit this shape: You said, Better, Try next, and an optional Saved phrase.",
-  "Use naturalVersion or grammarCorrection as Better, tryNext as Try next, and suggestedSavedPhrase as Saved phrase.",
+  "Learner-facing feedback must fit this shape: You said, Natural version, Try next, and an optional Saved phrase.",
+  "Use naturalVersion or grammarCorrection as Natural version, tryNext as Try next, and suggestedSavedPhrase as Saved phrase.",
   "Keep each learner-facing field short. No markdown, no headings inside values, no score explanations, and no multi-point feedback dumps.",
   "Be encouraging without being fluffy. Prefer one clear next action."
 ].join(" ");
@@ -32,7 +32,7 @@ const TUTOR_SYSTEM_PROMPT = [
   "Stay focused on helping the learner say one useful English idea more clearly.",
   "Do not become a generic chatbot. Do not add lesson menus, analytics, confidence scores, or long explanations.",
   "Return one short tutor reply, one corrected phrase, one natural alternative, one focused next speaking prompt, one saved phrase, one review item, one mistakePattern, and a compact sessionSummary.",
-  "Learner-facing correction must fit this shape: You said, Better, Try next, and optional Saved phrase.",
+  "Learner-facing correction must fit this shape: You said, Natural version, Try next, and optional Saved phrase.",
   "Keep tutorReply under 16 words.",
   "Keep nextPrompt under 12 words.",
   "Keep naturalAlternative short, beginner-friendly, and different from the correction when possible.",
@@ -53,8 +53,8 @@ function buildFeedbackUserPrompt(input) {
   return [
     "Return only JSON that matches the provided schema.",
     "Evaluate this spoken attempt for a language learner.",
-    "Keep the response usable in four rows: You said, Better, Try next, Saved phrase.",
-    "Make Better one short corrected or more natural phrase. Make Try next one spoken action.",
+    "Keep the response usable in four rows: You said, Natural version, Try next, Saved phrase.",
+    "Make Natural version one short corrected or more natural phrase. Make Try next one spoken action.",
     "Use reviewItemSuggestion for the same single phrase or correction worth reviewing later.",
     "",
     JSON.stringify({
@@ -74,7 +74,7 @@ function buildTutorUserPrompt(input) {
     "The nextPrompt should be one short thing the learner can say out loud now.",
     "If you correct the sentence, make reviewItem.prompt test the same correction and reviewItem.answer be the corrected phrase.",
     "Keep correction, savedPhrase, reviewItem.answer, mistakePattern.correctedSentence, and sessionSummary.savedReviewItem focused on the same single fix.",
-    "Keep learner-facing text calm and compact. Do not include headings like You said, Better, or Try next inside JSON values.",
+    "Keep learner-facing text calm and compact. Do not include headings like You said, Natural version, or Try next inside JSON values.",
     "sessionSummary should summarize this turn in reusable short fields; if context.turnCount is near context.maxTurns, make it suitable for the end-of-session card.",
     "",
     JSON.stringify({

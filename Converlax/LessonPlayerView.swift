@@ -7,6 +7,8 @@ final class SpeechPlaybackService: NSObject, ObservableObject, AVSpeechSynthesiz
     @Published private(set) var isPlaying = false
 
     private let synthesizer = AVSpeechSynthesizer()
+    private var activeUtterance: AVSpeechUtterance?
+    private var ownsAudioSession = false
 
     override init() {
         super.init()
@@ -28,6 +30,8 @@ final class SpeechPlaybackService: NSObject, ObservableObject, AVSpeechSynthesiz
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
 
+        guard prepareAudioSessionForPlayback() else { return }
+
         let utterance = AVSpeechUtterance(string: trimmedText)
         utterance.voice = voiceIdentifier.flatMap(AVSpeechSynthesisVoice.init(identifier:)) ??
             AVSpeechSynthesisVoice(language: localeIdentifier)
@@ -35,6 +39,7 @@ final class SpeechPlaybackService: NSObject, ObservableObject, AVSpeechSynthesiz
         utterance.pitchMultiplier = 1.0
         utterance.volume = 1.0
 
+        activeUtterance = utterance
         isPlaying = true
         synthesizer.speak(utterance)
     }
@@ -42,19 +47,47 @@ final class SpeechPlaybackService: NSObject, ObservableObject, AVSpeechSynthesiz
     func stop() {
         guard synthesizer.isSpeaking || synthesizer.isPaused || isPlaying else { return }
         synthesizer.stopSpeaking(at: .immediate)
+        activeUtterance = nil
         isPlaying = false
+        deactivateAudioSessionIfNeeded()
     }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
         DispatchQueue.main.async { [weak self] in
-            self?.isPlaying = false
+            self?.completePlaybackIfCurrent(utterance)
         }
     }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
         DispatchQueue.main.async { [weak self] in
-            self?.isPlaying = false
+            self?.completePlaybackIfCurrent(utterance)
         }
+    }
+
+    private func completePlaybackIfCurrent(_ utterance: AVSpeechUtterance) {
+        guard activeUtterance === utterance else { return }
+        activeUtterance = nil
+        isPlaying = false
+        deactivateAudioSessionIfNeeded()
+    }
+
+    private func prepareAudioSessionForPlayback() -> Bool {
+        do {
+            let audioSession = AVAudioSession.sharedInstance()
+            try audioSession.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+            try audioSession.setActive(true)
+            ownsAudioSession = true
+            return true
+        } catch {
+            isPlaying = false
+            return false
+        }
+    }
+
+    private func deactivateAudioSessionIfNeeded() {
+        guard ownsAudioSession else { return }
+        ownsAudioSession = false
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 }
 
@@ -92,7 +125,7 @@ private extension LessonStep {
         case .sayThisSentence:
             return "Read it aloud when you are ready."
         case .answerOutLoud:
-            return "Answer out loud when you are ready."
+            return "Say it in your own words when you are ready."
         case .chooseAndSay:
             if let selectedChoice,
                !selectedChoice.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -109,7 +142,7 @@ private extension LessonStep {
         case .sayThisSentence:
             return "Read aloud"
         case .answerOutLoud:
-            return "Answer out loud"
+            return "Say it in your own words"
         case .chooseAndSay:
             return "Choose and say"
         }
@@ -212,6 +245,7 @@ struct LessonPlayerView: View {
             applyLaunchCompletionStateIfNeeded()
             guard !completed else { return }
             applyLaunchSpeechStateIfNeeded()
+            restoreCurrentTurnFeedbackIfNeeded()
             syncSavedCurrentLine()
             withAnimation(reduceMotion ? nil : .easeOut(duration: 0.32).delay(0.04)) {
                 turnEntranceVisible = true
@@ -236,7 +270,11 @@ struct LessonPlayerView: View {
     }
 
     private var furthestAvailableStepIndex: Int {
-        min(max(state.resumeStepIndex(for: lesson), stepIndex), max(lesson.steps.count - 1, 0))
+        if state.isCompleted(lesson) {
+            return max(lesson.steps.count - 1, 0)
+        }
+
+        return min(max(state.resumeStepIndex(for: lesson), stepIndex), max(lesson.steps.count - 1, 0))
     }
 
     private var isCurrentTurnReadyForSpeech: Bool {
@@ -415,11 +453,16 @@ struct LessonPlayerView: View {
             return feedback
         }
 
-        return state.profile.feedbackEvents.first { feedback in
-            feedback.source.localizedCaseInsensitiveContains("speaking") &&
-                feedback.promptText.trimmingCharacters(in: .whitespacesAndNewlines) ==
-                step.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
+        return state.latestFeedback(for: step, in: lesson)
+    }
+
+    private func restoreCurrentTurnFeedbackIfNeeded() {
+        guard speechPhase == .ready, transcript.isEmpty, speechFeedback == nil else { return }
+        guard let restoredFeedback = latestFeedback(for: step) else { return }
+
+        transcript = restoredFeedback.attemptedText
+        speechFeedback = restoredFeedback
+        speechPhase = .feedback
     }
 
     private func applyLaunchCompletionStateIfNeeded() {
@@ -446,13 +489,14 @@ struct LessonPlayerView: View {
         if stepIndex < lesson.steps.count - 1 {
             let nextStepIndex = stepIndex + 1
             let nextStep = lesson.steps[nextStepIndex]
+            let restoredFeedback = latestFeedback(for: nextStep)
             state.saveLessonResume(lesson: lesson, stepIndex: nextStepIndex)
             withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86)) {
                 stepIndex = nextStepIndex
                 savedCurrentLine = state.savedLines.contains { $0.id == "lesson-\(nextStep.id)" }
-                speechPhase = .ready
-                transcript = ""
-                speechFeedback = nil
+                speechPhase = restoredFeedback == nil ? .ready : .feedback
+                transcript = restoredFeedback?.attemptedText ?? ""
+                speechFeedback = restoredFeedback
                 speechErrorMessage = nil
             }
         } else {

@@ -23,6 +23,58 @@ final class ConverlaxRootTabsUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Intermediate English"].exists)
     }
 
+    func testCompletedLessonTurnsShowPreviousFeedbackAndRetry() throws {
+        let app = launchApp(initialTab: "home", extraArguments: [
+            "-ConverlaxInitialHomeRoute",
+            "lesson",
+            "-ConverlaxInitialLessonID",
+            "english-hobbies-detail",
+            "-ConverlaxSeedCompletedLessonFeedback"
+        ])
+
+        XCTAssertTrue(element("speech-practice-panel", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Turn 1 of 7"].exists)
+        XCTAssertTrue(app.staticTexts["Feedback ready"].exists)
+
+        app.swipeUp()
+        XCTAssertTrue(app.buttons["Try again"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Next prompt"].waitForExistence(timeout: 5))
+        app.buttons["Next prompt"].tap()
+        app.swipeDown()
+
+        XCTAssertTrue(app.staticTexts["Turn 2 of 7"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Feedback ready"].exists)
+
+        app.buttons["Next turn"].tap()
+
+        XCTAssertTrue(app.staticTexts["Turn 3 of 7"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Feedback ready"].exists)
+    }
+
+    func testNextPromptStartsNormallyWhenNextTurnHasNoFeedback() throws {
+        let app = launchApp(initialTab: "home", extraArguments: [
+            "-ConverlaxInitialHomeRoute",
+            "lesson",
+            "-ConverlaxInitialLessonID",
+            "english-hobbies-detail",
+            "-ConverlaxSeedCompletedLessonFeedback",
+            "-ConverlaxSeedFirstTurnFeedbackOnly"
+        ])
+
+        XCTAssertTrue(element("speech-practice-panel", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Turn 1 of 7"].exists)
+        XCTAssertTrue(app.staticTexts["Feedback ready"].exists)
+
+        app.swipeUp()
+        XCTAssertTrue(app.buttons["Next prompt"].waitForExistence(timeout: 5))
+        app.buttons["Next prompt"].tap()
+        app.swipeDown()
+
+        XCTAssertTrue(app.staticTexts["Turn 2 of 7"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Your turn"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Start speaking"].exists)
+    }
+
     func testPracticeRootKeepsSpeakingPrimary() throws {
         let app = launchApp(initialTab: "practice")
 
@@ -165,9 +217,9 @@ final class ConverlaxRootTabsUITests: XCTestCase {
 
         XCTAssertTrue(element("speech-practice-panel", in: app).waitForExistence(timeout: 5))
 
-        XCTAssertTrue(app.staticTexts["Answer out loud"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Say it in your own words"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.staticTexts["You want to say where you live."].exists)
-        XCTAssertTrue(app.staticTexts["Answer out loud when you are ready."].exists)
+        XCTAssertTrue(app.staticTexts["Say it in your own words when you are ready."].exists)
         XCTAssertFalse(app.staticTexts["I live in Jakarta."].exists)
         XCTAssertFalse(app.buttons["Play sentence audio"].exists)
         XCTAssertFalse(app.buttons["Save line"].exists)

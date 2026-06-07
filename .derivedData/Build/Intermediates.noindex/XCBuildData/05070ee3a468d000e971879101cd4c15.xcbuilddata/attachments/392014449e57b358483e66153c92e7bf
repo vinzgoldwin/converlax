@@ -1,0 +1,179 @@
+{
+  "" : {
+    "diagnostics" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/Converlax-primary.dia",
+    "emit-module-dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/Converlax-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/Converlax-primary-emit-module.dia",
+    "pch" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/Converlax-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/Converlax-primary.swiftdeps"
+  },
+  "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/GeneratedAssetSymbols~partial.swiftmodule"
+  },
+  "/Users/kego/Projects/converlax/Converlax/AIFeedbackService.swift" : {
+    "const-values" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/AIFeedbackService.swiftconstvalues",
+    "dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/AIFeedbackService.d",
+    "diagnostics" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/AIFeedbackService.dia",
+    "index-unit-output-path" : "/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/AIFeedbackService.o",
+    "llvm-bc" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/AIFeedbackService.bc",
+    "object" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/AIFeedbackService.o",
+    "swift-dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/AIFeedbackService.swiftdeps",
+    "swiftmodule" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/AIFeedbackService~partial.swiftmodule"
+  },
+  "/Users/kego/Projects/converlax/Converlax/BeginnerContent.swift" : {
+    "const-values" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/BeginnerContent.swiftconstvalues",
+    "dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/BeginnerContent.d",
+    "diagnostics" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/BeginnerContent.dia",
+    "index-unit-output-path" : "/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/BeginnerContent.o",
+    "llvm-bc" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/BeginnerContent.bc",
+    "object" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/BeginnerContent.o",
+    "swift-dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/BeginnerContent.swiftdeps",
+    "swiftmodule" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/BeginnerContent~partial.swiftmodule"
+  },
+  "/Users/kego/Projects/converlax/Converlax/ContentView.swift" : {
+    "const-values" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ContentView.swiftconstvalues",
+    "dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ContentView.d",
+    "diagnostics" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ContentView.dia",
+    "index-unit-output-path" : "/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ContentView.o",
+    "llvm-bc" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ContentView.bc",
+    "object" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ContentView.o",
+    "swift-dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ContentView.swiftdeps",
+    "swiftmodule" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ContentView~partial.swiftmodule"
+  },
+  "/Users/kego/Projects/converlax/Converlax/ConverlaxApp.swift" : {
+    "const-values" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ConverlaxApp.swiftconstvalues",
+    "dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ConverlaxApp.d",
+    "diagnostics" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ConverlaxApp.dia",
+    "index-unit-output-path" : "/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ConverlaxApp.o",
+    "llvm-bc" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ConverlaxApp.bc",
+    "object" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ConverlaxApp.o",
+    "swift-dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ConverlaxApp.swiftdeps",
+    "swiftmodule" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ConverlaxApp~partial.swiftmodule"
+  },
+  "/Users/kego/Projects/converlax/Converlax/CourseViews.swift" : {
+    "const-values" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/CourseViews.swiftconstvalues",
+    "dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/CourseViews.d",
+    "diagnostics" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/CourseViews.dia",
+    "index-unit-output-path" : "/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/CourseViews.o",
+    "llvm-bc" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/CourseViews.bc",
+    "object" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/CourseViews.o",
+    "swift-dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/CourseViews.swiftdeps",
+    "swiftmodule" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/CourseViews~partial.swiftmodule"
+  },
+  "/Users/kego/Projects/converlax/Converlax/LearningState.swift" : {
+    "const-values" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/LearningState.swiftconstvalues",
+    "dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/LearningState.d",
+    "diagnostics" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/LearningState.dia",
+    "index-unit-output-path" : "/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/LearningState.o",
+    "llvm-bc" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/LearningState.bc",
+    "object" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/LearningState.o",
+    "swift-dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/LearningState.swiftdeps",
+    "swiftmodule" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/LearningState~partial.swiftmodule"
+  },
+  "/Users/kego/Projects/converlax/Converlax/LessonPlayerView.swift" : {
+    "const-values" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/LessonPlayerView.swiftconstvalues",
+    "dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/LessonPlayerView.d",
+    "diagnostics" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/LessonPlayerView.dia",
+    "index-unit-output-path" : "/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/LessonPlayerView.o",
+    "llvm-bc" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/LessonPlayerView.bc",
+    "object" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/LessonPlayerView.o",
+    "swift-dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/LessonPlayerView.swiftdeps",
+    "swiftmodule" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/LessonPlayerView~partial.swiftmodule"
+  },
+  "/Users/kego/Projects/converlax/Converlax/Models.swift" : {
+    "const-values" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/Models.swiftconstvalues",
+    "dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/Models.d",
+    "diagnostics" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/Models.dia",
+    "index-unit-output-path" : "/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/Models.o",
+    "llvm-bc" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/Models.bc",
+    "object" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/Models.o",
+    "swift-dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/Models.swiftdeps",
+    "swiftmodule" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/Models~partial.swiftmodule"
+  },
+  "/Users/kego/Projects/converlax/Converlax/OnboardingView.swift" : {
+    "const-values" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/OnboardingView.swiftconstvalues",
+    "dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/OnboardingView.d",
+    "diagnostics" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/OnboardingView.dia",
+    "index-unit-output-path" : "/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/OnboardingView.o",
+    "llvm-bc" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/OnboardingView.bc",
+    "object" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/OnboardingView.o",
+    "swift-dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/OnboardingView.swiftdeps",
+    "swiftmodule" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/OnboardingView~partial.swiftmodule"
+  },
+  "/Users/kego/Projects/converlax/Converlax/PhaseOneContent.swift" : {
+    "const-values" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PhaseOneContent.swiftconstvalues",
+    "dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PhaseOneContent.d",
+    "diagnostics" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PhaseOneContent.dia",
+    "index-unit-output-path" : "/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PhaseOneContent.o",
+    "llvm-bc" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PhaseOneContent.bc",
+    "object" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PhaseOneContent.o",
+    "swift-dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PhaseOneContent.swiftdeps",
+    "swiftmodule" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PhaseOneContent~partial.swiftmodule"
+  },
+  "/Users/kego/Projects/converlax/Converlax/PhaseOneViews.swift" : {
+    "const-values" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PhaseOneViews.swiftconstvalues",
+    "dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PhaseOneViews.d",
+    "diagnostics" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PhaseOneViews.dia",
+    "index-unit-output-path" : "/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PhaseOneViews.o",
+    "llvm-bc" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PhaseOneViews.bc",
+    "object" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PhaseOneViews.o",
+    "swift-dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PhaseOneViews.swiftdeps",
+    "swiftmodule" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PhaseOneViews~partial.swiftmodule"
+  },
+  "/Users/kego/Projects/converlax/Converlax/PracticeViews.swift" : {
+    "const-values" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PracticeViews.swiftconstvalues",
+    "dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PracticeViews.d",
+    "diagnostics" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PracticeViews.dia",
+    "index-unit-output-path" : "/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PracticeViews.o",
+    "llvm-bc" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PracticeViews.bc",
+    "object" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PracticeViews.o",
+    "swift-dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PracticeViews.swiftdeps",
+    "swiftmodule" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/PracticeViews~partial.swiftmodule"
+  },
+  "/Users/kego/Projects/converlax/Converlax/SpeechRecognitionService.swift" : {
+    "const-values" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/SpeechRecognitionService.swiftconstvalues",
+    "dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/SpeechRecognitionService.d",
+    "diagnostics" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/SpeechRecognitionService.dia",
+    "index-unit-output-path" : "/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/SpeechRecognitionService.o",
+    "llvm-bc" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/SpeechRecognitionService.bc",
+    "object" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/SpeechRecognitionService.o",
+    "swift-dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/SpeechRecognitionService.swiftdeps",
+    "swiftmodule" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/SpeechRecognitionService~partial.swiftmodule"
+  },
+  "/Users/kego/Projects/converlax/Converlax/ThemeAndComponents.swift" : {
+    "const-values" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ThemeAndComponents.swiftconstvalues",
+    "dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ThemeAndComponents.d",
+    "diagnostics" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ThemeAndComponents.dia",
+    "index-unit-output-path" : "/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ThemeAndComponents.o",
+    "llvm-bc" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ThemeAndComponents.bc",
+    "object" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ThemeAndComponents.o",
+    "swift-dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ThemeAndComponents.swiftdeps",
+    "swiftmodule" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/ThemeAndComponents~partial.swiftmodule"
+  },
+  "/Users/kego/Projects/converlax/Converlax/TutorAIService.swift" : {
+    "const-values" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/TutorAIService.swiftconstvalues",
+    "dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/TutorAIService.d",
+    "diagnostics" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/TutorAIService.dia",
+    "index-unit-output-path" : "/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/TutorAIService.o",
+    "llvm-bc" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/TutorAIService.bc",
+    "object" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/TutorAIService.o",
+    "swift-dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/TutorAIService.swiftdeps",
+    "swiftmodule" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/TutorAIService~partial.swiftmodule"
+  },
+  "/Users/kego/Projects/converlax/Converlax/TutorView.swift" : {
+    "const-values" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/TutorView.swiftconstvalues",
+    "dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/TutorView.d",
+    "diagnostics" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/TutorView.dia",
+    "index-unit-output-path" : "/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/TutorView.o",
+    "llvm-bc" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/TutorView.bc",
+    "object" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/TutorView.o",
+    "swift-dependencies" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/TutorView.swiftdeps",
+    "swiftmodule" : "/Users/kego/Projects/converlax/.derivedData/Build/Intermediates.noindex/Converlax.build/Debug-iphoneos/Converlax.build/Objects-normal/arm64/TutorView~partial.swiftmodule"
+  }
+}

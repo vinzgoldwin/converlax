@@ -1,0 +1,40 @@
+{
+  "source": "/Users/kego/Projects/converlax/Converlax/ContentView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Home",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 75
+        }
+      },
+      {
+        "comment": "",
+        "key": "Practice",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 86
+        }
+      },
+      {
+        "comment": "",
+        "key": "Review",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 97
+        }
+      },
+      {
+        "comment": "",
+        "key": "Profile",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 108
+        }
+      }
+    ]
+  },
+  "version": 1
+}

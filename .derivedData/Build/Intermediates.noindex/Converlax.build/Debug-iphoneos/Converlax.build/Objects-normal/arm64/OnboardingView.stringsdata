@@ -1,0 +1,104 @@
+{
+  "source": "/Users/kego/Projects/converlax/Converlax/OnboardingView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Converlax",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 57
+        }
+      },
+      {
+        "comment": "",
+        "key": "You can change this later in Settings.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 138
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your first lesson takes about 4 minutes.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 196
+        }
+      },
+      {
+        "comment": "",
+        "key": "Learn one line, speak it, and check that it makes sense.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 198
+        }
+      },
+      {
+        "comment": "",
+        "key": "Course and level",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 297
+        }
+      },
+      {
+        "comment": "",
+        "key": "Change level?",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 302
+        }
+      },
+      {
+        "comment": "",
+        "key": "Switch to %@",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 310
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 316
+        }
+      },
+      {
+        "comment": "",
+        "key": "Home will move to the first unfinished lesson for that level. Your saved content stays available.",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 320
+        }
+      },
+      {
+        "comment": "",
+        "key": "What changes",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 361
+        }
+      },
+      {
+        "comment": "",
+        "key": "Current level",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 443
+        }
+      },
+      {
+        "comment": "",
+        "key": "Select",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 443
+        }
+      }
+    ]
+  },
+  "version": 1
+}

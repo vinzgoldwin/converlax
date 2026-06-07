@@ -548,10 +548,10 @@ struct LearningFeedbackCard: View {
         }
 
         if let betterLine {
-            FeedbackCompactRow(title: "Better", text: betterLine, symbol: "quote.bubble.fill", color: .mintSuccess)
+            FeedbackCompactRow(title: betterLineTitle, text: betterLine, symbol: "quote.bubble.fill", color: .mintSuccess)
         }
 
-        FeedbackCompactRow(title: "Fix", text: fixDetails ?? "No fix needed.", symbol: "textformat", color: .primaryBlue)
+        FeedbackCompactRow(title: polishTitle, text: fixDetails ?? noPolishText, symbol: "textformat", color: .primaryBlue)
 
         if let pronunciationDetails {
             FeedbackCompactRow(title: "Pronunciation", text: pronunciationDetails, symbol: "waveform", color: .warmAmber)
@@ -569,6 +569,22 @@ struct LearningFeedbackCard: View {
             source.contains("conversation") ||
             source.contains("roleplay") ||
             prompt.contains("roleplay")
+    }
+
+    private var isStrongAttempt: Bool {
+        feedback.confidence >= 85
+    }
+
+    private var betterLineTitle: String {
+        isStrongAttempt ? "Natural version" : "Better"
+    }
+
+    private var polishTitle: String {
+        isStrongAttempt ? "Small polish" : "Fix"
+    }
+
+    private var noPolishText: String {
+        isStrongAttempt ? "No polish needed." : "No fix needed."
     }
 
     private var attemptText: String? {
@@ -986,7 +1002,7 @@ struct SpeechPracticePanel: View {
         case .error:
             "The recording did not finish."
         default:
-            "Tap start and answer out loud."
+            "Tap start and say it in your own words."
         }
     }
 

@@ -1,0 +1,128 @@
+{
+  "source": "/Users/kego/Projects/converlax/Converlax/ThemeAndComponents.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Progress",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 116
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld percent",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 117
+        }
+      },
+      {
+        "comment": "",
+        "key": "Create a custom lesson",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 489
+        }
+      },
+      {
+        "comment": "",
+        "key": "Feedback",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 518
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel voice input",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 869
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ · %lld%%",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 1178
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@, %lld percent",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 1186
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tutor prompt",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 1276
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ · %@",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1438
+        }
+      },
+      {
+        "comment": "",
+        "key": "Session summary",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 1478
+        }
+      },
+      {
+        "comment": "",
+        "key": "Level %lld · %@",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1624
+        }
+      },
+      {
+        "comment": "",
+        "key": "+%lld XP",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1630
+        }
+      },
+      {
+        "comment": "",
+        "key": "Continue from here",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1653
+        }
+      },
+      {
+        "comment": "",
+        "key": "Learning progress",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 1696
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld%%",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1705
+        }
+      }
+    ]
+  },
+  "version": 1
+}
