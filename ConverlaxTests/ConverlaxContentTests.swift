@@ -369,12 +369,7 @@ final class ConverlaxContentTests: XCTestCase {
         XCTAssertNotEqual(storedReview.nextDueDay, reviewItem.nextDueDay)
         XCTAssertFalse(state.dueReviewItems.contains { $0.id == reviewItem.id })
 
-        if state.dueReviewItems.isEmpty {
-            XCTAssertTrue(state.nextRecommendation.title.localizedCaseInsensitiveContains("continue"))
-        } else {
-            XCTAssertTrue(state.nextRecommendation.title.localizedCaseInsensitiveContains("review"))
-            XCTAssertFalse(try XCTUnwrap(state.dueReviewItems.first).prompt.isEmpty)
-        }
+        XCTAssertTrue(state.nextRecommendation.title.localizedCaseInsensitiveContains("continue"))
     }
 
     func testCompletedLessonTurnFeedbackStaysAvailable() throws {

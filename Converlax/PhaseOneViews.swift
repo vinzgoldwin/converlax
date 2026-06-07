@@ -268,7 +268,7 @@ struct SpeakProfileHomeView: View {
     }
 
     private var personalSavedContentCount: Int {
-        state.profile.savedWords.count + state.profile.savedLines.count + state.profile.savedLearningObjects.count + state.profile.favoriteRoleplayIDs.count
+        state.profile.savedLines.count + state.profile.favoriteRoleplayIDs.count
     }
 
     private var journeyLearnerSubtitle: String {
@@ -281,11 +281,7 @@ struct SpeakProfileHomeView: View {
         let completedLessonActivity = state.profile.activities.first { activity in
             activity.id.hasPrefix("lesson-") || activity.symbol == "checkmark.seal.fill"
         }
-        let savedPhrase = state.savedLearningObjects.first { object in
-            object.kind == .line || object.kind == .phrase || object.kind == .roleplayPhrase || object.kind == .tutorMessage
-        }
         let savedLine = state.profile.savedLines.first
-        let savedWord = state.profile.savedWords.first
         let speakingSummary = state.profile.sessionSummaries.first { summary in
             summary.id.hasPrefix("summary-usage-session-") ||
                 summary.title.localizedCaseInsensitiveContains("Open practice")
@@ -306,31 +302,11 @@ struct SpeakProfileHomeView: View {
             ))
         }
 
-        if let savedPhrase {
-            items.append(AchievementTimelineItem(
-                id: "saved-phrase",
-                title: "Saved phrase",
-                detail: savedPhrase.text,
-                dateLabel: "Saved",
-                symbol: "bookmark.fill",
-                color: .warmAmber,
-                isComplete: true
-            ))
-        } else if let savedLine {
+        if let savedLine {
             items.append(AchievementTimelineItem(
                 id: "saved-phrase",
                 title: "Saved phrase",
                 detail: savedLine.text,
-                dateLabel: "Saved",
-                symbol: "bookmark.fill",
-                color: .warmAmber,
-                isComplete: true
-            ))
-        } else if let savedWord {
-            items.append(AchievementTimelineItem(
-                id: "saved-phrase",
-                title: "Saved phrase",
-                detail: savedWord.term,
                 dateLabel: "Saved",
                 symbol: "bookmark.fill",
                 color: .warmAmber,
@@ -1886,7 +1862,6 @@ private enum SavedContentFilter: String, CaseIterable, Identifiable {
     case all = "All"
     case lines = "Lines"
     case situations = "Situations"
-    case items = "Items"
 
     var id: String { rawValue }
 }
@@ -1913,17 +1888,6 @@ private struct SavedLinesView: View {
             $0.title.localizedCaseInsensitiveContains(query)
                 || $0.subtitle.localizedCaseInsensitiveContains(query)
                 || $0.setting.localizedCaseInsensitiveContains(query)
-        }
-    }
-
-    var filteredObjects: [SavedLearningObject] {
-        guard !query.isEmpty else { return state.savedLearningObjects }
-        return state.savedLearningObjects.filter {
-            $0.text.localizedCaseInsensitiveContains(query)
-                || $0.translation.localizedCaseInsensitiveContains(query)
-                || $0.source.localizedCaseInsensitiveContains(query)
-                || $0.note.localizedCaseInsensitiveContains(query)
-                || $0.kind.rawValue.localizedCaseInsensitiveContains(query)
         }
     }
 
@@ -1983,13 +1947,6 @@ private struct SavedLinesView: View {
                 }
             }
 
-            if showsObjects {
-                Section("Words and phrases") {
-                    ForEach(filteredObjects) { object in
-                        LearningObjectRow(object: object) {}
-                    }
-                }
-            }
         }
         .converlaxListSurface()
         .searchable(text: $query, prompt: "Search saved content")
@@ -2004,21 +1961,16 @@ private struct SavedLinesView: View {
         filter == .all || filter == .situations
     }
 
-    private var showsObjects: Bool {
-        filter == .all || filter == .items
-    }
-
     private var hasNoSearchResults: Bool {
         guard !query.isEmpty else { return false }
 
         let linesEmpty = !showsLines || filteredLines.isEmpty
         let situationsEmpty = !showsSituations || filteredRoleplays.isEmpty
-        let objectsEmpty = !showsObjects || filteredObjects.isEmpty
-        return linesEmpty && situationsEmpty && objectsEmpty
+        return linesEmpty && situationsEmpty
     }
 
     private var isEmptyBeforeSearch: Bool {
-        query.isEmpty && filteredLines.isEmpty && filteredRoleplays.isEmpty && filteredObjects.isEmpty
+        query.isEmpty && filteredLines.isEmpty && filteredRoleplays.isEmpty
     }
 }
 

@@ -153,6 +153,7 @@ struct LessonPlayerView: View {
     @ObservedObject var state: LearningState
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private let onBackToCourse: (() -> Void)?
     @State private var lesson: BeginnerLesson
     @State private var stepIndex = 0
     @State private var completed = false
@@ -171,13 +172,14 @@ struct LessonPlayerView: View {
     @State private var completionResult: CompletionCelebrationResult?
     @State private var turnEntranceVisible = false
 
-    init(lesson: BeginnerLesson, state: LearningState) {
+    init(lesson: BeginnerLesson, state: LearningState, onBackToCourse: (() -> Void)? = nil) {
         _lesson = State(initialValue: lesson)
         let launchStepIndex = ConverlaxLaunchArguments.lessonStepIndex(in: ProcessInfo.processInfo.arguments)
         let initialStepIndex = launchStepIndex.map { min(max($0, 0), max(lesson.steps.count - 1, 0)) }
             ?? state.resumeStepIndex(for: lesson)
         _stepIndex = State(initialValue: initialStepIndex)
         self.state = state
+        self.onBackToCourse = onBackToCourse
     }
 
     var body: some View {
@@ -190,7 +192,7 @@ struct LessonPlayerView: View {
                         CompletionCelebrationView(result: completionResult)
                     }
                     Spacer()
-                    Button(action: dismiss.callAsFunction) {
+                    Button(action: backToCourse) {
                         Text("Back to course")
                     }
                     .buttonStyle(PrimaryButtonStyle())
@@ -259,6 +261,15 @@ struct LessonPlayerView: View {
 
     private var step: LessonStep {
         lesson.steps[stepIndex]
+    }
+
+    private func backToCourse() {
+        guard let onBackToCourse else {
+            dismiss()
+            return
+        }
+
+        onBackToCourse()
     }
 
     private var selectedChoice: String? {

@@ -54,7 +54,6 @@ enum ConverlaxLaunchArguments {
 enum AppTab: Hashable {
     case home
     case practice
-    case review
     case profile
 
     static var launchDefault: AppTab {
@@ -69,8 +68,6 @@ enum AppTab: Hashable {
         switch arguments[flagIndex + 1] {
         case "practice", "freeTalk", "roleplays":
             return .practice
-        case "review":
-            return .review
         case "profile":
             return .profile
         default:

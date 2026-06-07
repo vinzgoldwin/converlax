@@ -146,7 +146,7 @@ struct OnboardingView: View {
 
     private func levelButton(_ level: Level) -> some View {
         ChoiceRow(
-            title: level == .beginner ? "\(level.rawValue) \(level.code) - Recommended" : "\(level.rawValue) \(level.code)",
+            title: "\(level.rawValue) \(level.code)",
             subtitle: onboardingSubtitle(for: level),
             selected: selectedLevel == level
         ) {

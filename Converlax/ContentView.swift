@@ -6,7 +6,6 @@ struct ContentView: View {
     @State private var isShowingForcedOnboarding: Bool
     @State private var homePath: [HomeRoute]
     @State private var practicePath: [PracticeRoute]
-    @State private var reviewPath: [ReviewRoute]
     @State private var profilePath: [ProfileRoute]
 
     init() {
@@ -14,7 +13,6 @@ struct ContentView: View {
         _isShowingForcedOnboarding = State(initialValue: Self.forceOnboarding)
         _homePath = State(initialValue: HomeRoute.launchDefaultPath)
         _practicePath = State(initialValue: PracticeRoute.launchDefaultPath)
-        _reviewPath = State(initialValue: ReviewRoute.launchDefaultPath)
         _profilePath = State(initialValue: ProfileRoute.launchDefaultPath)
     }
 
@@ -26,7 +24,6 @@ struct ContentView: View {
                     selectedTab: $selectedTab,
                     homePath: $homePath,
                     practicePath: $practicePath,
-                    reviewPath: $reviewPath,
                     profilePath: $profilePath
                 )
             } else {
@@ -49,7 +46,6 @@ private struct MainTabView: View {
     @Binding var selectedTab: AppTab
     @Binding var homePath: [HomeRoute]
     @Binding var practicePath: [PracticeRoute]
-    @Binding var reviewPath: [ReviewRoute]
     @Binding var profilePath: [ProfileRoute]
 
     var body: some View {
@@ -64,7 +60,9 @@ private struct MainTabView: View {
                         case .tutor:
                             TutorView(state: state)
                         case .lesson(let lesson):
-                            LessonPlayerView(lesson: lesson, state: state)
+                            LessonPlayerView(lesson: lesson, state: state) {
+                                homePath = [.courseDetail]
+                            }
                         case .lessonDetail(let lesson):
                             LessonDetailView(lesson: lesson, state: state)
                         }
@@ -87,17 +85,6 @@ private struct MainTabView: View {
                     .accessibilityIdentifier("tab-practice")
             }
             .tag(AppTab.practice)
-
-            NavigationStack(path: $reviewPath) {
-                ReviewHomeView(state: state)
-                    .accessibilityIdentifier("screen-review")
-            }
-            .id(AppTab.review)
-            .tabItem {
-                Label("Review", systemImage: "bolt.fill")
-                    .accessibilityIdentifier("tab-review")
-            }
-            .tag(AppTab.review)
 
             NavigationStack(path: $profilePath) {
                 SpeakProfileHomeView(state: state)

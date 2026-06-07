@@ -171,16 +171,6 @@ final class LearningState: ObservableObject {
             )
         }
 
-        let personalDueItems = personalDueReviewItems()
-        if !personalDueItems.isEmpty {
-            return NextLearningRecommendation(
-                title: "Review \(personalDueItems.count) due \(personalDueItems.count == 1 ? "item" : "items")",
-                detail: "From your saved lines, lesson answers, and speaking feedback.",
-                reason: "These were created by recent learning activity.",
-                symbol: "bolt.fill"
-            )
-        }
-
         if !isCompleted(currentLesson) {
             return NextLearningRecommendation(
                 title: "Continue \(currentLesson.title.lowercased())",

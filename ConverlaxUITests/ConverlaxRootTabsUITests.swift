@@ -88,12 +88,11 @@ final class ConverlaxRootTabsUITests: XCTestCase {
         XCTAssertFalse(element("situation-filter", in: app).exists)
     }
 
-    func testReviewRootShowsCurrentReviewAction() throws {
-        let app = launchApp(initialTab: "review")
+    func testRootTabsDoNotShowReview() throws {
+        let app = launchApp(initialTab: "home")
 
-        XCTAssertTrue(element("screen-review", in: app).waitForExistence(timeout: 5))
-        XCTAssertTrue(element("review-primary-action", in: app).exists)
-        XCTAssertEqual(app.buttons.matching(identifier: "review-primary-action").count, 1)
+        XCTAssertTrue(element("screen-home", in: app).waitForExistence(timeout: 5))
+        XCTAssertFalse(element("tab-review", in: app).exists)
     }
 
     func testProfileRootShowsJourney() throws {
@@ -237,6 +236,27 @@ final class ConverlaxRootTabsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Back to course"].exists)
     }
 
+    func testLessonCompletionBackToCourseReturnsToCoursePath() throws {
+        let app = launchApp(initialTab: "home", extraArguments: [
+            "-ConverlaxInitialHomeRoute",
+            "lessonDetail",
+            "-ConverlaxInitialLessonID",
+            "english-hobbies-detail",
+            "-ConverlaxShowLessonCompletion"
+        ])
+
+        XCTAssertTrue(app.navigationBars["Lesson"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Start speaking"].waitForExistence(timeout: 5))
+        app.buttons["Start speaking"].tap()
+
+        XCTAssertTrue(element("completion-celebration", in: app).waitForExistence(timeout: 5))
+        app.buttons["Back to course"].tap()
+
+        XCTAssertTrue(app.navigationBars["Course"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Course path"].exists)
+        XCTAssertTrue(app.staticTexts["Weekend plans"].exists)
+    }
+
     func testSavedLineReactionAppearsAfterSavingVisibleTurn() throws {
         let app = launchApp(initialTab: "home", extraArguments: [
             "-ConverlaxInitialHomeRoute",
@@ -252,17 +272,12 @@ final class ConverlaxRootTabsUITests: XCTestCase {
         XCTAssertTrue(element("saved-line-reaction-mascot", in: app).exists)
     }
 
-    func testReviewCompletionLaunchPathShowsClearedState() throws {
-        let app = launchApp(initialTab: "review", extraArguments: [
-            "-ConverlaxSeedTutorReview",
-            "-ConverlaxInitialReviewRoute",
-            "smartReview",
-            "-ConverlaxShowReviewCompletion"
-        ])
+    func testProfileSavedContentIgnoresAutomaticLearningObjects() throws {
+        let app = launchApp(initialTab: "profile", extraArguments: ["-ConverlaxSeedTutorReview"])
 
-        XCTAssertTrue(app.staticTexts["Review complete"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Nothing else is due today."].exists)
-        XCTAssertTrue(app.buttons["Continue speaking"].exists)
+        XCTAssertTrue(element("screen-profile", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Saved content"].exists)
+        XCTAssertTrue(app.staticTexts["Lines and phrases"].exists)
     }
 
     func testForcedOnboardingCompletionLandsOnHome() throws {
@@ -375,15 +390,6 @@ final class ConverlaxRootTabsUITests: XCTestCase {
         XCTAssertFalse(anyElement(containing: "Review later", in: app).exists)
         XCTAssertFalse(app.buttons["More detail"].exists)
         XCTAssertTrue(anyElement(containing: "I went to work yesterday.", in: app).exists)
-    }
-
-    func testReviewCanPresentRecentTutorCorrection() throws {
-        let app = launchApp(initialTab: "review", extraArguments: ["-ConverlaxSeedTutorReview"])
-
-        XCTAssertTrue(element("review-primary-action", in: app).waitForExistence(timeout: 5))
-        element("review-primary-action", in: app).tap()
-
-        XCTAssertTrue(anyElement(containing: "I went to work yesterday.", in: app).waitForExistence(timeout: 5))
     }
 
     private func launchApp(initialTab: String, extraArguments: [String] = []) -> XCUIApplication {
