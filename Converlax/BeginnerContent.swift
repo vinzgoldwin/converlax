@@ -59,19 +59,84 @@ enum BeginnerContent {
     }
 
     private static func goalPrompt(for seed: EnglishLessonSeed) -> String {
+        switch seed.id {
+        case "english-hobbies-detail":
+            return "Tell me one hobby you like, with one small detail."
+        case "english-weekend-plans":
+            return "Tell me one weekend plan, then ask the other person back."
+        case "english-invitation-accept":
+            return "Accept the invitation, then ask one detail."
+        case "english-invitation-decline":
+            return "Say no gently, and leave the conversation friendly."
+        case "english-short-story-yesterday":
+            return "Tell me three simple things you did yesterday."
+        case "english-social-review":
+            return "React to a friend, then ask one follow-up question."
+        case "english-work-clarify-task":
+            return "Ask one clear question about what should happen next."
+        case "english-work-blocker":
+            return "Name one blocker, then ask for help."
+        case "english-polite-request":
+            return "Ask someone for help without pressure."
+        case "english-meeting-clarification":
+            return "Interrupt gently, then check one thing you heard."
+        case "english-video-call-issues":
+            return "Name one call problem, then ask for the line again."
+        case "english-work-review":
+            return "Give one work update, then ask for what you need."
+        case "english-airport-checkin":
+            return "Check in for a flight, then ask one bag question."
+        case "english-flight-delay":
+            return "Ask about a delay and what you should do next."
+        case "english-hotel-problem":
+            return "Report one hotel room problem and ask for help."
+        case "english-restaurant-travel":
+            return "Order one local dish, then ask one simple question."
+        case "english-lost-item":
+            return "Describe one lost item with one useful detail."
+        case "english-pharmacy-travel":
+            return "Say one symptom, then ask for medicine advice."
+        case "english-local-transport":
+            return "Ask the best way to get to one place."
+        case "english-travel-emergency":
+            return "Ask for urgent help in two short lines."
+        case "english-travel-review":
+            return "Handle one travel problem with a short, clear line."
+        case "english-past-story":
+            return "Tell me a short past story in three sentences."
+        case "english-future-plans-confidence":
+            return "Tell me one future plan and one reason."
+        case "english-explain-reasons":
+            return "Give one choice and two simple reasons."
+        case "english-compare-options":
+            return "Compare two options in one clear sentence."
+        case "english-give-preference":
+            return "Say which option you prefer, politely."
+        case "english-repair-misunderstanding":
+            return "Correct one detail so your meaning is clear."
+        case "english-longer-answer":
+            return "Answer a familiar question in three short sentences."
+        case "english-weekly-speaking-check-1":
+            return "Tell me what you practiced this week."
+        case "english-confidence-final":
+            return "Start a realistic conversation with one calm detail."
+        default:
+            break
+        }
+
         switch seed.unit {
         case 1:
             return "Today, say \(seed.subtitle) in one clear sentence."
         case 2:
-            return "Practice a real errand: \(seed.subtitle)."
+            return "Say one short line for this errand: \(seed.subtitle)."
         case 3:
-            return "Keep a social chat moving as you \(seed.subtitle)."
+            return "Say one friendly line to \(seed.subtitle)."
         case 4:
-            return "Use calm work English to \(seed.subtitle)."
+            return "Say one calm work line to \(seed.subtitle)."
         case 5:
-            return "Handle a travel moment: \(seed.subtitle)."
+            return "Say one useful travel line to \(seed.subtitle)."
         default:
-            return "Build confidence as you \(seed.subtitle)."
+            return "Say a clear answer as you \(seed.subtitle)."
         }
     }
 
@@ -372,7 +437,7 @@ enum BeginnerContent {
             icon: "person.wave.2.fill",
             accent: .blue,
             minutes: 5,
-            goal: "My goal is to introduce myself in two calm sentences.",
+            goal: "Introduce yourself in two calm sentences.",
             model: "Hi, I'm Maya. Nice to meet you.",
             modelHelper: "Use this in class, at work, while traveling, or when a friend introduces you.",
             speak: "Hi, I'm Alex. I'm from Indonesia.",
@@ -402,7 +467,7 @@ enum BeginnerContent {
             icon: "bubble.left.fill",
             accent: .mint,
             minutes: 5,
-            goal: "My goal is to answer a simple check-in and ask one question back.",
+            goal: "Answer a simple check-in, then ask one question back.",
             model: "Pretty good, thanks. How about you?",
             modelHelper: "This keeps the conversation open without needing a long answer.",
             speak: "I'm doing well. I had a quiet morning.",
@@ -432,7 +497,7 @@ enum BeginnerContent {
             icon: "clock.fill",
             accent: .mint,
             minutes: 5,
-            goal: "My goal is to describe one normal day in simple English.",
+            goal: "Describe one normal day in simple English.",
             model: "I usually start work around nine.",
             modelHelper: "Usually means most days. Around makes the time feel natural.",
             speak: "I usually study English after work.",
@@ -462,7 +527,7 @@ enum BeginnerContent {
             icon: "figure.walk",
             accent: .violet,
             minutes: 5,
-            goal: "My goal is to say what I like and ask about the other person.",
+            goal: "Say one thing you like, then ask about the other person.",
             model: "I like watching movies when I have free time.",
             modelHelper: "This is easy, personal, and useful for friendly conversation.",
             speak: "I like walking around the city on weekends.",
@@ -492,7 +557,7 @@ enum BeginnerContent {
             icon: "calendar.badge.plus",
             accent: .blue,
             minutes: 6,
-            goal: "My goal is to suggest a simple plan and confirm the details.",
+            goal: "Suggest a simple plan and confirm one detail.",
             model: "Would you like to get coffee tomorrow?",
             modelHelper: "Would you like to is polite and friendly.",
             speak: "Are you free after class?",
@@ -522,7 +587,7 @@ enum BeginnerContent {
             icon: "checkmark.seal.fill",
             accent: .amber,
             minutes: 7,
-            goal: "My goal is to keep a first conversation going for one minute.",
+            goal: "Keep a first conversation going for one minute.",
             model: "Hi, I'm Alex. Nice to meet you. How's your day going?",
             modelHelper: "This opens a real conversation with two safe lines.",
             speak: "I'm here for the language meetup.",
@@ -552,7 +617,7 @@ enum BeginnerContent {
             icon: "cup.and.saucer.fill",
             accent: .amber,
             minutes: 6,
-            goal: "My goal is to order at a cafe and answer one follow-up question.",
+            goal: "Order at a cafe and answer one follow-up question.",
             model: "Hi, can I get a latte and a croissant, please?",
             modelHelper: "Can I get sounds natural at a cafe counter.",
             speak: "For here, please.",
@@ -582,7 +647,7 @@ enum BeginnerContent {
             icon: "fork.knife",
             accent: .violet,
             minutes: 6,
-            goal: "My goal is to check a dish before I order it.",
+            goal: "Check one dish before you order it.",
             model: "Does this come with rice or salad?",
             modelHelper: "Use come with to ask what is included.",
             speak: "Is there any meat in this soup?",
@@ -612,7 +677,7 @@ enum BeginnerContent {
             icon: "map.fill",
             accent: .blue,
             minutes: 6,
-            goal: "My goal is to ask for directions and repeat the answer back.",
+            goal: "Ask for directions and repeat the answer back.",
             model: "Excuse me, how do I get to the train station?",
             modelHelper: "Use how do I get to when you need the route, not just the place.",
             speak: "Is it far from here?",
@@ -642,7 +707,7 @@ enum BeginnerContent {
             icon: "tram.fill",
             accent: .mint,
             minutes: 6,
-            goal: "My goal is to ask for a ticket and check where to get off.",
+            goal: "Ask for a ticket and check where to get off.",
             model: "One adult ticket to City Hall, please.",
             modelHelper: "This works at a station counter or ticket window.",
             speak: "Which platform does it leave from?",
@@ -672,7 +737,7 @@ enum BeginnerContent {
             icon: "bag.fill",
             accent: .amber,
             minutes: 6,
-            goal: "My goal is to ask about a product and pay without panic.",
+            goal: "Ask about one product, then choose how to pay.",
             model: "How much is this jacket?",
             modelHelper: "Use this when you point to one item.",
             speak: "Do you have it in medium?",
@@ -702,7 +767,7 @@ enum BeginnerContent {
             icon: "questionmark.circle.fill",
             accent: .violet,
             minutes: 6,
-            goal: "My goal is to ask for help when I do not understand.",
+            goal: "Ask for help when you do not understand.",
             model: "Sorry, can you say that again?",
             modelHelper: "This is a simple way to ask for a repeat without freezing.",
             speak: "Could you speak more slowly, please?",
@@ -732,7 +797,7 @@ enum BeginnerContent {
             icon: "briefcase.fill",
             accent: .blue,
             minutes: 6,
-            goal: "My goal is to start a work chat with my role and one useful next step.",
+            goal: "Start a work chat with your role and one useful next step.",
             model: "Hi, I'm Maya. I joined the product team this week.",
             modelHelper: "Use joined to give quick context when you are new.",
             speak: "I work on onboarding, so I'll be helping with the app flow.",
@@ -762,7 +827,7 @@ enum BeginnerContent {
             icon: "person.2.fill",
             accent: .mint,
             minutes: 6,
-            goal: "My goal is to give a short meeting update and ask who should act next.",
+            goal: "Give a short meeting update and ask who should act next.",
             model: "Hi everyone. I have a quick update on the timeline.",
             modelHelper: "Name the topic before you give details.",
             speak: "The draft is ready for review.",
@@ -792,7 +857,7 @@ enum BeginnerContent {
             icon: "phone.fill",
             accent: .violet,
             minutes: 6,
-            goal: "My goal is to make a short work call and explain why I am calling.",
+            goal: "Open a short work call and explain why you are calling.",
             model: "Hi, this is Alex from Converlax.",
             modelHelper: "Use this is when you introduce yourself on a call.",
             speak: "I'm calling about the invoice you sent yesterday.",
@@ -822,7 +887,7 @@ enum BeginnerContent {
             icon: "exclamationmark.bubble.fill",
             accent: .amber,
             minutes: 6,
-            goal: "My goal is to explain a work problem with the symptom and what is blocked.",
+            goal: "Explain a work problem with the symptom and what is blocked.",
             model: "I'm having trouble uploading the file.",
             modelHelper: "Use having trouble plus an -ing verb for a simple issue.",
             speak: "The upload stops at 80 percent, so I can't send the report.",
@@ -852,7 +917,7 @@ enum BeginnerContent {
             icon: "lightbulb.fill",
             accent: .blue,
             minutes: 6,
-            goal: "My goal is to give a work opinion with one reason and one next test.",
+            goal: "Give a work opinion with one reason and one next test.",
             model: "I have a small suggestion about the plan.",
             modelHelper: "This opens your opinion gently before you choose.",
             speak: "Option B is clearer for new users.",
@@ -882,7 +947,7 @@ enum BeginnerContent {
             icon: "hand.thumbsup.fill",
             accent: .mint,
             minutes: 6,
-            goal: "My goal is to agree with the goal, explain a concern, and suggest a better next step.",
+            goal: "Agree first, explain one concern, then suggest a better next step.",
             model: "I agree with the goal, but I have a concern about the deadline.",
             modelHelper: "Agree with the shared goal before you explain the problem.",
             speak: "Friday gives us one more day to test.",
@@ -912,7 +977,7 @@ enum BeginnerContent {
             icon: "bed.double.fill",
             accent: .violet,
             minutes: 6,
-            goal: "My goal is to check in and handle one practical detail.",
+            goal: "Check in and ask about one practical hotel detail.",
             model: "Good evening. I have a room booked under Alex Tan.",
             modelHelper: "Room booked under names the person on the hotel booking.",
             speak: "I arrived a little early. Is the room ready yet?",
@@ -942,7 +1007,7 @@ enum BeginnerContent {
             icon: "airplane.departure",
             accent: .blue,
             minutes: 6,
-            goal: "My goal is to explain where I am going, when, and why.",
+            goal: "Explain where you are going, when, and why.",
             model: "I'm staying in Bangkok until Friday.",
             modelHelper: "Use staying in for a temporary visit to a city.",
             speak: "Tomorrow I'm taking the train to the old town.",
@@ -972,7 +1037,7 @@ enum BeginnerContent {
             icon: "airplane",
             accent: .amber,
             minutes: 6,
-            goal: "My goal is to ask one clear airport question at a time.",
+            goal: "Ask one clear airport question at a time.",
             model: "Which gate should I go to for flight 218?",
             modelHelper: "Use which gate when you need the gate number for a flight.",
             speak: "The screen says delayed. What is the new boarding time?",
@@ -1002,7 +1067,7 @@ enum BeginnerContent {
             icon: "cross.case.fill",
             accent: .blue,
             minutes: 6,
-            goal: "My goal is to ask for urgent help in short, direct lines.",
+            goal: "Ask for urgent help in short, direct lines.",
             model: "I need help now. My wallet was stolen.",
             modelHelper: "Use short sentences so the main problem is clear.",
             speak: "My bag is missing.",
@@ -1032,7 +1097,7 @@ enum BeginnerContent {
             icon: "pills.fill",
             accent: .mint,
             minutes: 6,
-            goal: "My goal is to explain symptoms, timing, advice, and dosage.",
+            goal: "Explain one symptom, when it started, and what advice you need.",
             model: "I have a fever and a sore throat.",
             modelHelper: "Use I have plus the symptom or symptoms.",
             speak: "It started two days ago.",
@@ -1062,7 +1127,7 @@ enum BeginnerContent {
             icon: "checkmark.seal.fill",
             accent: .violet,
             minutes: 8,
-            goal: "My goal is to open, ask, clarify, and close a real exchange.",
+            goal: "Open a real exchange, ask one question, clarify, and close.",
             model: "Hi, I'm Alex. I'm here for a short work trip.",
             modelHelper: "This gives your name and reason without a long story.",
             speak: "Could I ask where the airport train leaves from?",
@@ -1100,7 +1165,7 @@ enum BeginnerContent {
             icon: "person.wave.2.fill",
             accent: .blue,
             minutes: 5,
-            goal: "My goal is to greet someone and introduce myself in French.",
+            goal: "Greet someone and introduce yourself in French.",
             model: "Bonjour. Je m'appelle Maya.",
             modelHelper: "Hello. My name is Maya.",
             speak: "Bonjour. Je m'appelle Alex.",
@@ -1130,7 +1195,7 @@ enum BeginnerContent {
             icon: "bubble.left.fill",
             accent: .mint,
             minutes: 5,
-            goal: "My goal is to answer a simple greeting and keep the exchange moving.",
+            goal: "Answer a simple greeting and keep the exchange moving.",
             model: "Bonjour, comment ca va ?",
             modelHelper: "This means hello, how are you?",
             speak: "Ca va bien, merci.",
@@ -1160,7 +1225,7 @@ enum BeginnerContent {
             icon: "cup.and.saucer.fill",
             accent: .amber,
             minutes: 5,
-            goal: "My goal is to order one drink politely.",
+            goal: "Order one drink politely.",
             model: "Un cafe, s'il vous plait.",
             modelHelper: "A short cafe order: a coffee, please.",
             speak: "Je voudrais un cafe, s'il vous plait.",
@@ -1190,7 +1255,7 @@ enum BeginnerContent {
             icon: "map.fill",
             accent: .violet,
             minutes: 5,
-            goal: "My goal is to ask where a useful place is.",
+            goal: "Ask where one useful place is.",
             model: "Ou est la gare ?",
             modelHelper: "Where is the station?",
             speak: "Excusez-moi, ou est la gare ?",
@@ -1220,7 +1285,7 @@ enum BeginnerContent {
             icon: "building.2.fill",
             accent: .blue,
             minutes: 5,
-            goal: "My goal is to check in with a reservation.",
+            goal: "Check in with a reservation.",
             model: "J'ai une reservation.",
             modelHelper: "I have a reservation.",
             speak: "Bonjour, j'ai une reservation.",
@@ -1250,7 +1315,7 @@ enum BeginnerContent {
             icon: "checkmark.seal.fill",
             accent: .mint,
             minutes: 6,
-            goal: "My goal is to combine greetings, ordering, directions, and hotel check-in.",
+            goal: "Combine greetings, ordering, directions, and hotel check-in.",
             model: "Bonjour. Je m'appelle Alex. Je voudrais un cafe, s'il vous plait.",
             modelHelper: "This combines a greeting, name, and cafe order.",
             speak: "Bonjour. Je m'appelle Alex. Je viens d'Indonesie.",

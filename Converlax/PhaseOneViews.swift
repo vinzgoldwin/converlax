@@ -559,72 +559,77 @@ private struct LessonPracticePreview: View {
     let lesson: BeginnerLesson
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             Text("What you will practice")
                 .font(.headline.weight(.semibold))
 
-            ForEach(items) { item in
-                HStack(alignment: .top, spacing: 10) {
-                    LessonPracticePreviewIcon(symbol: item.symbol, color: item.color)
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(items) { item in
+                    HStack(spacing: 12) {
+                        LessonPracticePreviewIcon(symbol: item.symbol, color: item.color)
 
-                    VStack(alignment: .leading, spacing: 3) {
                         Text(item.title)
                             .font(.subheadline.weight(.semibold))
-                        Text(item.detail)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                            .foregroundStyle(Color.converlaxInk)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.86)
+
+                        Spacer(minLength: 0)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 5)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(14)
-        .background(Color.claySurface.opacity(0.72), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.clayStroke.opacity(0.8), lineWidth: 1)
-        )
     }
 
     private var items: [LessonPracticePreviewItem] {
         var preview: [LessonPracticePreviewItem] = []
 
         if !lesson.savedWords.isEmpty {
-            let terms = lesson.savedWords.prefix(3).map(\.term).joined(separator: ", ")
             preview.append(
                 LessonPracticePreviewItem(
                     id: "words",
                     symbol: "character.book.closed.fill",
-                    title: "\(lesson.savedWords.count) useful \(lesson.savedWords.count == 1 ? "word" : "words")",
-                    detail: terms,
+                    title: "\(lesson.savedWords.count) useful \(lesson.savedWords.count == 1 ? "phrase" : "phrases")",
                     color: .warmAmber
                 )
             )
         }
 
-        let choiceCount = lesson.steps.filter { $0.kind == .choice }.count
-        if choiceCount > 0 {
+        if lesson.steps.contains(where: { $0.turnIntent == .listenAndRepeat }) {
             preview.append(
                 LessonPracticePreviewItem(
-                    id: "checks",
-                    symbol: "questionmark.bubble.fill",
-                    title: "\(choiceCount) spoken \(choiceCount == 1 ? "answer" : "answers")",
-                    detail: "Answer the prompt out loud.",
-                    color: .primaryBlue
+                    id: "model",
+                    symbol: "speaker.wave.2.fill",
+                    title: "Listen and repeat",
+                    color: lesson.accent.color
                 )
             )
         }
 
-        let speakingCount = lesson.steps.filter { $0.kind == .speak }.count
-        if speakingCount > 0 {
+        let guidedLineCount = lesson.steps.filter { $0.kind == .speak }.count
+        if guidedLineCount > 0 {
             preview.append(
                 LessonPracticePreviewItem(
-                    id: "speaking",
+                    id: "guided-lines",
                     symbol: "mic.fill",
-                    title: "\(speakingCount) speaking \(speakingCount == 1 ? "prompt" : "prompts")",
-                    detail: "Practice the line out loud when it appears.",
+                    title: "\(guidedLineCount) guided \(guidedLineCount == 1 ? "line" : "lines")",
                     color: .mintSuccess
+                )
+            )
+        }
+
+        let situationPromptCount = lesson.steps
+            .filter { [.choice, .roleplay, .freeResponse].contains($0.kind) }
+            .count
+        if situationPromptCount > 0 {
+            preview.append(
+                LessonPracticePreviewItem(
+                    id: "situations",
+                    symbol: "questionmark.bubble.fill",
+                    title: "\(situationPromptCount) situation \(situationPromptCount == 1 ? "answer" : "answers")",
+                    color: .primaryBlue
                 )
             )
         }
@@ -635,13 +640,12 @@ private struct LessonPracticePreview: View {
                     id: "guided",
                     symbol: lesson.icon,
                     title: "Short guided practice",
-                    detail: lesson.subtitle,
                     color: lesson.accent.color
                 )
             )
         }
 
-        return Array(preview.prefix(3))
+        return Array(preview.prefix(4))
     }
 }
 
@@ -664,7 +668,6 @@ private struct LessonPracticePreviewItem: Identifiable {
     let id: String
     let symbol: String
     let title: String
-    let detail: String
     let color: Color
 }
 

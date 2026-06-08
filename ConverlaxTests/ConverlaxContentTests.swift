@@ -771,6 +771,24 @@ final class ConverlaxContentTests: XCTestCase {
         XCTAssertEqual(state.profile.scheduledReviews.first?.successCount, 0)
     }
 
+    func testCompletionNextActionRemovesDuplicateCallToActionVerb() {
+        let result = CompletionCelebrationResult(
+            title: "Lesson complete",
+            subtitle: "You finished add hobby details.",
+            xpEarned: 150,
+            levelBefore: 1,
+            levelAfter: 1,
+            levelTitle: "First Steps",
+            levelProgressBefore: 0,
+            levelProgressAfter: 0.3,
+            savedItemsCreated: 0,
+            nextActionTitle: "Continue weekend plans",
+            nextActionDetail: "Next lesson in your English path."
+        )
+
+        XCTAssertEqual(result.nextActionDisplayTitle, "weekend plans")
+    }
+
     private func makeState() -> LearningState {
         let suiteName = "ConverlaxContentTests-\(UUID().uuidString)"
         let suite = UserDefaults(suiteName: suiteName)!

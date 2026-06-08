@@ -169,12 +169,31 @@ final class ConverlaxRootTabsUITests: XCTestCase {
 
         XCTAssertTrue(element("speech-practice-panel", in: app).waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Your goal"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.staticTexts["My goal is to introduce myself in two calm sentences."].exists)
+        XCTAssertTrue(app.staticTexts["Introduce yourself in two calm sentences."].exists)
         XCTAssertTrue(app.staticTexts["Say your own answer when you are ready."].exists)
         XCTAssertFalse(app.buttons["Play sentence audio"].exists)
         XCTAssertFalse(app.staticTexts["Record one clear answer."].exists)
         XCTAssertFalse(app.staticTexts["Say this sentence"].exists)
         XCTAssertFalse(app.staticTexts["Read it aloud when you are ready."].exists)
+    }
+
+    func testLessonDetailPreviewShowsActualPractice() throws {
+        let app = launchApp(initialTab: "home", extraArguments: [
+            "-ConverlaxInitialHomeRoute",
+            "lessonDetail",
+            "-ConverlaxInitialLessonID",
+            "english-hobbies-detail"
+        ])
+
+        XCTAssertTrue(app.staticTexts["What you will practice"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["4 useful phrases"].exists)
+        XCTAssertTrue(app.staticTexts["Listen and repeat"].exists)
+        XCTAssertTrue(app.staticTexts["2 guided lines"].exists)
+        XCTAssertTrue(app.staticTexts["3 situation answers"].exists)
+        XCTAssertFalse(app.staticTexts["I like photography because it helps me slow down."].exists)
+        XCTAssertFalse(app.staticTexts["I started running last year. / It helps me relax after work."].exists)
+        XCTAssertFalse(app.staticTexts["Answer the prompt out loud."].exists)
+        XCTAssertFalse(app.staticTexts["Practice the line out loud when it appears."].exists)
     }
 
     func testLessonModelTurnHasAudioPlaybackControl() throws {
@@ -235,6 +254,9 @@ final class ConverlaxRootTabsUITests: XCTestCase {
 
         XCTAssertTrue(element("completion-celebration", in: app).waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Lesson complete"].exists)
+        XCTAssertTrue(app.staticTexts["Up next"].exists)
+        XCTAssertFalse(app.staticTexts["Continue from here"].exists)
+        XCTAssertFalse(app.staticTexts["Continue weekend plans"].exists)
         XCTAssertTrue(app.buttons["Back to course"].exists)
     }
 
@@ -252,6 +274,9 @@ final class ConverlaxRootTabsUITests: XCTestCase {
         app.buttons["Start speaking"].tap()
 
         XCTAssertTrue(element("completion-celebration", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Up next"].exists)
+        XCTAssertFalse(app.staticTexts["Continue from here"].exists)
+        XCTAssertFalse(app.staticTexts["Continue weekend plans"].exists)
         app.buttons["Back to course"].tap()
 
         XCTAssertTrue(app.navigationBars["Course"].waitForExistence(timeout: 5))

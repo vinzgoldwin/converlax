@@ -38,7 +38,7 @@ private struct CourseHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text("Your next lesson")
+            Text("Next lesson")
                 .font(.title2.weight(.bold))
                 .foregroundStyle(.primary)
                 .lineLimit(2)

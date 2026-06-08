@@ -1635,15 +1635,17 @@ private struct CompletionNextActionRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: "arrow.forward.circle.fill")
-                .font(.title3.weight(.semibold))
+            Image(systemName: "book.closed.fill")
+                .font(.subheadline.weight(.bold))
                 .foregroundStyle(Color.primaryBlue)
+                .frame(width: 28, height: 28)
+                .background(Color.primaryBlue.opacity(0.14), in: Circle())
 
             VStack(alignment: .leading, spacing: 3) {
-                Text("Continue from here")
+                Text("Up next")
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.secondary)
-                Text(result.nextActionTitle)
+                Text(result.nextActionDisplayTitle)
                     .font(.subheadline.weight(.semibold))
                 if !result.nextActionDetail.isEmpty {
                     Text(result.nextActionDetail)
@@ -1656,6 +1658,7 @@ private struct CompletionNextActionRow: View {
             Spacer(minLength: 8)
         }
         .padding(.top, 4)
+        .accessibilityElement(children: .combine)
     }
 }
 

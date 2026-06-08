@@ -1235,6 +1235,14 @@ struct CompletionCelebrationResult: Equatable {
     let nextActionTitle: String
     let nextActionDetail: String
 
+    var nextActionDisplayTitle: String {
+        let title = nextActionTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        for prefix in ["Continue ", "Start "] where title.hasPrefix(prefix) {
+            return String(title.dropFirst(prefix.count))
+        }
+        return title
+    }
+
     var levelProgressTitle: String {
         levelAfter > levelBefore ? "Reached Level \(levelAfter)" : "Level \(levelAfter) progress moved"
     }
