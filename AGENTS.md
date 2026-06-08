@@ -1,13 +1,10 @@
-# Agent Notes
+# Converlax Agent Notes
 
 Converlax is a speaking-practice iOS app with a small AI feedback backend. Keep the product calm, direct, and easy to use. Simplicity is the first requirement.
 
 ## Product Shape
 
-- Three root tabs, one job each:
-  - Home: continue the next lesson.
-  - Practice: start speaking.
-  - Profile: appreciate the learner's journey.
+- Three root tabs only: Home continues the next lesson, Practice starts speaking, and Profile appreciates the learner's journey.
 - Review is a supporting flow, not a root tab. Route due review and saved-line practice from Home/Profile or intentional detail screens.
 - Prefer one dominant action per screen. Secondary actions should be quiet rows or small tool buttons.
 - Do not turn root screens into feature menus. Put advanced or uncommon paths behind intentional detail screens, or omit them.
@@ -26,8 +23,7 @@ Converlax is a speaking-practice iOS app with a small AI feedback backend. Keep 
 
 ## Journey And Motion
 
-- Profile should feel emotional, not analytical.
-- Keep the main Profile screen limited to current level/title, one compact progress bar, recent journey items, and rows for saved content, practice history, and settings.
+- Profile should feel emotional, not analytical. Keep the main screen limited to current level/title, one compact progress bar, recent journey items, and rows for saved content, practice history, and settings.
 - Do not show XP source breakdowns, full title catalogs, or full milestone lists on the main Profile screen.
 - Completion moments should be brief: acknowledge progress, show a small reward, then offer the next action.
 - Use animation only to clarify local state changes: gentle lift/fade, compact progress movement, listening feedback, and row removal transitions are appropriate.

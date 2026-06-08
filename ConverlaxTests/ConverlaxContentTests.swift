@@ -211,6 +211,17 @@ final class ConverlaxContentTests: XCTestCase {
         XCTAssertNotEqual(turnFour.prompt, turnSeven.prompt)
     }
 
+    func testWeekendPlansLessonDoesNotRepeatTurnFourPromptOnTurnSeven() throws {
+        let lesson = try XCTUnwrap(BeginnerContent.lesson(id: "english-weekend-plans"))
+        let turnFour = try XCTUnwrap(lesson.steps.first { $0.id == "english-weekend-plans-alternative" })
+        let turnSeven = try XCTUnwrap(lesson.steps.first { $0.id == "english-weekend-plans-follow-up" })
+
+        XCTAssertEqual(turnFour.prompt, "I'm thinking about going for a walk.")
+        XCTAssertEqual(turnSeven.turnIntent, .answerOutLoud)
+        XCTAssertEqual(turnSeven.prompt, "Ask the other person about their weekend plans.")
+        XCTAssertNotEqual(turnFour.prompt, turnSeven.prompt)
+    }
+
     func testEveryEnglishLessonHasSpeakableStepsAndReviewSeeds() {
         for lesson in BeginnerContent.lessons(for: .english) {
             XCTAssertGreaterThanOrEqual(lesson.steps.count, 5, lesson.id)
