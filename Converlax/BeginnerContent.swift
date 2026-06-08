@@ -249,7 +249,7 @@ enum BeginnerContent {
             accent: accent,
             minutes: minutes,
             steps: [
-                LessonStep(id: "\(id)-goal", kind: .teach, title: LessonTurnIntent.sayThisSentence.rawValue, prompt: goal, helper: "Read this once to set the focus.", choices: [], correctAnswer: nil),
+                LessonStep(id: "\(id)-goal", kind: .teach, title: LessonTurnIntent.practiceGoal.rawValue, prompt: goal, helper: "", choices: [], correctAnswer: nil),
                 LessonStep(id: "\(id)-model", kind: .teach, title: "Listen and repeat", prompt: model, helper: modelHelper, choices: [], correctAnswer: nil),
                 LessonStep(id: "\(id)-speak", kind: .speak, title: LessonTurnIntent.sayThisSentence.rawValue, prompt: speak, helper: "Read the line as shown.", choices: [], correctAnswer: nil),
                 LessonStep(id: "\(id)-alternative", kind: .speak, title: LessonTurnIntent.sayThisSentence.rawValue, prompt: alternative, helper: "Read the line as shown.", choices: [], correctAnswer: nil),
@@ -350,7 +350,7 @@ enum BeginnerContent {
             accent: accent,
             minutes: minutes,
             steps: [
-                LessonStep(id: "\(id)-goal", kind: .teach, title: LessonTurnIntent.sayThisSentence.rawValue, prompt: goal, helper: "Read this once to set the focus.", choices: [], correctAnswer: nil),
+                LessonStep(id: "\(id)-goal", kind: .teach, title: LessonTurnIntent.practiceGoal.rawValue, prompt: goal, helper: "", choices: [], correctAnswer: nil),
                 LessonStep(id: "\(id)-model", kind: .teach, title: "Listen and repeat", prompt: model, helper: modelHelper, choices: [], correctAnswer: nil),
                 LessonStep(id: "\(id)-speak", kind: .speak, title: LessonTurnIntent.sayThisSentence.rawValue, prompt: speak, helper: "Read the line as shown.", choices: [], correctAnswer: nil),
                 LessonStep(id: "\(id)-next-line", kind: .speak, title: LessonTurnIntent.sayThisSentence.rawValue, prompt: nextLine, helper: "Read the line as shown.", choices: [], correctAnswer: nil),

@@ -14,7 +14,9 @@ Environment overrides:
   CONFIGURATION        Build configuration. Default: Debug
   XCODE_DEVICE_ID      Device id used by xcodebuild destination.
   DEVICETL_DEVICE_ID   Device id used by xcrun devicectl install.
-  DERIVED_DATA_PATH    DerivedData output path.
+  DERIVED_DATA_PATH    DerivedData output path. Defaults to the user-level
+                       Xcode cache (~/Library/Caches/Converlax/DerivedData)
+                       so device builds never touch the working tree.
 
 Current defaults target Kevin's paired iPad:
   XCODE_DEVICE_ID=00008103-000D792914E2201E
@@ -47,7 +49,7 @@ SCHEME="${SCHEME:-Converlax}"
 CONFIGURATION="${CONFIGURATION:-Debug}"
 XCODE_DEVICE_ID="${XCODE_DEVICE_ID:-00008103-000D792914E2201E}"
 DEVICETL_DEVICE_ID="${DEVICETL_DEVICE_ID:-90DDC869-C11E-55EA-A614-367493954585}"
-DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$REPO_ROOT/build/DerivedData}"
+DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$HOME/Library/Caches/Converlax/DerivedData}"
 APP_PATH="$DERIVED_DATA_PATH/Build/Products/$CONFIGURATION-iphoneos/$SCHEME.app"
 BUNDLE_ID="${BUNDLE_ID:-com.kego.converlax}"
 

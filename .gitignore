@@ -1,5 +1,15 @@
 .DS_Store
 tmp/
+
+# Xcode build artifacts
 DerivedData/
+.derivedData/
+build/
+.build/
 *.xcuserstate
 xcuserdata/
+*.xcresult/
+
+# Swift package manager
+.swiftpm/
+Package.resolved

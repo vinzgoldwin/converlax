@@ -597,6 +597,7 @@ enum LessonStepKind: String, Codable, Hashable {
 enum LessonTurnIntent: String, Codable, Hashable, CaseIterable {
     case listenAndRepeat = "Listen and repeat"
     case sayThisSentence = "Say this sentence"
+    case practiceGoal = "Your goal"
     case answerOutLoud = "Say it in your own words"
     case chooseAndSay = "Choose and say"
 }
@@ -1396,6 +1397,10 @@ extension LessonStep {
             return .listenAndRepeat
         }
 
+        if id.hasSuffix("-goal") {
+            return .practiceGoal
+        }
+
         if !choices.isEmpty {
             return .chooseAndSay
         }
@@ -1418,7 +1423,7 @@ extension LessonStep {
 
     var visiblePromptText: String {
         switch turnIntent {
-        case .answerOutLoud, .chooseAndSay:
+        case .answerOutLoud, .chooseAndSay, .practiceGoal:
             return prompt
         case .listenAndRepeat, .sayThisSentence:
             return expectedSpeechText

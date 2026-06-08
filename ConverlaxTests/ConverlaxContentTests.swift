@@ -38,6 +38,10 @@ final class ConverlaxContentTests: XCTestCase {
                     XCTAssertFalse(step.id.hasSuffix("-model"), "\(lesson.id) \(step.id)")
                     XCTAssertEqual(step.visiblePromptText, step.expectedSpeechText, "\(lesson.id) \(step.id)")
                     XCTAssertNil(step.correctAnswer, "\(lesson.id) \(step.id)")
+                case .practiceGoal:
+                    XCTAssertTrue(step.id.hasSuffix("-goal"), "\(lesson.id) \(step.id)")
+                    XCTAssertEqual(step.visiblePromptText, step.prompt, "\(lesson.id) \(step.id)")
+                    XCTAssertNil(step.correctAnswer, "\(lesson.id) \(step.id)")
                 case .answerOutLoud:
                     XCTAssertFalse(step.id.hasSuffix("-model"), "\(lesson.id) \(step.id)")
                     if let correctAnswer = step.correctAnswer {
@@ -74,6 +78,45 @@ final class ConverlaxContentTests: XCTestCase {
                     XCTAssertFalse(
                         primaryCopy.localizedCaseInsensitiveContains(bannedCopy),
                         "\(lesson.id) \(step.id) contains mismatched copy: \(bannedCopy)"
+                    )
+                }
+            }
+        }
+    }
+
+    func testGoalStepsAreLabeledAsGoalsNotSentences() {
+        let lessons = BeginnerContent.lessons(for: .english) + BeginnerContent.lessons(for: .french)
+        let bannedGoalCopy = [
+            "Say this sentence",
+            "Read it aloud",
+            "Read this once",
+            "set the focus"
+        ]
+
+        for lesson in lessons {
+            for step in lesson.steps where step.id.hasSuffix("-goal") {
+                XCTAssertEqual(step.turnIntent, .practiceGoal, "\(lesson.id) \(step.id)")
+                XCTAssertEqual(step.title, LessonTurnIntent.practiceGoal.rawValue, "\(lesson.id) \(step.id)")
+                let combined = "\(step.title) \(step.helper)"
+                for bannedCopy in bannedGoalCopy {
+                    XCTAssertFalse(
+                        combined.localizedCaseInsensitiveContains(bannedCopy),
+                        "\(lesson.id) \(step.id) uses sentence-repeat copy for a goal: \(bannedCopy)"
+                    )
+                }
+            }
+        }
+    }
+
+    func testSayThisSentenceOnlyUsedForActualSentences() {
+        let lessons = BeginnerContent.lessons(for: .english) + BeginnerContent.lessons(for: .french)
+
+        for lesson in lessons {
+            for step in lesson.steps {
+                if step.turnIntent == .sayThisSentence {
+                    XCTAssertTrue(
+                        step.kind == .speak,
+                        "\(lesson.id) \(step.id) uses Say this sentence outside a speak step"
                     )
                 }
             }

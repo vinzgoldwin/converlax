@@ -1581,19 +1581,9 @@ private struct CompletionLevelProgressRow: View {
                 Spacer(minLength: 8)
             }
 
-            ZStack(alignment: .leading) {
-                LessonProgressBar(progress: displayedProgress)
-                GeometryReader { proxy in
-                    Rectangle()
-                        .fill(Color.converlaxInk.opacity(0.42))
-                        .frame(width: 2, height: 12)
-                        .offset(x: max(0, min(proxy.size.width - 2, proxy.size.width * result.levelProgressBefore)))
-                }
+            LessonProgressBar(progress: displayedProgress)
                 .frame(height: 12)
-                .allowsHitTesting(false)
-            }
-            .frame(height: 12)
-            .padding(.leading, 40)
+                .padding(.leading, 40)
         }
         .onAppear {
             displayedProgress = result.levelProgressBefore

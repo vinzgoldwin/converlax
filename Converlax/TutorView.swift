@@ -5,22 +5,27 @@ struct TutorView: View {
     private let maxTurns = 4
 
     @ObservedObject var state: LearningState
-    @State private var voicePhase: SpeechPracticePhase = .ready
+    @StateObject private var speechPractice: SpeechPracticeController
     @State private var showHistory = false
     @State private var lastFeedback: LearningFeedback?
     @State private var noInputNotice: String?
     @State private var feedbackNotice: String?
-    @State private var voiceTranscript = ""
-    @State private var voiceErrorMessage: String?
     @State private var savedMessageIDs: Set<UUID> = []
     @State private var isTutorResponding = false
     @State private var currentPrompt = "Say one English sentence."
     @State private var turnCount = 0
     @State private var conversationTurns: [TutorTurnRecord] = []
     @State private var isPracticeComplete = false
-    @StateObject private var speechRecognizer = SpeechRecognitionService()
     @State private var didApplyLaunchVoiceState = false
     @State private var messages: [ChatMessage] = []
+
+    init(state: LearningState) {
+        self.state = state
+        _speechPractice = StateObject(wrappedValue: SpeechPracticeController(
+            localeProvider: { state.profile.targetLanguage.speechRecognitionLocaleIdentifier },
+            testTranscriptOverride: { Self.uiTestVoiceTranscript() }
+        ))
+    }
 
     var body: some View {
         ZStack {
@@ -36,10 +41,7 @@ struct TutorView: View {
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Menu {
-                    Button("Chat history") {
-                        showHistory = true
-                    }
-                    Button("Saved messages") {
+                    Button("Tutor history") {
                         showHistory = true
                     }
                 } label: {
@@ -59,14 +61,14 @@ struct TutorView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .onChange(of: speechRecognizer.transcript) { _, newValue in
-            voiceTranscript = newValue
+        .onChange(of: speechPractice.recognizer.transcript) { _, _ in
+            speechPractice.syncLiveTranscript()
         }
         .onAppear {
             applyLaunchVoiceStateIfNeeded()
         }
         .onDisappear {
-            speechRecognizer.cancelRecording()
+            speechPractice.cancel()
         }
     }
 
@@ -118,14 +120,14 @@ struct TutorView: View {
                 .buttonStyle(PrimaryButtonStyle())
             } else {
                 SpeechPracticePanel(
-                    phase: voicePhase,
-                    transcript: voiceTranscript,
+                    phase: speechPractice.phase,
+                    transcript: speechPractice.transcript,
                     feedback: nil,
                     accent: .primaryBlue,
                     prompt: currentPrompt,
                     readyInstruction: "Answer the Tutor prompt out loud.",
-                    voiceLevel: speechRecognizer.voiceLevel,
-                    errorMessage: voiceErrorMessage,
+                    voiceLevel: speechPractice.recognizer.voiceLevel,
+                    errorMessage: speechPractice.errorMessage,
                     primaryActionTitle: tutorVoiceActionTitle,
                     onPrimary: handleVoicePrimaryAction,
                     onCancel: cancelVoice
@@ -141,7 +143,7 @@ struct TutorView: View {
             return "Finish practice"
         }
 
-        switch voicePhase {
+        switch speechPractice.phase {
         case .ready where turnCount > 0:
             return "Answer prompt"
         case .transcript:
@@ -157,7 +159,7 @@ struct TutorView: View {
             return
         }
 
-        switch voicePhase {
+        switch speechPractice.phase {
         case .permissionNeeded, .permissionDenied, .ready, .paused, .noSpeech, .error:
             startVoiceRecording()
         case .recording:
@@ -172,56 +174,28 @@ struct TutorView: View {
     }
 
     private func startVoiceRecording() {
-        if let transcript = uiTestVoiceTranscript() {
-            voiceTranscript = transcript
-            voiceErrorMessage = nil
-            feedbackNotice = nil
-            voicePhase = .transcript
-            return
-        }
-
-        voicePhase = .requestingPermission
-        voiceTranscript = ""
-        voiceErrorMessage = nil
         feedbackNotice = nil
-
-        Task {
-            let started = await speechRecognizer.startRecording(localeIdentifier: state.profile.targetLanguage.speechRecognitionLocaleIdentifier)
-            if started {
-                voicePhase = .recording
-            } else {
-                voiceErrorMessage = speechRecognizer.errorMessage
-                voicePhase = speechRecognizer.errorMessage?.localizedCaseInsensitiveContains("permission") == true ? .permissionDenied : .error
-            }
-        }
+        speechPractice.startRecording()
     }
 
     private func finishVoiceRecording() {
-        voicePhase = .transcribing
-        let recognizedText = speechRecognizer.stopRecording()
-        voiceTranscript = recognizedText
-
-        guard !recognizedText.isEmpty else {
-            voiceErrorMessage = "Nothing clear was captured. Say one short sentence and try again."
-            voicePhase = .noSpeech
-            return
-        }
-
-        voicePhase = .transcript
+        speechPractice.finishRecording()
     }
 
     @MainActor
     private func submitVoiceTranscript() async {
-        let recognizedText = voiceTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+        let recognizedText = speechPractice.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !recognizedText.isEmpty else {
-            voiceErrorMessage = "Nothing clear was captured. Say one short sentence and try again."
-            voicePhase = .noSpeech
+            speechPractice.forceState(
+                phase: .noSpeech,
+                transcript: speechPractice.transcript,
+                errorMessage: "Nothing clear was captured. Say one short sentence and try again."
+            )
             return
         }
 
         noInputNotice = nil
-        voicePhase = .processing
-        voiceErrorMessage = nil
+        speechPractice.forceState(phase: .processing, transcript: recognizedText, errorMessage: nil)
 
         await submitTutorMessage(recognizedText)
     }
@@ -319,14 +293,11 @@ struct TutorView: View {
     }
 
     private func cancelVoice() {
-        speechRecognizer.cancelRecording()
-        resetVoiceInput()
+        speechPractice.cancel()
     }
 
     private func resetVoiceInput() {
-        voicePhase = .ready
-        voiceTranscript = ""
-        voiceErrorMessage = nil
+        speechPractice.reset()
     }
 
     private var summaryImprovedPhrase: String {
@@ -418,7 +389,7 @@ struct TutorView: View {
     }
 
     private func resetConversation() {
-        speechRecognizer.cancelRecording()
+        speechPractice.cancel()
         messages = []
         lastFeedback = nil
         noInputNotice = nil
@@ -438,26 +409,25 @@ struct TutorView: View {
         else { return }
 
         didApplyLaunchVoiceState = true
-        voiceTranscript = ""
-        voiceErrorMessage = nil
         noInputNotice = nil
 
         switch launchState {
         case "recording":
-            voicePhase = .recording
+            speechPractice.forceState(phase: .recording, transcript: "", errorMessage: nil)
         case "transcript", "response":
-            voiceTranscript = "I go to work yesterday"
-            voicePhase = .transcript
+            speechPractice.forceState(phase: .transcript, transcript: "I go to work yesterday", errorMessage: nil)
         case "finalTranscript":
             turnCount = maxTurns - 1
             currentPrompt = "Tell me one more detail."
-            voiceTranscript = "I went to work yesterday"
-            voicePhase = .transcript
+            speechPractice.forceState(phase: .transcript, transcript: "I went to work yesterday", errorMessage: nil)
         case "permissionDenied", "permission":
-            voiceErrorMessage = "Voice practice needs Microphone and Speech Recognition. Allow access in Settings and try again."
-            voicePhase = .permissionDenied
+            speechPractice.forceState(
+                phase: .permissionDenied,
+                transcript: "",
+                errorMessage: "Voice practice needs Microphone and Speech Recognition. Allow access in Settings and try again."
+            )
         default:
-            voicePhase = .ready
+            speechPractice.forceState(phase: .ready, transcript: "", errorMessage: nil)
         }
     }
 
@@ -478,7 +448,7 @@ struct TutorView: View {
         return clean.isEmpty ? firstPrompt : String(clean.prefix(96))
     }
 
-    private func uiTestVoiceTranscript() -> String? {
+    private static func uiTestVoiceTranscript() -> String? {
         let arguments = ProcessInfo.processInfo.arguments
         guard arguments.contains("-ConverlaxUseUITestVoiceTranscript") else { return nil }
 

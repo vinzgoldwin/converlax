@@ -124,6 +124,8 @@ private extension LessonStep {
             return "Listen first, then repeat it."
         case .sayThisSentence:
             return "Read it aloud when you are ready."
+        case .practiceGoal:
+            return "Say your own answer when you are ready."
         case .answerOutLoud:
             return "Say it in your own words when you are ready."
         case .chooseAndSay:
@@ -141,6 +143,8 @@ private extension LessonStep {
             return "Listen and repeat"
         case .sayThisSentence:
             return "Read aloud"
+        case .practiceGoal:
+            return "Practice the goal"
         case .answerOutLoud:
             return "Say it in your own words"
         case .chooseAndSay:
@@ -158,13 +162,10 @@ struct LessonPlayerView: View {
     @State private var stepIndex = 0
     @State private var completed = false
     @State private var savedCurrentLine = false
-    @State private var speechPhase: SpeechPracticePhase = .ready
-    @State private var transcript = ""
     @State private var speechFeedback: LearningFeedback?
     @State private var turnFeedbackByStepID: [String: LearningFeedback] = [:]
     @State private var selectedChoicesByStepID: [String: String] = [:]
-    @State private var speechErrorMessage: String?
-    @StateObject private var speechRecognizer = SpeechRecognitionService()
+    @StateObject private var speechPractice: SpeechPracticeController
     @StateObject private var speechPlayback = SpeechPlaybackService()
     @State private var savedLineReactionTrigger = 0
     @State private var didApplyLaunchSpeechState = false
@@ -180,6 +181,9 @@ struct LessonPlayerView: View {
         _stepIndex = State(initialValue: initialStepIndex)
         self.state = state
         self.onBackToCourse = onBackToCourse
+        _speechPractice = StateObject(wrappedValue: SpeechPracticeController(
+            localeProvider: { state.profile.targetLanguage.speechRecognitionLocaleIdentifier }
+        ))
     }
 
     var body: some View {
@@ -207,11 +211,11 @@ struct LessonPlayerView: View {
                             accent: lesson.accent.color,
                             savedCurrentLine: savedCurrentLine,
                             savedLineReactionTrigger: savedLineReactionTrigger,
-                            speechPhase: speechPhase,
-                            transcript: transcript,
-                            voiceLevel: speechRecognizer.voiceLevel,
+                            speechPhase: speechPractice.phase,
+                            transcript: speechPractice.transcript,
+                            voiceLevel: speechPractice.recognizer.voiceLevel,
                             speechFeedback: speechFeedback,
-                            speechErrorMessage: speechErrorMessage,
+                            speechErrorMessage: speechPractice.errorMessage,
                             isLastTurn: stepIndex == lesson.steps.count - 1,
                             canGoToPreviousTurn: stepIndex > 0,
                             canGoToNextTurn: stepIndex < furthestAvailableStepIndex,
@@ -240,8 +244,8 @@ struct LessonPlayerView: View {
         .navigationTitle(lesson.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
-        .onChange(of: speechRecognizer.transcript) { _, newValue in
-            transcript = newValue
+        .onChange(of: speechPractice.recognizer.transcript) { _, _ in
+            speechPractice.syncLiveTranscript()
         }
         .onAppear {
             applyLaunchCompletionStateIfNeeded()
@@ -255,7 +259,7 @@ struct LessonPlayerView: View {
         }
         .onDisappear {
             speechPlayback.stop()
-            speechRecognizer.cancelRecording()
+            speechPractice.cancel()
         }
     }
 
@@ -320,7 +324,7 @@ struct LessonPlayerView: View {
     }
 
     private func advanceSpeechState() {
-        switch speechPhase {
+        switch speechPractice.phase {
         case .permissionNeeded, .permissionDenied, .ready, .paused, .noSpeech, .error:
             startSpeechRecording()
         case .recording:
@@ -336,46 +340,39 @@ struct LessonPlayerView: View {
             }
             advanceAfterSpeechAcceptance()
         case .accepted:
-            speechPhase = .ready
-            transcript = ""
             speechFeedback = nil
-            speechErrorMessage = nil
+            speechPractice.reset()
         }
     }
 
     private func cancelSpeech() {
         speechPlayback.stop()
-        speechRecognizer.cancelRecording()
-        speechPhase = .ready
-        transcript = ""
+        speechPractice.cancel()
         speechFeedback = nil
-        speechErrorMessage = nil
     }
 
     private func retryCurrentTurn() {
         speechPlayback.stop()
-        speechRecognizer.cancelRecording()
         withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) {
-            speechPhase = .ready
-            transcript = ""
+            speechPractice.cancel()
             speechFeedback = nil
-            speechErrorMessage = nil
         }
     }
 
     private func moveToTurn(_ targetIndex: Int) {
         guard lesson.steps.indices.contains(targetIndex) else { return }
         speechPlayback.stop()
-        speechRecognizer.cancelRecording()
         let targetStep = lesson.steps[targetIndex]
         let restoredFeedback = latestFeedback(for: targetStep)
         withAnimation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.86)) {
             stepIndex = targetIndex
             savedCurrentLine = state.savedLines.contains { $0.id == "lesson-\(targetStep.id)" }
-            speechPhase = restoredFeedback == nil ? .ready : .feedback
-            transcript = restoredFeedback?.attemptedText ?? ""
+            speechPractice.forceState(
+                phase: restoredFeedback == nil ? .ready : .feedback,
+                transcript: restoredFeedback?.attemptedText ?? "",
+                errorMessage: nil
+            )
             speechFeedback = restoredFeedback
-            speechErrorMessage = nil
         }
     }
 
@@ -383,34 +380,12 @@ struct LessonPlayerView: View {
         guard isCurrentTurnReadyForSpeech else { return }
 
         speechPlayback.stop()
-        speechPhase = .requestingPermission
-        transcript = ""
         speechFeedback = nil
-        speechErrorMessage = nil
-
-        Task {
-            let started = await speechRecognizer.startRecording(localeIdentifier: state.profile.targetLanguage.speechRecognitionLocaleIdentifier)
-            if started {
-                speechPhase = .recording
-            } else {
-                speechErrorMessage = speechRecognizer.errorMessage
-                speechPhase = speechRecognizer.errorMessage?.localizedCaseInsensitiveContains("permission") == true ? .permissionDenied : .error
-            }
-        }
+        speechPractice.startRecording()
     }
 
     private func finishSpeechRecording() {
-        speechPhase = .transcribing
-        let capturedTranscript = speechRecognizer.stopRecording()
-        transcript = capturedTranscript
-
-        guard !capturedTranscript.isEmpty else {
-            speechErrorMessage = "Nothing clear was captured. Say one short sentence and try again."
-            speechPhase = .noSpeech
-            return
-        }
-
-        speechPhase = .transcript
+        speechPractice.finishRecording()
     }
 
     private func playCurrentModelPhrase() {
@@ -424,15 +399,17 @@ struct LessonPlayerView: View {
 
     @MainActor
     private func generateSpeechFeedback() async {
-        let cleanTranscript = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanTranscript = speechPractice.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanTranscript.isEmpty else {
-            speechErrorMessage = "Nothing clear was captured. Say one short sentence and try again."
-            speechPhase = .noSpeech
+            speechPractice.forceState(
+                phase: .noSpeech,
+                transcript: speechPractice.transcript,
+                errorMessage: "Nothing clear was captured. Say one short sentence and try again."
+            )
             return
         }
 
-        speechPhase = .processing
-        speechErrorMessage = nil
+        speechPractice.forceState(phase: .processing, transcript: cleanTranscript, errorMessage: nil)
 
         let aiFeedback: AIFeedback
         do {
@@ -441,8 +418,11 @@ struct LessonPlayerView: View {
                 context: speechFeedbackContext(mode: step.feedbackMode, step: step)
             )
         } catch {
-            speechErrorMessage = AIFeedbackService.fallbackMessage(for: error)
-            speechPhase = .error
+            speechPractice.forceState(
+                phase: .error,
+                transcript: cleanTranscript,
+                errorMessage: AIFeedbackService.fallbackMessage(for: error)
+            )
             return
         }
 
@@ -455,7 +435,7 @@ struct LessonPlayerView: View {
         )
         turnFeedbackByStepID[step.id] = feedback
         speechFeedback = feedback
-        speechPhase = .feedback
+        speechPractice.forceState(phase: .feedback, transcript: cleanTranscript, errorMessage: nil)
         speakMascotMoment(for: .lessonStrongAttempt(lessonID: lesson.id, confidence: feedback.confidence))
     }
 
@@ -468,12 +448,15 @@ struct LessonPlayerView: View {
     }
 
     private func restoreCurrentTurnFeedbackIfNeeded() {
-        guard speechPhase == .ready, transcript.isEmpty, speechFeedback == nil else { return }
+        guard speechPractice.phase == .ready, speechPractice.transcript.isEmpty, speechFeedback == nil else { return }
         guard let restoredFeedback = latestFeedback(for: step) else { return }
 
-        transcript = restoredFeedback.attemptedText
+        speechPractice.forceState(
+            phase: .feedback,
+            transcript: restoredFeedback.attemptedText,
+            errorMessage: nil
+        )
         speechFeedback = restoredFeedback
-        speechPhase = .feedback
     }
 
     private func applyLaunchCompletionStateIfNeeded() {
@@ -504,10 +487,12 @@ struct LessonPlayerView: View {
             withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86)) {
                 stepIndex = nextStepIndex
                 savedCurrentLine = state.savedLines.contains { $0.id == "lesson-\(nextStep.id)" }
-                speechPhase = restoredFeedback == nil ? .ready : .feedback
-                transcript = restoredFeedback?.attemptedText ?? ""
+                speechPractice.forceState(
+                    phase: restoredFeedback == nil ? .ready : .feedback,
+                    transcript: restoredFeedback?.attemptedText ?? "",
+                    errorMessage: nil
+                )
                 speechFeedback = restoredFeedback
-                speechErrorMessage = nil
             }
         } else {
             let previousProfile = state.profile
@@ -525,10 +510,11 @@ struct LessonPlayerView: View {
     }
 
     private func speakMascotMoment(for event: MascotVoiceCelebrationEvent) {
+        let phase = speechPractice.phase
         guard
             let moment = state.mascotVoiceMoment(
                 for: event,
-                isRecording: speechPhase == .requestingPermission || speechPhase == .recording
+                isRecording: phase == .requestingPermission || phase == .recording
             )
         else { return }
 
@@ -553,30 +539,29 @@ struct LessonPlayerView: View {
         stepIndex = targetIndex
         savedCurrentLine = state.savedLines.contains { $0.id == "lesson-\(targetStep.id)" }
         speechFeedback = nil
-        speechErrorMessage = nil
 
         switch launchState {
         case "recording":
-            transcript = ""
-            speechPhase = .recording
+            speechPractice.forceState(phase: .recording, transcript: "", errorMessage: nil)
         case "transcript", "transcriptReady":
-            transcript = sampleTranscript(for: targetStep)
-            speechPhase = .transcript
+            speechPractice.forceState(phase: .transcript, transcript: sampleTranscript(for: targetStep), errorMessage: nil)
         case "feedback":
-            transcript = sampleTranscript(for: targetStep)
+            let sample = sampleTranscript(for: targetStep)
             let feedback = state.acceptSpeechPractice(
                 lesson: lesson,
                 step: targetStep,
-                transcript: transcript,
+                transcript: sample,
                 mode: targetStep.feedbackMode
             )
             turnFeedbackByStepID[targetStep.id] = feedback
             speechFeedback = feedback
-            speechPhase = .feedback
+            speechPractice.forceState(phase: .feedback, transcript: sample, errorMessage: nil)
         case "permissionDenied", "permission":
-            transcript = ""
-            speechErrorMessage = "Voice practice needs Microphone and Speech Recognition. Allow access in Settings and try again."
-            speechPhase = .permissionDenied
+            speechPractice.forceState(
+                phase: .permissionDenied,
+                transcript: "",
+                errorMessage: "Voice practice needs Microphone and Speech Recognition. Allow access in Settings and try again."
+            )
         default:
             break
         }

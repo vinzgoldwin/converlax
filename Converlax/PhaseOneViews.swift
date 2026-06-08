@@ -674,13 +674,17 @@ private struct FreeTalkSessionView: View {
     @State private var finished = false
     @State private var summary: LearningSessionSummary?
     @State private var feedback: LearningFeedback?
-    @State private var speechPhase: SpeechPracticePhase = .ready
-    @State private var transcript = ""
-    @State private var speechErrorMessage: String?
-    @StateObject private var speechRecognizer = SpeechRecognitionService()
+    @StateObject private var speechPractice: SpeechPracticeController
     @State private var completionResult: CompletionCelebrationResult?
 
     private let prompt = "Tell me about your day using one sentence. Then ask me a question back."
+
+    init(state: LearningState) {
+        self.state = state
+        _speechPractice = StateObject(wrappedValue: SpeechPracticeController(
+            localeProvider: { state.profile.targetLanguage.speechRecognitionLocaleIdentifier }
+        ))
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -697,13 +701,13 @@ private struct FreeTalkSessionView: View {
                             .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
 
                         SpeechPracticePanel(
-                            phase: speechPhase,
-                            transcript: transcript,
+                            phase: speechPractice.phase,
+                            transcript: speechPractice.transcript,
                             feedback: nil,
                             accent: .primaryBlue,
                             readyInstruction: "Answer this prompt out loud.",
-                            voiceLevel: speechRecognizer.voiceLevel,
-                            errorMessage: speechErrorMessage,
+                            voiceLevel: speechPractice.recognizer.voiceLevel,
+                            errorMessage: speechPractice.errorMessage,
                             onPrimary: handlePrimaryAction,
                             onCancel: cancelSpeech
                         )
@@ -712,8 +716,8 @@ private struct FreeTalkSessionView: View {
 
                     if let feedback {
                         LearningFeedbackCard(feedback: feedback)
-                        if feedback.feedbackProvider == "local", let speechErrorMessage {
-                            FeedbackFallbackNotice(text: speechErrorMessage)
+                        if feedback.feedbackProvider == "local", let errorMessage = speechPractice.errorMessage {
+                            FeedbackFallbackNotice(text: errorMessage)
                         }
                     }
 
@@ -741,16 +745,16 @@ private struct FreeTalkSessionView: View {
         .navigationTitle("Open practice")
         .toolbar(.hidden, for: .tabBar)
         .accessibilityIdentifier("free-talk-session")
-        .onChange(of: speechRecognizer.transcript) { _, newValue in
-            transcript = newValue
+        .onChange(of: speechPractice.recognizer.transcript) { _, _ in
+            speechPractice.syncLiveTranscript()
         }
         .onDisappear {
-            speechRecognizer.cancelRecording()
+            speechPractice.cancel()
         }
     }
 
     private func handlePrimaryAction() {
-        switch speechPhase {
+        switch speechPractice.phase {
         case .permissionNeeded, .permissionDenied, .ready, .paused, .noSpeech, .error:
             startSpeechRecording()
         case .recording:
@@ -758,54 +762,35 @@ private struct FreeTalkSessionView: View {
         case .requestingPermission, .processing, .transcribing:
             break
         case .transcript:
-            Task { await saveSession(with: transcript) }
+            Task { await saveSession(with: speechPractice.transcript) }
         case .feedback, .accepted:
             resetSession()
         }
     }
 
     private func startSpeechRecording() {
-        speechPhase = .requestingPermission
-        transcript = ""
         feedback = nil
         summary = nil
-        speechErrorMessage = nil
-
-        Task {
-            let started = await speechRecognizer.startRecording(localeIdentifier: state.profile.targetLanguage.speechRecognitionLocaleIdentifier)
-            if started {
-                speechPhase = .recording
-            } else {
-                speechErrorMessage = speechRecognizer.errorMessage
-                speechPhase = speechRecognizer.errorMessage?.localizedCaseInsensitiveContains("permission") == true ? .permissionDenied : .error
-            }
-        }
+        speechPractice.startRecording()
     }
 
     private func finishSpeechRecording() {
-        speechPhase = .transcribing
-        let capturedTranscript = speechRecognizer.stopRecording()
-        transcript = capturedTranscript
-
-        guard !capturedTranscript.isEmpty else {
-            speechErrorMessage = "Nothing clear was captured. Say one short sentence and try again."
-            speechPhase = .noSpeech
-            return
-        }
-
-        speechPhase = .transcript
+        speechPractice.finishRecording()
     }
+
     @MainActor
     private func saveSession(with spokenText: String) async {
         let cleanText = spokenText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanText.isEmpty else {
-            speechErrorMessage = "Nothing clear was captured. Say one short sentence and try again."
-            speechPhase = .noSpeech
+            speechPractice.forceState(
+                phase: .noSpeech,
+                transcript: spokenText,
+                errorMessage: "Nothing clear was captured. Say one short sentence and try again."
+            )
             return
         }
 
-        speechPhase = .processing
-        speechErrorMessage = nil
+        speechPractice.forceState(phase: .processing, transcript: cleanText, errorMessage: nil)
 
         let aiFeedback: AIFeedback
         do {
@@ -824,8 +809,11 @@ private struct FreeTalkSessionView: View {
                 )
             )
         } catch {
-            speechErrorMessage = AIFeedbackService.fallbackMessage(for: error)
-            speechPhase = .error
+            speechPractice.forceState(
+                phase: .error,
+                transcript: cleanText,
+                errorMessage: AIFeedbackService.fallbackMessage(for: error)
+            )
             return
         }
 
@@ -849,29 +837,24 @@ private struct FreeTalkSessionView: View {
             nextActionTitle: result.summary.nextRecommendation,
             nextActionDetail: ""
         )
-        speechPhase = .accepted
+        speechPractice.forceState(phase: .accepted, transcript: cleanText, errorMessage: nil)
         withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.88)) {
             finished = true
         }
     }
 
     private func cancelSpeech() {
-        speechRecognizer.cancelRecording()
-        speechPhase = .ready
-        transcript = ""
-        speechErrorMessage = nil
+        speechPractice.cancel()
     }
 
     private func resetSession() {
-        speechRecognizer.cancelRecording()
+        speechPractice.cancel()
         finished = false
         summary = nil
         feedback = nil
         completionResult = nil
-        speechPhase = .ready
-        transcript = ""
-        speechErrorMessage = nil
     }
+
     private func strongPhrases(from transcript: String) -> [String] {
         let sentences = transcript.split(whereSeparator: { ".?!".contains($0) }).map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
         return Array(sentences.filter { !$0.isEmpty }.prefix(2))
@@ -980,11 +963,16 @@ private struct RoleplayDetailView: View {
     @State private var completed = false
     @State private var summary: LearningSessionSummary?
     @State private var feedback: LearningFeedback?
-    @State private var speechPhase: SpeechPracticePhase = .ready
-    @State private var transcript = ""
-    @State private var speechErrorMessage: String?
-    @StateObject private var speechRecognizer = SpeechRecognitionService()
+    @StateObject private var speechPractice: SpeechPracticeController
     @State private var completionResult: CompletionCelebrationResult?
+
+    init(roleplay: RoleplayScenario, state: LearningState) {
+        self.roleplay = roleplay
+        self.state = state
+        _speechPractice = StateObject(wrappedValue: SpeechPracticeController(
+            localeProvider: { state.profile.targetLanguage.speechRecognitionLocaleIdentifier }
+        ))
+    }
 
     var body: some View {
         ScrollView {
@@ -1001,13 +989,13 @@ private struct RoleplayDetailView: View {
                     RoleplayConversationPrompt(roleplay: roleplay)
 
                     SpeechPracticePanel(
-                        phase: speechPhase,
-                        transcript: transcript,
+                        phase: speechPractice.phase,
+                        transcript: speechPractice.transcript,
                         feedback: nil,
                         accent: .primaryBlue,
                         readyInstruction: "Start the situation out loud.",
-                        voiceLevel: speechRecognizer.voiceLevel,
-                        errorMessage: speechErrorMessage,
+                        voiceLevel: speechPractice.recognizer.voiceLevel,
+                        errorMessage: speechPractice.errorMessage,
                         onPrimary: handlePrimaryAction,
                         onCancel: cancelSpeech
                     )
@@ -1017,8 +1005,8 @@ private struct RoleplayDetailView: View {
 
                 if let feedback {
                     LearningFeedbackCard(feedback: feedback)
-                    if feedback.feedbackProvider == "local", let speechErrorMessage {
-                        FeedbackFallbackNotice(text: speechErrorMessage)
+                    if feedback.feedbackProvider == "local", let errorMessage = speechPractice.errorMessage {
+                        FeedbackFallbackNotice(text: errorMessage)
                     }
                 }
                 if let summary {
@@ -1050,16 +1038,16 @@ private struct RoleplayDetailView: View {
         .navigationTitle("Situation")
         .toolbar(.hidden, for: .tabBar)
         .accessibilityIdentifier("roleplay-detail")
-        .onChange(of: speechRecognizer.transcript) { _, newValue in
-            transcript = newValue
+        .onChange(of: speechPractice.recognizer.transcript) { _, _ in
+            speechPractice.syncLiveTranscript()
         }
         .onDisappear {
-            speechRecognizer.cancelRecording()
+            speechPractice.cancel()
         }
     }
 
     private func handlePrimaryAction() {
-        switch speechPhase {
+        switch speechPractice.phase {
         case .permissionNeeded, .permissionDenied, .ready, .paused, .noSpeech, .error:
             startSpeechRecording()
         case .recording:
@@ -1067,54 +1055,35 @@ private struct RoleplayDetailView: View {
         case .requestingPermission, .processing, .transcribing:
             break
         case .transcript:
-            Task { await saveSession(with: transcript) }
+            Task { await saveSession(with: speechPractice.transcript) }
         case .feedback, .accepted:
             resetSession()
         }
     }
 
     private func startSpeechRecording() {
-        speechPhase = .requestingPermission
-        transcript = ""
         feedback = nil
         summary = nil
-        speechErrorMessage = nil
-
-        Task {
-            let started = await speechRecognizer.startRecording(localeIdentifier: state.profile.targetLanguage.speechRecognitionLocaleIdentifier)
-            if started {
-                speechPhase = .recording
-            } else {
-                speechErrorMessage = speechRecognizer.errorMessage
-                speechPhase = speechRecognizer.errorMessage?.localizedCaseInsensitiveContains("permission") == true ? .permissionDenied : .error
-            }
-        }
+        speechPractice.startRecording()
     }
 
     private func finishSpeechRecording() {
-        speechPhase = .transcribing
-        let capturedTranscript = speechRecognizer.stopRecording()
-        transcript = capturedTranscript
-
-        guard !capturedTranscript.isEmpty else {
-            speechErrorMessage = "Nothing clear was captured. Say one short sentence and try again."
-            speechPhase = .noSpeech
-            return
-        }
-
-        speechPhase = .transcript
+        speechPractice.finishRecording()
     }
+
     @MainActor
     private func saveSession(with spokenText: String) async {
         let cleanText = spokenText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanText.isEmpty else {
-            speechErrorMessage = "Nothing clear was captured. Say one short sentence and try again."
-            speechPhase = .noSpeech
+            speechPractice.forceState(
+                phase: .noSpeech,
+                transcript: spokenText,
+                errorMessage: "Nothing clear was captured. Say one short sentence and try again."
+            )
             return
         }
 
-        speechPhase = .processing
-        speechErrorMessage = nil
+        speechPractice.forceState(phase: .processing, transcript: cleanText, errorMessage: nil)
 
         let promptText = "Roleplay at \(roleplay.setting): \(roleplay.subtitle)"
         let aiFeedback: AIFeedback
@@ -1134,8 +1103,11 @@ private struct RoleplayDetailView: View {
                 )
             )
         } catch {
-            speechErrorMessage = AIFeedbackService.fallbackMessage(for: error)
-            speechPhase = .error
+            speechPractice.forceState(
+                phase: .error,
+                transcript: cleanText,
+                errorMessage: AIFeedbackService.fallbackMessage(for: error)
+            )
             return
         }
 
@@ -1159,29 +1131,24 @@ private struct RoleplayDetailView: View {
             nextActionTitle: result.summary.nextRecommendation,
             nextActionDetail: ""
         )
-        speechPhase = .accepted
+        speechPractice.forceState(phase: .accepted, transcript: cleanText, errorMessage: nil)
         withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.88)) {
             completed = true
         }
     }
 
     private func cancelSpeech() {
-        speechRecognizer.cancelRecording()
-        speechPhase = .ready
-        transcript = ""
-        speechErrorMessage = nil
+        speechPractice.cancel()
     }
 
     private func resetSession() {
-        speechRecognizer.cancelRecording()
+        speechPractice.cancel()
         completed = false
         summary = nil
         feedback = nil
         completionResult = nil
-        speechPhase = .ready
-        transcript = ""
-        speechErrorMessage = nil
     }
+
     private func matchingRoleplayLines(in transcript: String) -> [String] {
         let lowercasedTranscript = transcript.lowercased()
         let matches = roleplay.lines.map(\.text).filter { line in
@@ -1288,11 +1255,15 @@ private struct SmartReviewView: View {
     @State private var showAnswer = false
     @State private var didCompleteReview = false
     @State private var didApplyLaunchCompletionState = false
-    @State private var speechPhase: SpeechPracticePhase = .ready
-    @State private var transcript = ""
-    @State private var speechErrorMessage: String?
-    @StateObject private var speechRecognizer = SpeechRecognitionService()
+    @StateObject private var speechPractice: SpeechPracticeController
     @StateObject private var reviewPlayback = SpeechPlaybackService()
+
+    init(state: LearningState) {
+        self.state = state
+        _speechPractice = StateObject(wrappedValue: SpeechPracticeController(
+            localeProvider: { state.profile.targetLanguage.speechRecognitionLocaleIdentifier }
+        ))
+    }
 
     var items: [ScheduledReviewItem] {
         state.dueReviewItems
@@ -1395,13 +1366,13 @@ private struct SmartReviewView: View {
                     .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
 
                     SpeechPracticePanel(
-                        phase: speechPhase,
-                        transcript: transcript,
+                        phase: speechPractice.phase,
+                        transcript: speechPractice.transcript,
                         feedback: nil,
                         accent: .primaryBlue,
                         readyInstruction: reviewReadyInstruction,
-                        voiceLevel: speechRecognizer.voiceLevel,
-                        errorMessage: speechErrorMessage,
+                        voiceLevel: speechPractice.recognizer.voiceLevel,
+                        errorMessage: speechPractice.errorMessage,
                         primaryActionTitle: reviewVoiceActionTitle,
                         onPrimary: handleReviewVoicePrimaryAction,
                         onCancel: resetSpeech
@@ -1435,20 +1406,20 @@ private struct SmartReviewView: View {
         .toolbar(.hidden, for: .tabBar)
         .animation(reduceMotion ? nil : .spring(response: 0.34, dampingFraction: 0.86), value: currentItemAnimationID)
         .animation(reduceMotion ? nil : .easeOut(duration: 0.24), value: showAnswer)
-        .onChange(of: speechRecognizer.transcript) { _, newValue in
-            transcript = newValue
+        .onChange(of: speechPractice.recognizer.transcript) { _, _ in
+            speechPractice.syncLiveTranscript()
         }
         .onAppear {
             applyLaunchCompletionStateIfNeeded()
         }
         .onDisappear {
             reviewPlayback.stop()
-            speechRecognizer.cancelRecording()
+            speechPractice.cancel()
         }
     }
 
     private var reviewVoiceActionTitle: String? {
-        switch speechPhase {
+        switch speechPractice.phase {
         case .transcript:
             "Show answer"
         case .accepted:
@@ -1459,7 +1430,7 @@ private struct SmartReviewView: View {
     }
 
     private func handleReviewVoicePrimaryAction() {
-        switch speechPhase {
+        switch speechPractice.phase {
         case .permissionNeeded, .permissionDenied, .ready, .paused, .noSpeech, .error:
             startSpeechRecording()
         case .recording:
@@ -1468,7 +1439,7 @@ private struct SmartReviewView: View {
             break
         case .transcript:
             showAnswer = true
-            speechPhase = .accepted
+            speechPractice.forceState(phase: .accepted, transcript: speechPractice.transcript, errorMessage: nil)
         case .feedback, .accepted:
             resetSpeech()
         }
@@ -1476,43 +1447,20 @@ private struct SmartReviewView: View {
 
     private func startSpeechRecording() {
         reviewPlayback.stop()
-        speechPhase = .requestingPermission
-        transcript = ""
-        speechErrorMessage = nil
         showAnswer = false
-
-        Task {
-            let started = await speechRecognizer.startRecording(localeIdentifier: state.profile.targetLanguage.speechRecognitionLocaleIdentifier)
-            if started {
-                speechPhase = .recording
-            } else {
-                speechErrorMessage = speechRecognizer.errorMessage
-                speechPhase = speechRecognizer.errorMessage?.localizedCaseInsensitiveContains("permission") == true ? .permissionDenied : .error
-            }
-        }
+        speechPractice.startRecording()
     }
 
     private func finishSpeechRecording() {
-        speechPhase = .transcribing
-        let capturedTranscript = speechRecognizer.stopRecording()
-        transcript = capturedTranscript
-
-        guard !capturedTranscript.isEmpty else {
-            speechErrorMessage = "Nothing clear was captured. Say one short sentence and try again."
-            speechPhase = .noSpeech
-            return
-        }
-
-        speechPhase = .transcript
+        speechPractice.finishRecording()
     }
+
     private func resetSpeech() {
         reviewPlayback.stop()
-        speechRecognizer.cancelRecording()
-        speechPhase = .ready
-        transcript = ""
-        speechErrorMessage = nil
+        speechPractice.cancel()
         showAnswer = false
     }
+
     private func recordCurrentReview(remembered: Bool) {
         let reviewedItem = item
         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.28)) {
@@ -1520,7 +1468,7 @@ private struct SmartReviewView: View {
         }
 
         if state.dueReviewItems.isEmpty {
-            let wasRecording = speechPhase == .requestingPermission || speechPhase == .recording
+            let wasRecording = speechPractice.phase == .requestingPermission || speechPractice.phase == .recording
             withAnimation(reduceMotion ? nil : .spring(response: 0.34, dampingFraction: 0.88)) {
                 didCompleteReview = true
             }
@@ -1534,10 +1482,11 @@ private struct SmartReviewView: View {
     }
 
     private func speakMascotMoment(for event: MascotVoiceCelebrationEvent, isRecording: Bool? = nil) {
+        let phase = speechPractice.phase
         guard
             let moment = state.mascotVoiceMoment(
                 for: event,
-                isRecording: isRecording ?? (speechPhase == .requestingPermission || speechPhase == .recording)
+                isRecording: isRecording ?? (phase == .requestingPermission || phase == .recording)
             )
         else { return }
 
@@ -1640,11 +1589,15 @@ private struct ReviewCompletionResultView: View {
 private struct SavedLinesReviewView: View {
     @ObservedObject var state: LearningState
     @State private var index = 0
-    @State private var speechPhase: SpeechPracticePhase = .ready
-    @State private var transcript = ""
-    @State private var speechErrorMessage: String?
     @State private var feedback: LearningFeedback?
-    @StateObject private var speechRecognizer = SpeechRecognitionService()
+    @StateObject private var speechPractice: SpeechPracticeController
+
+    init(state: LearningState) {
+        self.state = state
+        _speechPractice = StateObject(wrappedValue: SpeechPracticeController(
+            localeProvider: { state.profile.targetLanguage.speechRecognitionLocaleIdentifier }
+        ))
+    }
 
     private var lines: [SavedLine] {
         state.savedLines
@@ -1687,20 +1640,20 @@ private struct SavedLinesReviewView: View {
                 .background(Color.claySurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
 
                 SpeechPracticePanel(
-                    phase: speechPhase,
-                    transcript: transcript,
+                    phase: speechPractice.phase,
+                    transcript: speechPractice.transcript,
                     feedback: feedback,
                     accent: .primaryBlue,
                     readyInstruction: "Say this saved line out loud.",
-                    voiceLevel: speechRecognizer.voiceLevel,
-                    errorMessage: speechErrorMessage,
+                    voiceLevel: speechPractice.recognizer.voiceLevel,
+                    errorMessage: speechPractice.errorMessage,
                     primaryActionTitle: savedLineActionTitle,
                     onPrimary: handlePrimaryAction,
                     onCancel: resetSpeech
                 )
 
-                if let feedback, feedback.feedbackProvider == "local", let speechErrorMessage {
-                    FeedbackFallbackNotice(text: speechErrorMessage)
+                if let feedback, feedback.feedbackProvider == "local", let errorMessage = speechPractice.errorMessage {
+                    FeedbackFallbackNotice(text: errorMessage)
                 }
 
                 Spacer()
@@ -1728,16 +1681,16 @@ private struct SavedLinesReviewView: View {
         .background(Color.appBackground.ignoresSafeArea())
         .navigationTitle("Practice saved lines")
         .toolbar(.hidden, for: .tabBar)
-        .onChange(of: speechRecognizer.transcript) { _, newValue in
-            transcript = newValue
+        .onChange(of: speechPractice.recognizer.transcript) { _, _ in
+            speechPractice.syncLiveTranscript()
         }
         .onDisappear {
-            speechRecognizer.cancelRecording()
+            speechPractice.cancel()
         }
     }
 
     private var savedLineActionTitle: String? {
-        switch speechPhase {
+        switch speechPractice.phase {
         case .transcript:
             "Use this phrase"
         case .accepted:
@@ -1748,7 +1701,7 @@ private struct SavedLinesReviewView: View {
     }
 
     private func handlePrimaryAction() {
-        switch speechPhase {
+        switch speechPractice.phase {
         case .permissionNeeded, .permissionDenied, .ready, .paused, .noSpeech, .error:
             startSpeechRecording()
         case .recording:
@@ -1756,54 +1709,35 @@ private struct SavedLinesReviewView: View {
         case .requestingPermission, .processing, .transcribing:
             break
         case .transcript:
-            Task { await saveSpokenLine(with: transcript) }
+            Task { await saveSpokenLine(with: speechPractice.transcript) }
         case .feedback, .accepted:
             advanceLine()
         }
     }
 
     private func startSpeechRecording() {
-        speechPhase = .requestingPermission
-        transcript = ""
-        speechErrorMessage = nil
         feedback = nil
-
-        Task {
-            let started = await speechRecognizer.startRecording(localeIdentifier: state.profile.targetLanguage.speechRecognitionLocaleIdentifier)
-            if started {
-                speechPhase = .recording
-            } else {
-                speechErrorMessage = speechRecognizer.errorMessage
-                speechPhase = speechRecognizer.errorMessage?.localizedCaseInsensitiveContains("permission") == true ? .permissionDenied : .error
-            }
-        }
+        speechPractice.startRecording()
     }
 
     private func finishSpeechRecording() {
-        speechPhase = .transcribing
-        let capturedTranscript = speechRecognizer.stopRecording()
-        transcript = capturedTranscript
-
-        guard !capturedTranscript.isEmpty else {
-            speechErrorMessage = "Nothing clear was captured. Say one short sentence and try again."
-            speechPhase = .noSpeech
-            return
-        }
-
-        speechPhase = .transcript
+        speechPractice.finishRecording()
     }
+
     @MainActor
     private func saveSpokenLine(with spokenText: String) async {
         guard let line else { return }
         let cleanText = spokenText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanText.isEmpty else {
-            speechErrorMessage = "Nothing clear was captured. Say one short sentence and try again."
-            speechPhase = .noSpeech
+            speechPractice.forceState(
+                phase: .noSpeech,
+                transcript: spokenText,
+                errorMessage: "Nothing clear was captured. Say one short sentence and try again."
+            )
             return
         }
 
-        speechPhase = .processing
-        speechErrorMessage = nil
+        speechPractice.forceState(phase: .processing, transcript: cleanText, errorMessage: nil)
 
         let aiFeedback: AIFeedback
         do {
@@ -1822,8 +1756,11 @@ private struct SavedLinesReviewView: View {
                 )
             )
         } catch {
-            speechErrorMessage = AIFeedbackService.fallbackMessage(for: error)
-            speechPhase = .error
+            speechPractice.forceState(
+                phase: .error,
+                transcript: cleanText,
+                errorMessage: AIFeedbackService.fallbackMessage(for: error)
+            )
             return
         }
 
@@ -1838,7 +1775,7 @@ private struct SavedLinesReviewView: View {
             aiFeedback: aiFeedback
         )
         feedback = result.feedback
-        speechPhase = .accepted
+        speechPractice.forceState(phase: .accepted, transcript: cleanText, errorMessage: nil)
     }
 
     private func advanceLine() {
@@ -1851,12 +1788,10 @@ private struct SavedLinesReviewView: View {
     }
 
     private func resetSpeech() {
-        speechRecognizer.cancelRecording()
-        speechPhase = .ready
-        transcript = ""
-        speechErrorMessage = nil
+        speechPractice.cancel()
         feedback = nil
-    }}
+    }
+}
 
 private enum SavedContentFilter: String, CaseIterable, Identifiable {
     case all = "All"

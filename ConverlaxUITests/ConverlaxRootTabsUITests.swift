@@ -168,11 +168,13 @@ final class ConverlaxRootTabsUITests: XCTestCase {
         ])
 
         XCTAssertTrue(element("speech-practice-panel", in: app).waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Say this sentence"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Your goal"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.staticTexts["My goal is to introduce myself in two calm sentences."].exists)
-        XCTAssertTrue(app.staticTexts["Read it aloud when you are ready."].exists)
+        XCTAssertTrue(app.staticTexts["Say your own answer when you are ready."].exists)
         XCTAssertFalse(app.buttons["Play sentence audio"].exists)
         XCTAssertFalse(app.staticTexts["Record one clear answer."].exists)
+        XCTAssertFalse(app.staticTexts["Say this sentence"].exists)
+        XCTAssertFalse(app.staticTexts["Read it aloud when you are ready."].exists)
     }
 
     func testLessonModelTurnHasAudioPlaybackControl() throws {

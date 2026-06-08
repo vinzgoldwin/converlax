@@ -4,11 +4,11 @@ Converlax is a speaking-practice iOS app with a small AI feedback backend. Keep 
 
 ## Product Shape
 
-- One root screen, one job:
+- Three root tabs, one job each:
   - Home: continue the next lesson.
   - Practice: start speaking.
-  - Review: review what is due.
   - Profile: appreciate the learner's journey.
+- Review is a supporting flow, not a root tab. Route due review and saved-line practice from Home/Profile or intentional detail screens.
 - Prefer one dominant action per screen. Secondary actions should be quiet rows or small tool buttons.
 - Do not turn root screens into feature menus. Put advanced or uncommon paths behind intentional detail screens, or omit them.
 - Do not show two actions that do nearly the same thing on the same screen.
